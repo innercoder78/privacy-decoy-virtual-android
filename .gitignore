@@ -1,35 +1,53 @@
-# Gradle files
+# Generated Android/build and local development state
 .gradle/
-build/
 .kotlin/
-
-# Local configuration file (sdk path, etc)
-local.properties
-
-# Log/OS Files
-*.log
-
-# Android Studio generated files and folders
-captures/
+build/
+out/
 .externalNativeBuild/
 .cxx/
-*.aab
-*.apk
-output-metadata.json
-
-# IntelliJ
-*.iml
 .idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
+.vscode/
+*.iml
+local.properties
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
 
-# Keystore files
+# Sensitive local configuration and signing material (never commit)
+.env
+.env.*
 *.jks
 *.keystore
-
-# Google Services (e.g. APIs or Firebase)
+*.p12
+*.pfx
+*.key
+*.pem
 google-services.json
+secrets/
+credentials.json
+key.properties
 
-# Android Profiling
+# Generated packages, diagnostics and private captures
+*.apk
+*.aab
+*.apks
+*.log
 *.hprof
+*.pcap
+*.pcapng
+captures/
+
+# Guest build outputs and VM disks; intentional adoption still requires review
+guest-output/
+*.img
+*.qcow
+*.qcow2
+*.vdi
+*.vmdk
+*.vhd
+*.vhdx
+*.iso
+
+# Native libraries/archives are deliberately not broadly ignored: review their
+# appearance. The foundation validator rejects tracked binaries, even if forced.
