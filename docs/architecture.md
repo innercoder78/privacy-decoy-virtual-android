@@ -2,6 +2,10 @@
 
 **No engine selected. Feasibility and enforcing boundary unresolved.** This is a
 logical responsibility model, not an implementation or deployment diagram.
+The [Gate 0 candidate proposal](evidence/gate-0-userspace-vmm-candidate.md) develops
+a non-normative QEMU/TCG plus dedicated isolated-UID worker hypothesis with trusted
+management outside. Its [physical authority proof](evidence/gate-0-isolated-qemu-proof.md)
+is specified but not run; it does not change this document's unresolved boundary.
 
 ```text
 Host Android (stock, non-rooted, production user build)

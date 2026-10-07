@@ -16,6 +16,13 @@ obtain a credible, legitimately shippable execution mechanism for the required
 guest. The [Gate 0 evidence](docs/evidence/gate-0-platform-authority.md) records
 scoped negative findings for restricted Android virtualization paths while
 leaving pure user-space emulation and other legitimate mechanisms Unknown.
+The [user-space VMM research](docs/evidence/gate-0-userspace-vmm-sources.md) now
+identifies QEMU/TCG as the lead candidate to test, with an unproved isolated-UID
+containment hypothesis. The [next physical proof](docs/evidence/gate-0-isolated-qemu-proof.md)
+uses a tiny Linux fixture to test that mechanism, not to pass Gate 0 or select an
+engine. [Candidate design hypotheses](docs/evidence/gate-0-userspace-vmm-candidate.md)
+and a [black-box comparison plan](docs/evidence/gate-0-black-box-comparisons.md)
+remain non-normative research.
 
 Google account sign-in, Play Store installation and supported updates inside the
 guest are [compatibility objectives](docs/google-compatibility.md), not established
