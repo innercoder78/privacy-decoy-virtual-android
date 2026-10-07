@@ -31,7 +31,11 @@ A pass needs reviewed evidence for a concrete allowed candidate and the smallest
 falsifiable ordinary-app authority proof, with remaining Gate A/B questions stated.
 No privileged demonstration can satisfy this gate. The
 [candidate record](evidence/gate-0-platform-authority.md) has scoped negatives for
-restricted platform paths; software emulation remains Unknown. Overall failure
+restricted platform paths. [Follow-up research](evidence/gate-0-userspace-vmm-sources.md)
+makes QEMU/TCG a credible lead hypothesis, with [a defined isolated-worker experiment](evidence/gate-0-isolated-qemu-proof.md),
+but execution and containment remain Unknown. A tiny Linux boot cannot pass Gate 0;
+the complete interactive guest path and defensible prospective boundary remain
+review obligations. Overall failure
 would require evidence closing the viable alternatives, not only AVF exclusion.
 
 ## Subsequent gates

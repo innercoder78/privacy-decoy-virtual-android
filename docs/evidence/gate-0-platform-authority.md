@@ -163,8 +163,11 @@ Next research must ask:
 - Are its source, licenses, transitive dependencies, generated/native binaries,
   update ownership and distribution route defensible?
 
-Only after completing the survey should a separately reviewed proposal design the
-smallest ordinary-app proof for a credible candidate, with explicit controls and
-stop conditions. No VM is implemented or run here. **Overall Gate 0: Unresolved.**
+The [follow-up source survey](gate-0-userspace-vmm-sources.md) now identifies
+QEMU/TCG as the lead user-space candidate and records Android packaging precedents
+and isolated-process policy. The [separate proof proposal](gate-0-isolated-qemu-proof.md)
+defines the smallest next physical experiment, controls and stop conditions.
+Neither record selects an engine or supplies execution evidence. No VM is
+implemented or run here. **Overall Gate 0: Unresolved.**
 The scoped negative platform routes do not eliminate pure user-space emulation or
 all other legitimate mechanisms. PDVA feasibility is not established or disproven.
