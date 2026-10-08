@@ -5,3 +5,11 @@
 .editorconfig text eol=lf
 .gitattributes text eol=lf
 .gitignore text eol=lf
+
+# Research source/config is portable text, never executable tool binaries.
+*.java text eol=lf
+*.c text eol=lf
+*.xml text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+CMakeLists.txt text eol=lf

@@ -1,0 +1,59 @@
+name: PDVA Gate 0 substrate build
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/**'
+      - '.gitignore'
+      - '.gitattributes'
+      - 'docs/evidence/gate-0-isolated-worker*'
+      - 'docs/source-provenance-policy.md'
+      - 'docs/source-reference-catalog.md'
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/**'
+      - '.gitignore'
+      - '.gitattributes'
+      - 'docs/evidence/gate-0-isolated-worker*'
+      - 'docs/source-provenance-policy.md'
+      - 'docs/source-reference-catalog.md'
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact reviewed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          clean: false
+      - name: Repository and manifest hygiene
+        run: |
+          python3 .github/scripts/validate-foundation.py
+          python3 .github/scripts/validate-harness.py
+          git show --format= --check HEAD
+      - name: Select runner JDK and install pinned Android packages
+        shell: bash
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_17_X64/bin" >> "$GITHUB_PATH"
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          sdkmanager --version
+          sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+          cat "$ANDROID_HOME/platforms/android-37.0/source.properties"
+          cat "$ANDROID_HOME/ndk/28.2.13676358/source.properties"
+      - name: Build both variants and exercise protocol
+        run: |
+          python3 android/build.py :gate0-harness:assembleDebug :gate0-harness:assembleRelease :gate0-harness:assembleDebugAndroidTest :gate0-harness:protocolTest :gate0-harness:lintDebug
+      - name: Inspect release APK authority and native inventory
+        run: |
+          python3 .github/scripts/validate-harness.py --apkanalyzer "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" --apk android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk
+          unzip -l android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk
+          sha256sum android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk

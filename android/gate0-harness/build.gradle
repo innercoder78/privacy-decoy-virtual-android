@@ -1,0 +1,46 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'org.pdva.gate0'
+    compileSdk 37
+    buildToolsVersion '36.0.0'
+    ndkVersion '28.2.13676358'
+    defaultConfig {
+        applicationId 'org.pdva.gate0'
+        minSdk 30
+        targetSdk 37
+        versionCode 1
+        versionName '0.1-substrate'
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+        externalNativeBuild { cmake { arguments '-DANDROID_STL=none' } }
+        testInstrumentationRunner 'org.pdva.gate0.HarnessInstrumentation'
+    }
+    buildTypes {
+        release {
+            debuggable false
+            minifyEnabled false
+            // Ordinary local app key; never a production signing identity.
+            signingConfig signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    externalNativeBuild {
+        cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.22.1' }
+    }
+}
+tasks.register('compileProtocolTests', JavaCompile) {
+    source = files('src/main/java/org/pdva/gate0/Protocol.java',
+                   'src/main/java/org/pdva/gate0/Report.java',
+                   'src/test/java/org/pdva/gate0/ProtocolTest.java')
+    classpath = files()
+    destinationDirectory = layout.buildDirectory.dir('protocol-tests')
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+}
+tasks.register('protocolTest', JavaExec) {
+    dependsOn 'compileProtocolTests'
+    classpath = files(layout.buildDirectory.dir('protocol-tests'))
+    mainClass = 'org.pdva.gate0.ProtocolTest'
+}

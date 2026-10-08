@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conservative bootstrap hygiene, not a security or feasibility assessment.
+"""Conservative repository hygiene, not a security or feasibility assessment.
 
 No dependencies beyond Python's standard library and Git. Run from any directory.
 Checks working copies of tracked plus non-ignored new files (including before
@@ -21,8 +21,30 @@ ROOT_DIRS = {".github", "android", "docs"}
 HISTORY = "docs/reference/privacy-decoy-history/"
 SOURCE_SHA = "5320b3b44b38df4b8f3361ecbcb530386ff195e9"
 ALLOWED_CODE = {
+    ".github/scripts/test-repository-validation.py",
     ".github/scripts/validate-foundation.py",
+    ".github/scripts/validate-harness.py",
+    ".github/workflows/android-harness.yml",
     ".github/workflows/foundation.yml",
+    "android/build.gradle",
+    "android/build.py",
+    "android/gate0-harness/build.gradle",
+    "android/gate0-harness/src/androidTest/java/org/pdva/gate0/HarnessInstrumentation.java",
+    "android/gate0-harness/src/main/AndroidManifest.xml",
+    "android/gate0-harness/src/main/cpp/CMakeLists.txt",
+    "android/gate0-harness/src/main/cpp/probe.c",
+    "android/gate0-harness/src/main/java/org/pdva/gate0/MainActivity.java",
+    "android/gate0-harness/src/main/java/org/pdva/gate0/NativeProbe.java",
+    "android/gate0-harness/src/main/java/org/pdva/gate0/Protocol.java",
+    "android/gate0-harness/src/main/java/org/pdva/gate0/Report.java",
+    "android/gate0-harness/src/main/java/org/pdva/gate0/Session.java",
+    "android/gate0-harness/src/main/java/org/pdva/gate0/WorkerService.java",
+    "android/gate0-harness/src/main/res/values/strings.xml",
+    "android/gate0-harness/src/main/res/xml/data_extraction_rules.xml",
+    "android/gate0-harness/src/test/java/org/pdva/gate0/ProtocolTest.java",
+    "android/gradle.properties",
+    "android/gradle/verification-metadata.xml",
+    "android/settings.gradle",
 }
 BLOCKED_SUFFIXES = {
     ".apk", ".aab", ".apks", ".aar", ".so", ".jar", ".dex", ".o", ".a",
@@ -70,7 +92,7 @@ def validate():
         meta, name = entry.split("\t", 1)
         mode, _, stage = meta.split()
         if mode != "100644" or stage != "0":
-            errors.append(f"{name}: bootstrap requires regular 100644 files and no conflicts")
+            errors.append(f"{name}: repository requires regular 100644 files and no conflicts")
 
     markdown = {}
     for name in sorted(files):
@@ -85,9 +107,9 @@ def validate():
         if (relative.suffix.lower() in BLOCKED_SUFFIXES or lower in SECRET_NAMES
                 or lower == ".env" or lower.startswith(".env.")
                 or any(p.lower() in {"secrets", "credentials", "signing"} for p in relative.parts)):
-            errors.append(f"{name}: prohibited bootstrap artifact or sensitive filename")
+            errors.append(f"{name}: prohibited artifact or sensitive filename")
         if name not in ROOT_FILES | ALLOWED_CODE and relative.suffix != ".md":
-            errors.append(f"{name}: file type/path outside reviewed bootstrap text scope")
+            errors.append(f"{name}: file type/path outside reviewed exact-path text scope")
         if path.is_symlink() or not path.is_file():
             errors.append(f"{name}: missing or non-regular file")
             continue

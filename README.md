@@ -6,10 +6,12 @@ with one controlled guest-image line and an unrooted normal guest. Normal host
 operation must work on supported stock, non-rooted Android without system
 privileges, platform signing, OEM integration, or production ADB.
 
-**Foundation only. Gate 0: Unresolved.** No VM engine is selected, no VM or Android
-runtime is implemented, and no guest image is included. Full interactive Android
+**Pre-QEMU Gate 0 research. Gate 0: Unresolved.** No VM engine is selected,
+no VM or guest Android runtime is implemented, and no guest image is included. Full interactive Android
 feasibility and the actual enforcing guest/host security boundary are unproven.
 No devices are claimed supported. Documentation does not pass a feasibility gate.
+The [isolated-worker substrate harness](android/README.md) now supplies a minimal
+research APK and source-built native probe, with physical outcomes still Unknown.
 
 The first question is whether an ordinary distributable third-party app can
 obtain a credible, legitimately shippable execution mechanism for the required

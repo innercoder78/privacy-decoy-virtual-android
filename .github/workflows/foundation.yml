@@ -23,5 +23,7 @@ jobs:
         run: |
           git rev-parse HEAD
           python3 .github/scripts/validate-foundation.py
+          python3 .github/scripts/test-repository-validation.py
+          python3 .github/scripts/validate-harness.py
       - name: Check whitespace
         run: git show --format= --check HEAD
