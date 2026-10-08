@@ -24,3 +24,19 @@ parsers and snapshot readers are potential TCB components. No opaque binary may
 be adopted merely to get a guest boot. [Source policy](source-provenance-policy.md)
 applies before experiments; [Gate A](feasibility-gates.md) concerns full guest
 functionality and [Gate B](security-boundaries.md) concerns enforcement separately.
+
+## Proposed delivery and update contract
+
+[ADR-0002](decisions/ADR-0002-signed-environment-delivery-and-compatibility.md) is
+**PROPOSED**, pending Tony's explicit approval of the final text. Its single
+[detailed contract](environment-delivery-and-updates.md) investigates separate APK
+and guest delivery, authenticated catalogs, runtime compatibility at acceptance
+transitions, independent discovery preferences, and maintenance within Android 17.
+It elaborates potential work for the release-record areas above; it adds no current
+normative obligation, image, implementation or Gate F evidence.
+
+Guest Android major line, image patch/build and persistent userdata schema are
+separate identities. Supported Android 17 security updates should be investigated;
+automatic major upgrades and a version chooser remain outside initial scope.
+Any future multiple-line policy needs a separate owner-approved ADR, requirements
+revision, maintenance/security policy and image/version qualification.

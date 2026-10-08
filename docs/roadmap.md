@@ -28,3 +28,20 @@ Gate 0 pass above.
 **STOP**, **NARROW** and **REDESIGN** are real exits. Narrowing or material redesign
 requires explicit owner approval and a PDVA ADR. No engine, VM execution, guest
 image or Android runtime work is authorized in this bootstrap.
+
+## Lifecycle proposal for owner review
+
+[ADR-0002](decisions/ADR-0002-signed-environment-delivery-and-compatibility.md) is
+**PROPOSED**, pending Tony's explicit approval of the final text. The
+[delivery and updates contract](environment-delivery-and-updates.md) records the
+small-host/separate-environment product goals and proposed compatibility,
+authentication, discovery and recovery behavior. This is parallel documentation
+work, not a Gate 0 result or authorization for guest/downloader implementation.
+Immediate technical work remains Gate 0 research; A–G remain Not reached.
+
+If accepted, first review the identified requirements additions, trust/compatibility
+contracts, rights and maintenance ownership. Implementation/adoption needs its own
+scope and provenance review; complete-guest work still depends on Gate 0. Later
+Gate F/G qualification needs tamper, freshness, revocation, compatibility, migration,
+snapshot and interruption/recovery evidence for exact builds. A future guest-major
+chooser is deferred to a separate owner-approved ADR and requirements revision.
