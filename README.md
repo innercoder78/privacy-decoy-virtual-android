@@ -43,6 +43,7 @@ its findings neither prove nor disprove PDVA's full-guest direction.
 |---|---|
 | Product obligations and change authority | [Requirements](docs/requirements.md), [governance](docs/governance.md) |
 | Accepted direction, without engine selection | [ADR-0001](docs/decisions/ADR-0001-full-interactive-virtual-android-direction.md) |
+| Proposed delivery and compatibility, awaiting owner approval | [ADR-0002](docs/decisions/ADR-0002-signed-environment-delivery-and-compatibility.md), [delivery and updates contract](docs/environment-delivery-and-updates.md) |
 | Research progression and STOP outcomes | [Feasibility gates](docs/feasibility-gates.md), [roadmap](docs/roadmap.md) |
 | Evidence and claim discipline | [Acceptance criteria](docs/acceptance-evidence-criteria.md), [evidence index](docs/evidence/README.md) |
 | Conceptual system and enforcing authorities | [Architecture](docs/architecture.md), [security boundaries](docs/security-boundaries.md), [threat model](docs/threat-model.md) |

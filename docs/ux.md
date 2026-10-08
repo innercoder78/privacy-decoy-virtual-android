@@ -24,3 +24,8 @@ Clearly distinguish management policy from guest Android permissions. Real
 disclosure must be explicit, scoped and visible. Display Unsupported/Unknown
 honestly; do not imply a secure session from a boot animation. Guest failures must
 return to a safe management state with bounded recovery. Gate C is **Not reached**.
+
+The [proposed provisioning and update states](environment-delivery-and-updates.md#proposed-management-ux)
+cover missing environments, downloads, verification, compatible updates, app
+prerequisites and recovery. They belong to PDVA management and remain a design
+proposal under **PROPOSED** ADR-0002, pending Tony's approval; no UI is implemented.
