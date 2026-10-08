@@ -1,0 +1,4 @@
+<resources>
+    <string name="initial_status">No physical result recorded. Rotate or background during a run to exercise cancellation.</string>
+    <string name="running_status">Running bounded synthetic probes…</string>
+</resources>

@@ -1,8 +1,8 @@
 # Source-reference catalog
 
 References are organized by technical role. They are not engine selections,
-runtime dependencies or security endorsements. No runtime, guest image or native
-component is adopted. Retrieval/review date: **2026-10-07**.
+runtime dependencies or security endorsements. No third-party runtime or guest image is adopted. The repository-owned Gate 0
+native probe and its build tools are scoped separately below. Retrieval/review date: **2026-10-07**.
 
 | Role | Exact upstream / evidence identity | Current treatment |
 |---|---|---|
@@ -43,3 +43,12 @@ floating tag adoption is permitted.
 The action pin was also observed in the historical workflow, but independently
 re-verified rather than trusted by copying. Full runtime/component adoption in
 future remains subject to the stricter [source policy](source-provenance-policy.md).
+
+## Gate 0 research build adoption
+
+The [isolated-worker adoption record](evidence/gate-0-isolated-worker-adoption.md)
+explicitly scopes AGP/Gradle/JDK/SDK/NDK/CMake and the existing checkout action to
+the pre-QEMU research harness. Its [transitive build inventory](evidence/gate-0-isolated-worker-dependencies.md)
+and exact hashes distinguish build trust from the zero-Maven-dependency app.
+This supersedes only the bootstrap absence of Android build tooling; it selects
+no VM engine or guest component and changes no gate state.

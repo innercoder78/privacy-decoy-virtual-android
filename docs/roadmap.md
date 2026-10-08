@@ -3,7 +3,7 @@
 | Stage | Authorized scope and exit |
 |---|---|
 | Foundation — this bootstrap | Governance, PDVA requirements, historical classification, platform-authority evidence and cheap validation only. No feasibility result. |
-| Immediate next work — Gate 0 research | Review the [source survey](evidence/gate-0-userspace-vmm-sources.md) and the now-specified [isolated QEMU authority proof](evidence/gate-0-isolated-qemu-proof.md). The next proposed physical experiment is a tiny ARM64 Linux fixture in an isolated worker, subject to source/adoption review; no implementation is added here. A scoped mechanism success is not Gate 0 Passed. No engine selected by this roadmap. |
+| Immediate next work — Gate 0 research | Review the [source survey](evidence/gate-0-userspace-vmm-sources.md) and the now-specified [isolated QEMU authority proof](evidence/gate-0-isolated-qemu-proof.md). The next proposed physical experiment is a tiny ARM64 Linux fixture in an isolated worker, subject to source/adoption review; the [pre-QEMU substrate harness](evidence/gate-0-isolated-worker-harness.md) now prepares the Android-side capability test; QEMU and its fixture remain unimplemented. A scoped mechanism success is not Gate 0 Passed. No engine selected by this roadmap. |
 | Conditional complete-guest work | Only after a reviewed Gate 0 pass, propose Gate A implementation for the approved exact scope. Headless workload guests cannot satisfy it. |
 | Conditional qualification | Progress through Gates B–G as foundational evidence allows, with independently tracked security, usability, networking, Google and image-lifecycle outcomes. No calendar promise or giant implementation queue. |
 
@@ -12,6 +12,18 @@ Gate 0 is **Unresolved**; A–G are **Not reached**. The
 path does not eliminate user-space alternatives. A failed candidate stops work
 dependent on that candidate; it cannot be quietly replaced with in-host hooks or
 privileged deployment.
+
+Continue useful source research, theory, architecture, provenance, build
+integration, static analysis and other non-physical falsification work, including
+QEMU research and adoption review, without requiring Tony to connect a phone.
+The proposed physical experiment is future work, not a prerequisite for this PR
+or every later PR. Physical runtime observations remain **Unknown** and must not
+be treated as a substrate pass. Work depending on a physical fact must preserve
+that Unknown; stop only at the exact question that genuinely cannot advance
+without stock physical-device evidence. ChatGPT will identify future physical
+tasks separately. Further adoption and integration still require their own scope
+and provenance review; complete-guest progression still requires the reviewed
+Gate 0 pass above.
 
 **STOP**, **NARROW** and **REDESIGN** are real exits. Narrowing or material redesign
 requires explicit owner approval and a PDVA ADR. No engine, VM execution, guest

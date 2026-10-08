@@ -3,8 +3,8 @@
 Read the [requirements](../docs/requirements.md),
 [governance](../docs/governance.md), [gates](../docs/feasibility-gates.md) and
 [evidence criteria](../docs/acceptance-evidence-criteria.md) first. The repository
-is a foundation, not a VM implementation. Next technical work remains Gate 0
-research. No engine or production isolation is selected or proven.
+contains a foundation and a pre-QEMU research harness, not a VM implementation.
+Next technical work remains Gate 0 research. No engine or production isolation is selected or proven.
 
 Keep root entries limited to `.github/`, `android/`, `docs/`, `.editorconfig`,
 `.gitattributes`, `.gitignore` and `README.md`. New root entries need a reviewed
@@ -30,13 +30,17 @@ Before a commit:
 3. Verify local Markdown targets, historical notices and requirement/ADR IDs.
 4. Check claims against evidence: Gate 0 stays Unresolved unless reviewed new
    evidence establishes a complete scoped result; documentation is not a pass.
-5. Verify no VM/Android runtime/image/engine slipped into bootstrap scope and no
-   historical checkout file changed.
+5. Verify no VM/guest runtime/image/engine or unreviewed runtime dependency entered
+   the research slice and no historical checkout file changed.
+6. For harness changes, run the build/JVM/lint/manifest checks in
+   [Android instructions](../android/README.md). Physical outcomes need actual runs.
 
 The standard-library validator checks tracked and non-ignored new files and is
 deliberately conservative: bootstrap files are text Markdown, the foundation
 Python validator, workflow YAML and named repository configuration. Expanding
-that scope needs review. It is not a Markdown specification parser, secret
+that scope needs review. The first research implementation adds only the exact
+paths listed in the validator, with no binary exception. Regression tests exercise
+these rejection rules. It is not a Markdown specification parser, secret
 scanner, security audit or feasibility test.
 
 CI checks all PRs without path filtering, using read-only permissions and a short
