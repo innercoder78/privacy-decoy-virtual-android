@@ -47,7 +47,7 @@ Tradeoff: Python and first-use network access are needed; the installed/extracte
 local tool directory remains trusted developer build infrastructure.
 
 [Verification metadata](../../android/gradle/verification-metadata.xml) records
-exact SHA-256 identities for the resolved build graph: 184 Maven components,
+exact SHA-256 identities for the resolved build graph: 185 Maven components / 322 hashed artifacts,
 including POM metadata and AGP/lint transitives. The
 [coordinate/license inventory](gate-0-isolated-worker-dependencies.md) lists them.
 These include AGP's Kotlin, AndroidX databinding and crypto/XML/network tooling
@@ -124,3 +124,51 @@ identities above, Gradle hash and Maven verification metadata are unchanged.
 No emulator or physical device is used for this revision; physical results remain
 Unknown, and further useful non-physical work may continue under the
 [slice's evidence policy](gate-0-isolated-worker-harness.md).
+
+## Cross-platform Maven metadata completion reviewed 2026-10-08
+
+At head `26e004d7bd35b631250be676d580866d827e9166`, the
+[Android run](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/37736958641)
+successfully located command tools and installed the declared Android packages,
+then failed strict Gradle classpath verification for the Guava parent POM and two
+JUnit module artifacts below. Release inspection was skipped; that run supplies
+no successful Android build or inspection evidence. The working SDK path logic
+is unchanged.
+
+Linux resolution exposed a Guava parent POM and two JUnit Gradle module metadata
+files absent from the initial Windows-derived set. A local strict build with
+`--refresh-dependencies` then exposed the missing `groovy-bom-4.0.29.pom` during
+release lint-tool resolution; that component previously pinned only its `.module`
+file. The additional POM received the same independent review. These complete
+cross-platform build metadata; they add no app runtime dependency or test
+framework. Each exact artifact was retrieved directly from the declared Maven
+Central repository at `repo.maven.apache.org/maven2`, with SHA-256 calculated
+independently rather than accepted from Gradle's write-verification-metadata output.
+
+| Exact upstream artifact | Independently calculated SHA-256 |
+|---|---|
+| [guava-parent-33.4.0-jre.pom](https://repo.maven.apache.org/maven2/com/google/guava/guava-parent/33.4.0-jre/guava-parent-33.4.0-jre.pom) | `3a499ed34a0d9ee0f1bcc39230021a1cd4e2f7dd0426ab6844f585465d41dcd7` |
+| [junit-bom-5.10.2.module](https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.10.2/junit-bom-5.10.2.module) | `de23b114b3e4119a8fe6eb17bed5a3852816698bace67071579d6d927ebb080a` |
+| [junit-bom-5.11.0-M2.module](https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.11.0-M2/junit-bom-5.11.0-M2.module) | `86477abcf490d6ca059aa9973cb108d22a506f49d1a5569bb32cc6cbf43c2cce` |
+| [groovy-bom-4.0.29.pom](https://repo.maven.apache.org/maven2/org/apache/groovy/groovy-bom/4.0.29/groovy-bom-4.0.29.pom) | `c24277dec93f146bcda25f5ae4391d6527e384e2132efa32184c1e852b42bca9` |
+
+Coordinates and versions were checked in the Guava/Groovy POMs and both JUnit
+module `component` records. Separately retrieved copies from Maven Central's
+`repo1.maven.org/maven2` endpoint matched byte-for-byte. Published SHA-256
+checksums matched both JUnit module digests and the Groovy POM; Guava's published
+SHA-1 matched its POM bytes (no SHA-256 sidecar was available). These are
+same-repository consistency checks to detect corruption, not independent
+publisher authentication or source-to-binary reconstruction. HTTPS certificate
+verification remained enabled. The JUnit POMs were also retrieved and matched
+their existing pinned SHA-256 values. Upstream POM licenses are Apache License,
+Version 2.0 for the Guava parent, Eclipse Public License v2.0 for the JUnit BOMs
+and The Apache Software License, Version 2.0 for the Groovy BOM, as recorded in
+the inventory.
+
+The resulting metadata and license inventory both contain **185 Maven components
+and 322 hashed artifacts**: one additional component and exactly four additional
+artifacts. All earlier hashes and verification configuration remain unchanged,
+including metadata verification; no wildcard trust, ignored artifact or checksum
+bypass is added. Local Windows validation is separate from the pending Ubuntu CI
+run. Physical outcomes remain Unknown; no device is used, and the non-physical
+research policy remains in force.

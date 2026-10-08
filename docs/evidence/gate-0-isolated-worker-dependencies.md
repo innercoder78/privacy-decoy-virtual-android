@@ -1,7 +1,9 @@
 # Gate 0 isolated-worker build dependency inventory
 
 Build-only Maven coordinates resolved for AGP, lint, packaging and tooling on
-2026-10-07. These are **not app runtime dependencies**. Exact artifact SHA-256
+2026-10-07, with Linux-resolved metadata completed on 2026-10-08.
+The verified inventory contains **185 Maven components / 322 hashed artifacts**.
+These are **not app runtime dependencies**. Exact artifact SHA-256
 values are enforced by [Gradle verification metadata](../../android/gradle/verification-metadata.xml).
 License names below are upstream POM declarations, including cached parent POMs;
 they are not a file-level license audit. The [adoption record](gate-0-isolated-worker-adoption.md)
@@ -79,6 +81,7 @@ sets the limited build role, update owner and unresolved reproducibility/securit
 | com.google.guava:failureaccess:1.0.2 | The Apache Software License, Version 2.0 | 2 |
 | com.google.guava:guava:33.4.0-jre | Apache License, Version 2.0 | 2 |
 | com.google.guava:guava-parent:26.0-android | The Apache Software License, Version 2.0 | 1 |
+| com.google.guava:guava-parent:33.4.0-jre | Apache License, Version 2.0 | 1 |
 | com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava | The Apache Software License, Version 2.0 | 2 |
 | com.google.j2objc:j2objc-annotations:2.8 | Apache License, Version 2.0 | 1 |
 | com.google.j2objc:j2objc-annotations:3.0.0 | Apache License, Version 2.0 | 2 |
@@ -124,7 +127,7 @@ sets the limited build role, update owner and unresolved reproducibility/securit
 | org.apache.commons:commons-parent:71 | Apache-2.0 | 1 |
 | org.apache.commons:commons-parent:72 | Apache-2.0 | 1 |
 | org.apache.groovy:groovy:4.0.29 | The Apache Software License, Version 2.0 | 2 |
-| org.apache.groovy:groovy-bom:4.0.29 | The Apache Software License, Version 2.0 | 1 |
+| org.apache.groovy:groovy-bom:4.0.29 | The Apache Software License, Version 2.0 | 2 |
 | org.apache.httpcomponents:httpclient:4.5.14 | Apache License, Version 2.0 | 2 |
 | org.apache.httpcomponents:httpclient:4.5.6 | Apache License, Version 2.0 | 2 |
 | org.apache.httpcomponents:httpcomponents-client:4.5.14 | Apache License, Version 2.0 | 1 |
@@ -174,8 +177,8 @@ sets the limited build role, update owner and unresolved reproducibility/securit
 | org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.9.0 | The Apache Software License, Version 2.0 | 1 |
 | org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0 | The Apache Software License, Version 2.0 | 1 |
 | org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.9.0 | The Apache Software License, Version 2.0 | 2 |
-| org.junit:junit-bom:5.10.2 | Eclipse Public License v2.0 | 1 |
-| org.junit:junit-bom:5.11.0-M2 | Eclipse Public License v2.0 | 1 |
+| org.junit:junit-bom:5.10.2 | Eclipse Public License v2.0 | 2 |
+| org.junit:junit-bom:5.11.0-M2 | Eclipse Public License v2.0 | 2 |
 | org.junit:junit-bom:5.13.3 | Eclipse Public License v2.0 | 2 |
 | org.junit.platform:junit-platform-commons:1.13.3 | Eclipse Public License v2.0 | 2 |
 | org.junit.platform:junit-platform-engine:1.13.3 | Eclipse Public License v2.0 | 2 |
