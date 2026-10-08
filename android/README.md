@@ -53,11 +53,21 @@ Compile/target API is 37. This floor is not a product device-support claim.
 ARM64 has the generated-code fixture; x86-64 intentionally reports Unsupported
 for that fixture, encoded as UNKNOWN with an explicit limitation.
 
-## Ordinary physical experiment
+## Future ordinary physical experiment
 
-No connected authorized ADB device was available during implementation. All
-physical outcomes are **Unknown**. The default report preserves that label;
-a later evidence PR must identify and attest its actual physical run separately.
+The harness has not been physically run. All physical outcomes are **Unknown**;
+the default report preserves that label. A later evidence PR must identify and
+attest its actual physical run separately.
+
+These are future instructions, not a requirement for this PR or an automatic
+prerequisite before every subsequent PR. Tony does not need to connect a phone
+now. Source research, theory, architecture, provenance, build integration, static
+analysis and other non-physical falsification work may continue while useful,
+including further QEMU research and adoption review, without claiming a substrate
+pass. Physical facts remain Unknown wherever later reasoning depends on them.
+Only a specific unresolved claim that genuinely cannot advance honestly without
+stock physical-device evidence requires stopping at that exact question. ChatGPT
+will identify future physical-device tasks separately.
 
 1. On Tony's stock non-rooted ARM64 production phone, install the release APK
    through ordinary sideloading. Optional development installation:

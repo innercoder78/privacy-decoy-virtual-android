@@ -13,6 +13,18 @@ path does not eliminate user-space alternatives. A failed candidate stops work
 dependent on that candidate; it cannot be quietly replaced with in-host hooks or
 privileged deployment.
 
+Continue useful source research, theory, architecture, provenance, build
+integration, static analysis and other non-physical falsification work, including
+QEMU research and adoption review, without requiring Tony to connect a phone.
+The proposed physical experiment is future work, not a prerequisite for this PR
+or every later PR. Physical runtime observations remain **Unknown** and must not
+be treated as a substrate pass. Work depending on a physical fact must preserve
+that Unknown; stop only at the exact question that genuinely cannot advance
+without stock physical-device evidence. ChatGPT will identify future physical
+tasks separately. Further adoption and integration still require their own scope
+and provenance review; complete-guest progression still requires the reviewed
+Gate 0 pass above.
+
 **STOP**, **NARROW** and **REDESIGN** are real exits. Narrowing or material redesign
 requires explicit owner approval and a PDVA ADR. No engine, VM execution, guest
 image or Android runtime work is authorized in this bootstrap.

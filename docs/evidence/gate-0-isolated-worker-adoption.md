@@ -17,7 +17,7 @@ owner, with exact version/hash changes requiring a reviewed PR.
 | Build tools | Google `build-tools;36.0.0`. AGP-selected aapt2 `9.4.0-15978811` Windows/Linux/macOS artifacts hash-pinned separately | SDK terms / Android tools Apache-2.0 and included notices. DEX/resources/signing/packaging build trust. |
 | NDK | Google r28c `28.2.13676358`; [upstream changelog](https://github.com/android/ndk/wiki/Changelog-r28). clang-r530567e, LLVM base `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c`, Android patch source `e727bfb014bd436f581a66a450c939a6983a1fc3` from packaged source ledger | SDK terms and component notices in NOTICE/NOTICE.toolchain: LLVM Apache-2.0 with exceptions, Bionic BSD and other components. Native compiler/linker trust. Chosen AGP default, not latest NDK. Default flexible/16-KiB alignment; no page-size override. |
 | CMake / Ninja | Google SDK `cmake;3.22.1`, with packaged Ninja 1.10.2; [CMake release](https://cmake.org/cmake/help/v3.22/release/3.22.html) | CMake BSD-3-Clause, Ninja Apache-2.0. Native build orchestration only. SDK package distribution, not vendored source. |
-| SDK command tools | Local Google `cmdline-tools;22.0`; SDK manager / APK analyzer from that package | Android SDK terms plus included open-source notices. Installation/inspection only. CI's sdkmanager is hosted infrastructure and prints its version. |
+| SDK command tools | Local Google `cmdline-tools;22.0`; SDK manager / APK analyzer from that package | Android SDK terms plus included open-source notices. Installation/inspection only. CI's SDK manager and APK analyzer are hosted infrastructure, invoked by explicit checked paths with versions printed. |
 | Python | Local CPython 3.12.14; scripts need standard-library Python 3.11+ | PSF license and bundled notices. Download/hash bootstrap and validators, no pip dependencies. CI interpreter is recorded runner infrastructure. |
 | GitHub Action | Official actions/checkout v7.0.1, independently re-resolved `3d3c42e5aac5ba805825da76410c181273ba90b1` | Existing MIT adoption in [catalog](../source-reference-catalog.md). Only external action, now also used for Android CI. Read-only contents, no persisted credentials, no secrets, no privileged PR trigger. |
 | Git / Ubuntu runner | Hosted Ubuntu 24.04 Git/Python/JDK/SDK environment, exact image reported by Actions | Build infrastructure with its own packaged licenses. Mutable image; not reproducible product dependency. No new third-party cache/setup/upload action. |
@@ -97,3 +97,30 @@ read-only and limited to build/JVM/lint/static checks, with a 25-minute timeout.
 It prints tool versions, installs named Android packages, builds both variants,
 compiles instrumentation and inspects the release APK. No emulator, device,
 gate evaluation, status polling, secret or privileged grant is part of CI.
+
+## CI path correction reviewed 2026-10-08
+
+At head `07242e856b337303baca53b491807b7a64def9ea`, the
+[Android run](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/37707262682)
+failed with `sdkmanager: command not found` (exit 127). Build and release inspection
+were skipped, so that run supplies no successful Android build evidence.
+Its Ubuntu 24.04 runner image was `20260927.320.1`; the
+[published provisioning script](https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/scripts/build/install-android-sdk.sh)
+installs command tools under `cmdline-tools/latest/bin`. The workflow now checks
+SDK manager and APK analyzer executability at those explicit paths under
+`ANDROID_HOME`, prints the SDK manager version and the APK analyzer command-tool
+package identity from `source.properties`, and fails clearly if either is absent.
+APK analyzer does not provide a version verb; its containing package revision
+identifies the installed tool.
+There is no fallback download, setup action or suppression of installation errors.
+All build, test, lint and APK inspection steps remain required.
+
+The `latest` directory names the runner's provisioned command-tool installation,
+not a newly adopted or pinned application dependency. Its package version and
+the runner's JDK patch remain mutable build infrastructure. Local validation uses
+Windows, Temurin 17.0.20.1+1 and Google command tools 22.0; it does not establish
+success on GitHub's Ubuntu runner. The platform, build-tools, NDK and CMake package
+identities above, Gradle hash and Maven verification metadata are unchanged.
+No emulator or physical device is used for this revision; physical results remain
+Unknown, and further useful non-physical work may continue under the
+[slice's evidence policy](gate-0-isolated-worker-harness.md).

@@ -148,5 +148,16 @@ The 30-second lease is a harness mechanism needing physical testing, not a prove
 orphan/reaping guarantee. Sustained resource/thermal/battery behavior, concurrent
 peer isolation, QEMU TCG and complete Android 17 remain outside this slice.
 
-The next QEMU source/adoption PR is conditional on review and physical substrate
-results. This PR neither adopts QEMU nor authorizes that dependent integration.
+The harness has not been physically run; its physical outcomes remain **Unknown**.
+Further non-physical QEMU source research, adoption review, build integration,
+static analysis and other non-physical falsification work may proceed while useful,
+without requiring Tony to connect a phone or claiming that the substrate passed.
+Any later adoption or integration remains subject to its own scope and provenance
+review; this PR adds no QEMU or fixture.
+
+Work that logically depends on a physical fact must retain that fact as Unknown
+and must not claim success. When a future decision genuinely cannot advance
+without stock physical-device evidence, stop at that exact unresolved question
+rather than assuming a result or imposing a blanket phone prerequisite on every
+later PR. Future physical-device tasks will be identified separately by ChatGPT.
+Gate 0 remains Unresolved; A–G remain Not reached.
