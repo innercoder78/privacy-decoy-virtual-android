@@ -21,6 +21,8 @@ ROOT_DIRS = {".github", "android", "docs"}
 HISTORY = "docs/reference/privacy-decoy-history/"
 SOURCE_SHA = "5320b3b44b38df4b8f3361ecbcb530386ff195e9"
 ALLOWED_CODE = {
+    ".github/scripts/qemu-android-research.py",
+    ".github/workflows/qemu-android-research.yml",
     ".github/scripts/test-repository-validation.py",
     ".github/scripts/validate-foundation.py",
     ".github/scripts/validate-harness.py",

@@ -5,6 +5,7 @@ import importlib.util
 import io
 from pathlib import Path
 import tempfile
+import tarfile
 import unittest
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -17,6 +18,7 @@ def load(name):
 
 foundation = load("validate-foundation")
 harness = load("validate-harness")
+research = load("qemu-android-research")
 
 class RepositoryTests(unittest.TestCase):
     def check_tree(self, extra=None, mode="100644", stage="0"):
@@ -49,6 +51,13 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(1, self.check_tree({"android/unreviewed.java": b"class X {}"}))
     def test_exact_approved_source(self):
         self.assertEqual(0, self.check_tree({"android/build.gradle": b"// fixture\n"}))
+    def test_research_exact_paths_only(self):
+        for name in (".github/scripts/qemu-android-research.py",
+                     ".github/workflows/qemu-android-research.yml"):
+            with self.subTest(name=name):
+                self.assertEqual(0, self.check_tree({name: b"# fixture\n"}))
+                self.assertEqual(1, self.check_tree({name: b"\x00binary"}))
+                self.assertEqual(1, self.check_tree({name.replace("research", "unreviewed"): b"# fixture\n"}))
     def test_binary_in_text_path(self):
         self.assertEqual(1, self.check_tree({"android/build.gradle": b"\x00bad"}))
     def test_unknown_root(self):
@@ -73,6 +82,26 @@ class RepositoryTests(unittest.TestCase):
     def test_private_key_marker(self):
         marker = ("-----BEGIN " + "PRIVATE KEY-----").encode()
         self.assertEqual(1, self.check_tree({"docs/test.md": marker}))
+
+class ResearchInputTests(unittest.TestCase):
+    def test_corrupt_download_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "input"
+            path.write_bytes(b"corrupt archive")
+            with self.assertRaisesRegex(RuntimeError, "Hash mismatch"):
+                research.verify(path, "0" * 64)
+
+    def test_source_archive_cannot_escape_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = root / "bad.tar"
+            with tarfile.open(archive, "w") as output:
+                member = tarfile.TarInfo("../escaped")
+                member.size = 1
+                output.addfile(member, io.BytesIO(b"x"))
+            with self.assertRaises(tarfile.FilterError):
+                research.unpack(archive, root / "extracted")
+            self.assertFalse((root / "escaped").exists())
 
 class ManifestTests(unittest.TestCase):
     def setUp(self): self.source = harness.SOURCE.read_text(encoding="utf-8")
