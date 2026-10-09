@@ -10,6 +10,7 @@ from pathlib import Path
 import tempfile
 import tarfile
 import unittest
+from unittest import mock
 
 SCRIPTS = Path(__file__).resolve().parent
 
@@ -105,6 +106,161 @@ class ResearchInputTests(unittest.TestCase):
             with self.assertRaises(tarfile.FilterError):
                 research.unpack(archive, root / "extracted")
             self.assertFalse((root / "escaped").exists())
+
+
+class GlibSubprojectTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='pdva-glib-source-test-')
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.glib = self.root / 'glib'
+        self.parent = self.glib / 'subprojects'
+        self.parent.mkdir(parents=True)
+        (self.parent / 'gvdb').mkdir()
+        self.archive = self.root / 'source.tar'
+        self.write_archive()
+        self.pin = research.digest(self.archive)
+        self.pins = mock.patch.dict(research.ARCHIVES, {
+            name: ('https://example.invalid/fixture', self.pin, 'fixture')
+            for name in ('gvdb', 'proxy')
+        })
+        self.pins.start()
+        self.addCleanup(self.pins.stop)
+        research.unpack(self.archive, self.root / 'extracted')
+        self.source = self.root / 'extracted/fixture'
+
+    def write_archive(self, extra=None):
+        with tarfile.open(self.archive, 'w') as output:
+            directory = tarfile.TarInfo('fixture')
+            directory.type = tarfile.DIRTYPE
+            directory.mode = 0o775
+            output.addfile(directory)
+            member = tarfile.TarInfo('fixture/source.c')
+            member.mode = 0o664
+            member.size = 8
+            output.addfile(member, io.BytesIO(b'reviewed'))
+            if extra:
+                output.addfile(extra, io.BytesIO(b'x' * extra.size))
+
+    def install(self, name='gvdb'):
+        with contextlib.redirect_stdout(io.StringIO()):
+            research.materialize_glib_subproject(name, self.archive, self.source, self.glib)
+
+    def test_expected_empty_and_absent_destinations(self):
+        self.install('gvdb')
+        self.install('proxy')
+        for name in ('gvdb', 'proxy-libintl-0.5'):
+            self.assertEqual(b'reviewed', (self.parent / name / 'source.c').read_bytes())
+        self.assertEqual({'gvdb', 'proxy-libintl-0.5'}, {p.name for p in self.parent.iterdir()})
+
+    def test_absent_gvdb_is_not_the_expected_placeholder(self):
+        (self.parent / 'gvdb').rmdir()
+        with self.assertRaises(FileNotFoundError):
+            self.install()
+
+    def test_existing_empty_proxy_is_rejected(self):
+        (self.parent / 'proxy-libintl-0.5').mkdir()
+        with self.assertRaisesRegex(RuntimeError, 'Expected absent'):
+            self.install('proxy')
+
+    def test_existing_correct_content_is_not_merged(self):
+        self.install()
+        with self.assertRaisesRegex(RuntimeError, 'Expected empty'):
+            self.install()
+        self.assertEqual(b'reviewed', (self.parent / 'gvdb/source.c').read_bytes())
+
+    def test_unexpected_populated_directory_or_file_is_preserved(self):
+        dest = self.parent / 'gvdb'
+        marker = dest / 'unexpected'
+        marker.mkdir()
+        with self.assertRaisesRegex(RuntimeError, 'Expected empty'):
+            self.install()
+        self.assertTrue(marker.is_dir())
+        marker.rmdir()
+        dest.rmdir()
+        dest.write_bytes(b'conflict')
+        with self.assertRaisesRegex(RuntimeError, 'Expected empty'):
+            self.install()
+        self.assertEqual(b'conflict', dest.read_bytes())
+
+    @unittest.skipIf(os.name == 'nt', 'Real destination/ancestor symlinks are checked on Linux')
+    def test_destination_and_ancestor_symlinks_are_rejected(self):
+        dest = self.parent / 'gvdb'
+        dest.rmdir()
+        outside = self.root / 'outside'
+        outside.mkdir()
+        dest.symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(RuntimeError, 'Expected empty'):
+            self.install()
+        dest.unlink()
+        proxy = self.parent / 'proxy-libintl-0.5'
+        proxy.symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(RuntimeError, 'Expected absent'):
+            self.install('proxy')
+        proxy.unlink()
+        dest.mkdir()
+        payload = self.source / 'source.c'
+        payload.unlink()
+        payload.symlink_to(outside / 'missing')
+        with self.assertRaisesRegex(RuntimeError, 'Source file type mismatch'):
+            self.install()
+        payload.unlink()
+        payload.write_bytes(b'reviewed')
+        dest.rmdir()
+        self.parent.rmdir()
+        self.parent.symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(RuntimeError, 'not a real directory'):
+            self.install()
+        self.assertEqual([], list(outside.iterdir()))
+
+    def test_source_substitution_missing_and_extra_are_rejected(self):
+        path = self.source / 'source.c'
+        path.write_bytes(b'substituted')
+        with self.assertRaisesRegex(RuntimeError, 'blob mismatch'):
+            self.install()
+        path.unlink()
+        with self.assertRaisesRegex(RuntimeError, 'Missing source'):
+            self.install()
+        path.write_bytes(b'reviewed')
+        (self.source / 'extra').write_bytes(b'extra')
+        with self.assertRaisesRegex(RuntimeError, 'Extra source'):
+            self.install()
+        self.assertEqual([], list((self.parent / 'gvdb').iterdir()))
+
+    def test_staged_substitution_is_rejected_before_placeholder_removal(self):
+        original = research.shutil.copytree
+        def tamper(source, destination, **kwargs):
+            result = original(source, destination, **kwargs)
+            (destination / 'source.c').write_bytes(b'changed in staging')
+            return result
+        with mock.patch.object(research.shutil, 'copytree', side_effect=tamper):
+            with self.assertRaisesRegex(RuntimeError, 'blob mismatch'):
+                self.install()
+        self.assertEqual([], list((self.parent / 'gvdb').iterdir()))
+
+    def test_corrupt_archive_and_wrong_root_are_rejected(self):
+        self.archive.write_bytes(b'corrupt')
+        with self.assertRaisesRegex(RuntimeError, 'Hash mismatch'):
+            self.install()
+        self.write_archive()
+        with self.assertRaisesRegex(RuntimeError, 'Unexpected or duplicate archive path'):
+            research.regular_archive_manifest(self.archive, self.pin, 'wrong-root')
+
+    def test_archive_escaping_paths_links_and_duplicates_are_rejected(self):
+        for name, kind, link in (
+            ('../escape', tarfile.REGTYPE, ''),
+            ('/absolute', tarfile.REGTYPE, ''),
+            ('fixture/link', tarfile.SYMTYPE, '../../escape'),
+            ('fixture/link', tarfile.LNKTYPE, 'fixture/source.c'),
+            ('fixture/source.c', tarfile.REGTYPE, ''),
+        ):
+            member = tarfile.TarInfo(name)
+            member.type, member.linkname = kind, link
+            member.mode = 0o644
+            self.write_archive(member)
+            with self.subTest(name=name, kind=kind), self.assertRaises(RuntimeError):
+                research.regular_archive_manifest(self.archive, research.digest(self.archive), 'fixture')
+        self.assertFalse((self.root / 'escape').exists())
 
 
 class GitSourceTests(unittest.TestCase):

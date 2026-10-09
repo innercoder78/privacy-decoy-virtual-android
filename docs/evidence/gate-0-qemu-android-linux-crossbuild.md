@@ -3,11 +3,112 @@
 **2026-10-08. Gate 0: Unresolved. Gates A–G: Not reached.**
 ADR-0001 remains Accepted; ADR-0002 remains Proposed. No engine selected.
 
-## Revision review: original Linux failure and correction (2026-10-09)
+## Second revision: GLib subproject materialization (2026-10-09)
+
+**Head `b981a47430f5781d79d783237282f42d71a3c092` proved the corrected Git
+source verification on Linux, then failed at the existing gvdb directory.**
+It did not compile dependencies or configure QEMU. The next head's CI results
+remain pending at publication; the local correction below is source-copy evidence.
+
+Live preflight again matched main `d5466f1943e3cd7e33cbd62c8a23571e4de52ae5`
+and the sole open PR #6 at that head. Foundation and Android succeeded; cross-build
+failed. Both Linux test invocations passed all 29 tests without skips. The Android
+job built its harness and passed 48 protocol/report checks, not an emulator.
+Reviews, comments and unresolved threads were empty. Combined commit statuses
+contained no contexts; its empty pending aggregate is not a check failure. Main's
+classic required-check endpoint reported unprotected and its branch rules list
+was empty; no protection setting or workflow is changed. GitHub Status reported
+All Systems Operational, updated `2026-10-09T16:00:14.488Z`. The clean existing
+branch, one worktree, no stashes, full six-file exact-base diff/100644 modes,
+requirements, ADRs, source/license/dependency scope and binary inventory were
+reviewed. No unrelated work or Android authority is changed.
+
+### Observed second Linux run
+
+[Run 37887280609](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/37887280609),
+job `113680005143`, checked out the exact `b981a47` head on 2026-10-09 UTC,
+Ubuntu 24.04.5 image `20261004.327.1`. Foundation/harness validation, 29 tests,
+six pinned source archive hashes and all four pinned Git commit/tree/source
+verifications passed. The latter covered 1,013 files with actual Linux type/mode
+checks. This directly confirms the prior CRLF/archive-identity correction.
+
+The next operation failed with:
+
+```text
+FAILED [verified source acquisition]: [Errno 17] File exists:
+'$RESEARCH/glib-source/glib-e05063ccc6c8f222465a1080927f4c14349f3de6/subprojects/gvdb';
+later stages NOT RUN; no gate change.
+```
+
+The unconditional `shutil.copytree` assumed an absent destination. This is a
+source-materialization defect, not a compiler/portability or CI outage result.
+The later proxy copy and wheel verification were not reached. Kconfig closure,
+NDK acquisition/link control, Meson preparation, PCRE2, libffi, libfdt, GLib,
+QEMU configure/compile/link and ELF inspection were **NOT RUN** in this run.
+
+### Exact archive identities and correction
+
+The existing GLib archive was rehashed against its unchanged SHA-256 pin and
+its actual tar records inspected:
+
+| Destination | Exact GLib archive observation | Required initial state |
+|---|---|---|
+| `subprojects/gvdb` | One directory record, type `5`, size 0, mode 0775, no link target or descendants; an empty submodule placeholder | Empty real directory |
+| `subprojects/proxy-libintl-0.5` | No record and no descendants | Absent |
+
+GLib's pinned `.gitmodules`/gvdb wrap identify commit
+`2b42fc75f09dbe1cd1057580b5782b08f2dcb400`; the upstream exact-ref contents API
+also identifies gvdb as a submodule at that commit. Its proxy wrap names version
+0.5, the same source URL, directory and SHA-256 already in the recipe. These are
+the intended sources, not alternate content chosen to resolve a collision.
+The gvdb archive has 14 regular files and four directory records (108,451 file
+bytes); proxy has five regular files and one directory (39,244 bytes). Neither
+archive contains links or special entries. Their COPYING/license files remain
+included, with the existing LGPL scope below; no dependency/version is added.
+
+The new helper requires each destination's specific initial state, rejects
+symlink ancestors, and rechecks the source archive's SHA-256. Its bounded manifest
+allows only unique safe paths under the expected archive root and regular files
+and directories; links, special entries, unexpected layouts and modes fail closed.
+Every extracted source file is compared with the authenticated archive for bytes,
+type and safe extraction mode, with exact file/directory sets. A new staging copy
+is verified again before the destination is rechecked. Only `rmdir` of the empty
+gvdb placeholder is permitted, followed by renaming the staged directory and a
+final verification. There is no recursive destination deletion, merge, overwrite
+or acceptance of even apparently correct populated content. Proxy must remain
+absent until installation. The existing Git verifier and all immutable pins remain.
+
+Local Windows verification successfully installed both real pinned archives into
+the exact destination skeleton extracted from the authenticated GLib tar. Only
+that skeleton was extracted for this test because Windows cannot recreate GLib's
+unrelated license symlinks; no complete Linux extraction/build is claimed. The
+39-test suite retains the prior 29 tests and adds ten materialization tests:
+36 pass locally and three filesystem tests explicitly skip on Windows. Coverage
+includes both accepted states, incorrect absent/empty states, populated and
+ordinary-file conflicts, destination/ancestor symlinks (Linux), substituted,
+missing or extra source files, corruption during staging, corrupt archive/hash,
+wrong root, traversal, archive links and duplicate paths. Linux runs all 39.
+
+The pinned QEMU archive's `VERSION` is **11.1.2**, commit
+`4fc49f46dc95d4a27de2509e7fceb2931e91faeb`. The PR body's 11.0.1 wording was a
+typo; the source pin and the already-correct evidence inventory do not change.
+Foundation/Markdown links, harness authority, Python syntax, workflow shell and
+manual YAML review, whitespace, exact-base modes, pin/license/dependency and
+binary/secret checks passed before committing this correction. A standalone
+YAML parser remains unavailable. All build stages and compiler/provenance gates
+are retained; no speculative dependency migration or warning suppression is added.
+
+The new commit triggers the existing bounded Ubuntu pipeline. Its actual next
+stage remains **Unknown/pending**, with no post-publication polling or reruns.
+No phone, ADB, physical execution, Codex Cloud, new host permission, privileged
+Android API or host VpnService is involved. Gate 0 **Unresolved**, Gates A–G
+**Not reached**, ADR-0002 **Proposed**, no production engine or isolation claim.
+
+## First revision record: original Linux failure and correction (2026-10-09)
 
 **The original Linux run failed in source acquisition. No dependency compiled,
 no QEMU configure ran, and no QEMU ELF exists.** The revised head's Linux result
-is pending publication and subsequent owner review; it is not inferred from
+was pending at that publication and subsequent owner review; it was not inferred from
 local source-verification tests. Gate 0 remains Unresolved; A–G Not reached.
 
 The live revision preflight matched main

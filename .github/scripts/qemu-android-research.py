@@ -259,6 +259,79 @@ def materialize_git_source(repository, revision, tree, destination, env):
     print(f'VERIFIED Git commit={revision} tree={tree} files={len(manifest)} bytes={total}', flush=True)
 
 
+def regular_archive_manifest(archive, expected, top):
+    """The reviewed GLib fallback archives contain only directories and files."""
+    verify(archive, expected)
+    if len(source_path(top).parts) != 1:
+        raise RuntimeError('Unexpected archive root')
+    manifest, directories, seen = {}, set(), set()
+    with tarfile.open(archive) as source:
+        members = source.getmembers()
+        if len(members) > 100000 or sum(m.size for m in members) > 2 * GIB:
+            raise RuntimeError('Source archive exceeds budget')
+        for member in members:
+            path = source_path(member.name.rstrip('/'))
+            if path.parts[0] != top or path in seen:
+                raise RuntimeError('Unexpected or duplicate archive path')
+            seen.add(path)
+            name = PurePosixPath(*path.parts[1:]).as_posix()
+            if member.isdir():
+                directories.add(name)
+            elif (member.isfile() and name != '.' and 0 <= member.size <= 128 * 1024 ** 2
+                  and member.mode in (0o644, 0o664, 0o755, 0o775)):
+                data = source.extractfile(member).read()
+                if len(data) != member.size:
+                    raise RuntimeError('Truncated archive source')
+                # Same safe regular-file modes as tarfile's data filter.
+                mode = '100755' if member.mode & 0o100 else '100644'
+                manifest[name] = (mode, git_object_id('blob', data))
+            else:
+                raise RuntimeError('Unexpected archive entry type or mode')
+    expected_dirs = {p.as_posix() for name in manifest for p in source_path(name).parents}
+    if not manifest or directories != expected_dirs or set(manifest) & directories:
+        raise RuntimeError('Unexpected archive directory layout')
+    return manifest
+
+
+def materialize_glib_subproject(name, archive, source, glib):
+    # Identities observed in the exact hash-pinned GLib archive, not permissive
+    # alternatives: gvdb is an empty gitlink placeholder, proxy is absent.
+    locations = {'gvdb': ('gvdb', 'empty'), 'proxy': ('proxy-libintl-0.5', 'absent')}
+    relative, expected_state = locations[name]
+    parent = glib / 'subprojects'
+    destination = parent / relative
+    # Reject symlink ancestors as well as destination links before any writes.
+    for directory in (source, glib, parent):
+        for component in (directory, *directory.parents):
+            if not stat.S_ISDIR(component.lstat().st_mode):
+                raise RuntimeError('Source/destination ancestor is not a real directory')
+
+    def check_destination():
+        if expected_state == 'absent':
+            if os.path.lexists(destination):
+                raise RuntimeError('Expected absent GLib subproject destination')
+        elif (not stat.S_ISDIR(destination.lstat().st_mode)
+              or any(destination.iterdir())):
+            raise RuntimeError('Expected empty real GLib subproject directory')
+
+    check_destination()
+    _, sha, top = ARCHIVES[name]
+    manifest = regular_archive_manifest(archive, sha, top)
+    verify_source_tree(source, manifest)
+    # Stage and verify without merging/overwriting. Only rmdir of the checked
+    # empty placeholder is allowed; never recursively remove a destination.
+    with tempfile.TemporaryDirectory(prefix='.pdva-source-', dir=parent) as staging:
+        staged = Path(staging) / relative
+        shutil.copytree(source, staged, symlinks=True)
+        verify_source_tree(staged, manifest)
+        check_destination()
+        if expected_state == 'empty':
+            destination.rmdir()
+        staged.rename(destination)
+    verify_source_tree(destination, manifest)
+    print(f'VERIFIED GLib subproject={relative} initial={expected_state} files={len(manifest)}', flush=True)
+
+
 def tree_size(root):
     return sum(p.stat().st_size for p in root.rglob('*') if p.is_file() and not p.is_symlink())
 
@@ -355,8 +428,8 @@ class Research:
             overlay = qemu / 'subprojects/packagefiles' / name
             if overlay.exists():
                 shutil.copytree(overlay, destination, dirs_exist_ok=True)
-        shutil.copytree(sources['gvdb'], glib / 'subprojects/gvdb')
-        shutil.copytree(sources['proxy'], glib / 'subprojects/proxy-libintl-0.5')
+        for name in ('gvdb', 'proxy'):
+            materialize_glib_subproject(name, self.root / (name + '.archive'), sources[name], glib)
         for name, sha in WHEELS.items():
             verify(qemu / 'python/wheels' / name, sha)
         self.phase('declared Kconfig closure control')
