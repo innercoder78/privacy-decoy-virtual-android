@@ -4,6 +4,7 @@ import contextlib
 import importlib.util
 import io
 import os
+import shutil
 import subprocess
 import zlib
 from pathlib import Path
@@ -106,6 +107,162 @@ class ResearchInputTests(unittest.TestCase):
             with self.assertRaises(tarfile.FilterError):
                 research.unpack(archive, root / "extracted")
             self.assertFalse((root / "escaped").exists())
+
+
+class AndroidPatchTests(unittest.TestCase):
+    def setUp(self):
+        # Synthetic patch fixtures, never substituted into the research build.
+        self.sources = {
+            'meson.build': research.QEMU_RT_ANCHOR.encode(),
+            'util/oslib-posix.c': (research.QEMU_SHM_ANCHOR +
+                                  '\n    int fd = -73;\n    return fd;\n}\n').encode(),
+        }
+        pins = {name: research.hashlib.sha256(data).hexdigest() for name, data in self.sources.items()}
+        patcher = mock.patch.dict(research.QEMU_PATCH_INPUTS, pins, clear=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def render(self, sources=None, target='aarch64-linux-android30'):
+        return research.render_android_patch(self.sources if sources is None else sources, target)
+
+    def test_verified_inputs_and_platform_scope(self):
+        patched = self.render()
+        self.assertEqual(set(self.sources), set(patched))
+        c = patched['util/oslib-posix.c'].decode()
+        self.assertEqual(research.ANDROID_SHM_IMPL + self.sources['util/oslib-posix.c'].decode()
+                         + '#endif /* __ANDROID__ */\n', c)
+        meson = patched['meson.build'].decode()
+        self.assertIn("if cc.get_define('__ANDROID__') != ''", meson)
+        self.assertIn('if not cc.links', meson)
+        self.assertIn("error('PDVA Android shared memfd functionality unavailable')", meson)
+        self.assertIn(research.QEMU_RT_ANCHOR.removeprefix('rt = not_found\nif'), meson)
+        for forbidden in ('mkstemp', 'shm_open', 'shm_unlink', 'syscall', 'MFD_HUGETLB', 'MFD_ALLOW_SEALING'):
+            self.assertNotIn(forbidden, research.ANDROID_SHM_IMPL)
+
+    def test_modified_or_substituted_source_is_rejected(self):
+        for name in self.sources:
+            with self.subTest(name=name), self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                self.render(self.sources | {name: self.sources[name] + b'\n'})
+
+    def test_missing_and_duplicate_anchors_are_rejected(self):
+        for data in (b'no anchor', self.sources['meson.build'] * 2):
+            # Reach the independent anchor check with a synthetic fixture pin.
+            with mock.patch.dict(research.QEMU_PATCH_INPUTS, {
+                'meson.build': research.hashlib.sha256(data).hexdigest()
+            }), self.assertRaisesRegex(RuntimeError, 'anchors mismatch'):
+                self.render(self.sources | {'meson.build': data})
+
+    def test_duplicate_application_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+            self.render(self.render())
+
+    def test_unexpected_files_and_wrong_targets_are_rejected(self):
+        for sources in (self.sources | {'extra.c': b'extra'}, {'meson.build': b'only one'}):
+            with self.assertRaisesRegex(RuntimeError, 'target or file set'):
+                self.render(sources)
+        for target in ('aarch64-linux-gnu', 'x86_64-linux-android30', 'aarch64-linux-android29'):
+            with self.subTest(target=target), self.assertRaisesRegex(RuntimeError, 'target or file set'):
+                self.render(target=target)
+
+    def test_all_files_are_verified_before_any_write(self):
+        with tempfile.TemporaryDirectory(prefix='pdva-patch-test-') as directory:
+            root = Path(directory)
+            (root / 'util').mkdir()
+            for name, data in self.sources.items():
+                (root / name).write_bytes(data)
+            (root / 'util/oslib-posix.c').write_bytes(b'substitution')
+            with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                research.apply_android_patch(root, lambda text: None)
+            self.assertEqual(self.sources['meson.build'], (root / 'meson.build').read_bytes())
+
+    def test_pcre2_targets_exclude_programs(self):
+        self.assertEqual(('libpcre2-8.la', 'libpcre2-posix.la'), research.PCRE2_BUILD_TARGETS)
+        self.assertEqual({'install-libLTLIBRARIES', 'install-includeHEADERS',
+                          'install-nodist_includeHEADERS', 'install-pkgconfigDATA'},
+                         set(research.PCRE2_INSTALL_TARGETS))
+
+    @unittest.skipUnless(os.name == 'posix' and shutil.which('cc'), 'Host C controls run on Linux CI')
+    def test_native_failure_cleanup_platform_and_missing_api_controls(self):
+        # Only these modeled host unit tests execute. No Android code is run.
+        prelude = '''#include <assert.h>
+#include <errno.h>
+#include <stddef.h>
+#include <string.h>
+#define __ANDROID__ 1
+#define __BIONIC__ 1
+#define __aarch64__ 1
+#define __ANDROID_API__ 30
+#define MFD_CLOEXEC 1
+typedef struct Error { int code; } Error;
+static Error recorded;
+static int result, chmod_result, resize_result, creates, chmods, resizes, closes;
+static size_t requested_size;
+static int test_create(const char *name, unsigned flags) {
+    assert(strcmp(name, "qemu-shm") == 0 && flags == MFD_CLOEXEC);
+    creates++; errno = EPERM; return result;
+}
+static int test_resize(int fd, size_t size) {
+    assert(fd == result); resizes++; requested_size = size;
+    errno = ENOSPC; return resize_result;
+}
+static int test_chmod(int fd, unsigned mode) {
+    assert(fd == result && mode == 0); chmods++;
+    errno = EACCES; return chmod_result;
+}
+static int test_close(int fd) { assert(fd == result); closes++; return 0; }
+static void error_setg_errno(Error **errp, int code, const char *format, ...) {
+    (void)format; recorded.code = code; *errp = &recorded;
+}
+#define memfd_create test_create
+#define ftruncate test_resize
+#define fchmod test_chmod
+#define close test_close
+'''
+        driver = '''#error Wrong Android branch
+#endif
+int main(void) {
+    Error *error = NULL;
+    result = -1;
+    assert(qemu_shm_alloc(4096, &error) == -1);
+    assert(creates == 1 && !chmods && !resizes && !closes && error->code == EPERM);
+    error = NULL; result = 7; chmod_result = -1;
+    assert(qemu_shm_alloc(4096, &error) == -1);
+    assert(chmods == 1 && !resizes && closes == 1 && error->code == EACCES);
+    error = NULL; chmod_result = 0; resize_result = -1;
+    assert(qemu_shm_alloc(4096, &error) == -1);
+    assert(resizes == 1 && closes == 2 && error->code == ENOSPC);
+    error = NULL; result = 0; resize_result = 0;
+    assert(qemu_shm_alloc(0, &error) == 0 && !error);
+    assert(resizes == 2 && closes == 2 && requested_size == 0);
+    return 0;
+}
+'''
+        with tempfile.TemporaryDirectory(prefix='pdva-patch-c-test-') as directory:
+            root = Path(directory)
+            source, binary = root / 'control.c', root / 'control'
+            source.write_text(prelude + research.ANDROID_SHM_IMPL + driver)
+            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', str(source),
+                            '-o', str(binary)], check=True, capture_output=True)
+            subprocess.run([str(binary)], check=True, timeout=10)
+            for data in (self.sources['util/oslib-posix.c'], self.render()['util/oslib-posix.c']):
+                source.write_bytes(data)
+                text = subprocess.check_output(['cc', '-E', '-P', str(source)])
+                if data == self.sources['util/oslib-posix.c']:
+                    original = text
+                else:
+                    self.assertEqual(original, text)
+            source.write_text(research.ANDROID_SHM_PROBE)
+            flags = ['-D__ANDROID__=1', '-D__BIONIC__=1', '-D__aarch64__=1', '-D__ANDROID_API__=30']
+            result = subprocess.run(['cc', '-Werror', *flags,
+                '-Dmemfd_create=pdva_missing_memfd', str(source), '-o', str(binary)],
+                capture_output=True, text=True)
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn('pdva_missing_memfd', result.stderr)
+            for missing in range(len(flags)):
+                result = subprocess.run(['cc', '-Werror', *flags[:missing], *flags[missing + 1:],
+                    '-c', str(source), '-o', str(root / 'bad.o')], capture_output=True, text=True)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn('PDVA research requires', result.stderr)
 
 
 class GlibSubprojectTests(unittest.TestCase):

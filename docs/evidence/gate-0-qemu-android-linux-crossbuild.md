@@ -3,7 +3,262 @@
 **2026-10-08. Gate 0: Unresolved. Gates A–G: Not reached.**
 ADR-0001 remains Accepted; ADR-0002 remains Proposed. No engine selected.
 
-## Second revision: GLib subproject materialization (2026-10-09)
+## Third revision: Android shared-memory portability (2026-10-09)
+
+**Head `6b91edab5f1bf3e6fe78f56daf8e3eb8c1cae30f` built all requested dependency
+libraries on Ubuntu for Android ARM64, then failed during QEMU configuration.**
+QEMU compilation/linking was NOT RUN. The next patched head's CI remains pending
+at publication; neither a full QEMU executable nor Android runtime behavior is
+established by the local controls below.
+
+Live preflight matched main `d5466f1943e3cd7e33cbd62c8a23571e4de52ae5` and
+sole open PR #6 at `6b91eda`. Foundation and Android succeeded, cross-build failed;
+all 39 Linux repository tests passed. The Android harness passed 48 protocol/report
+checks, without any emulator. Reviews, comments and unresolved threads were empty;
+combined statuses had no contexts and branch rules were empty. GitHub Status was
+operational, updated `2026-10-09T17:14:42.469Z`. The clean existing branch, single
+worktree, no stashes, full six-file base diff, ordinary 100644 modes, requirements,
+ADRs, evidence, source/license/dependency records and binary inventory were reviewed.
+The historical repository remains untouched and read-only.
+
+### What the third Linux attempt actually executed
+
+[Run 37964351266](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/37964351266),
+job `113934830958`, checked out the exact `6b91eda` head. It completed source/archive/
+Git-object verification, both GLib subproject installations, 41-symbol declared
+Kconfig closure, verified NDK r28c acquisition, Android ARM64 link control and ELF
+inspection of that control, host Meson preparation, PCRE2, libffi, libfdt and GLib
+configuration/build/installation. The earlier two source failures remain failures;
+this run separately proves that their corrections advanced the pipeline.
+
+The log records these installed static-library identities (not QEMU DT_NEEDED or
+proof that every GLib component will link into the selected QEMU executable):
+
+| Library | Bytes | SHA-256 from the executed run |
+|---|---:|---|
+| libpcre2-8.a | 464610 | `c4f985898d2e83835716dc43c65471b7dbaccbf5b597f9b012fa908d60d004d3` |
+| libpcre2-posix.a | 7258 | `49392a5adfd5a4e59b85153047a86f65414fd38018caeb486a2268b4ce31cf84` |
+| libffi.a | 107830 | `5f2765c56ed6d25dcf8b773c5b3a0be3e4b8bd8aedfd44cb44122919bba55b43` |
+| libfdt.a | 62028 | `a541b09de75db673691c3779bee30391a54fbd8211a5a6ffd212685f68d0d356` |
+| libglib-2.0.a | 8037372 | `50f110beceae022fc3890d72fee5f27bea65a6e5c888edcc6c35c0184f2ea8e5` |
+| libgio-2.0.a | 19719336 | `23d4c1c9ab4677084e52b17ec3bc7c421673191e79707f76178c63bae0ed65d0` |
+| libgirepository-2.0.a | 2831942 | `783192eb06f376ee3c47660a7972631954c100258d4d2324d902458254feea9f` |
+| libgmodule-2.0.a | 71990 | `22a3caf8de2c274831161b38f4fdb77fbc3f3196d74734e1f4f1b08c12a2b695` |
+| libgobject-2.0.a | 2732352 | `4ffc851217b8e812a5f524766b49cb4cd951c26a8bcaf662989796fb9d2e3eb6` |
+| libgthread-2.0.a | 6222 | `34f76c4c92b363a53c163ef9f19b8c012655da639c351eaa30fad68dd19add92` |
+| libintl.a | 12996 | `ab4bc64ec11ef0966e46f610bcc872ac5bb9d3bbeda8453ebee212d06383b26c` |
+
+QEMU configure then reported `Checking for function "shm_open" : NO` and:
+
+```text
+meson.build:1375:12: ERROR: C prefer_static library 'rt' not found
+FAILED [QEMU Android configure]: Command exit 1; dependent stages NOT RUN
+```
+
+The underlying link probe reported an undefined `shm_open`; the next probe could
+not find `-lrt`. Other failed optional feature/compiler probes in diagnostic tails
+are not the first fatal blocker and are not individually suppressed.
+
+### Exact source behavior and selected adaptation
+
+The source remains QEMU v11.1.2 at
+`4fc49f46dc95d4a27de2509e7fceb2931e91faeb`. Its `meson.build:1371` assumes every
+non-Windows target missing libc `shm_open` must supply librt. Android has neither
+that API nor a separate librt in the reviewed NDK API-30 stubs. The NDK's
+`sys/mman.h` declares `memfd_create` under GNU feature selection from API 30;
+AArch64 API-30 libc exports it as `memfd_create@LIBC_R`. The reviewed Linux and
+existing Windows r28c copies of this header and libc link stub are byte-identical.
+This establishes build-time API identity, not SELinux/seccomp/isolated-UID authority.
+
+`util/oslib-posix.c:985` creates a unique mode-0 POSIX shm object, unlinks its
+name, truncates it to the requested size and returns an owning FD, closing on
+resize failure. `util/meson.build` includes this file for POSIX targets.
+`backends/hostmem-shm.c` is included by the non-Windows/non-Emscripten system
+source set, and `system/physmem.c` calls the function for RAM_SHARED when the
+memfd availability check fails. The latter intentionally requests size zero
+before later RAM sizing. Thus this is included, potentially reachable source in
+the selected system build, not safely removable dead functionality. Actual linked
+reachability remains unproved until a QEMU link/map exists. No new backend is enabled.
+
+The local Android-only implementation creates a real memfd with `MFD_CLOEXEC`,
+applies `fchmod(fd, 0)` to preserve the original reopening restriction, and uses
+`ftruncate` with the existing requested size (including zero). Each syscall error
+reports through QEMU's existing Error API; permission/resize errors close the FD.
+There is no named filesystem object, ambient directory fallback, raw syscall shim,
+dummy rt library, broker, privileged helper or success stub. Non-Android C retains
+the original function unchanged. Meson detects the target compiler's `__ANDROID__`
+macro (QEMU configure labels Bionic as Linux), requires the reviewed memfd/fchmod/
+ftruncate/shared-mmap link control, and preserves its original librt logic for
+other targets. Both new C paths require Bionic, AArch64 and API 30 explicitly.
+
+The [memfd API semantics](https://man7.org/linux/man-pages/man2/memfd_create.2.html)
+support FD-backed shared mappings and automatic release after all references are
+dropped. The name is diagnostic, not a rendezvous pathname. Close-on-exec limits
+exec inheritance; it does not prevent deliberate FD passing or fork inheritance.
+No seals or huge pages are requested: callers still need writable, resizable RAM,
+and the old API supplied no sealing guarantee. Resizing is not physical-page
+reservation; allocation/page faults can still exhaust memory or fail. memfd avoids
+a `/dev/shm` mount limit but does not supply resource quotas. Android accounting,
+FD limits, policy denials, sharing, process death and mapping cleanup remain runtime
+Unknowns. This patch does not establish cross-process isolation or a trusted peer.
+
+TCG does **not** call `qemu_shm_alloc` for its split-W^X buffer: `tcg/region.c`
+uses `qemu_memfd_alloc`, maps RW/RX aliases and closes the FD after successful
+mapping. `util/memfd.c` already retries memfd then falls back to mkstemp; TCG's
+default-on split-W^X mode can also fall back, unlike force-on. Neither existing
+fallback is newly introduced or used by this adaptation. Both still require a
+separate fail-closed authority review before any Android runtime experiment; this
+research executable is not approved for launch or harness integration.
+
+### Reproducible patch identity and exact diff
+
+The script verifies both complete pre-patch file SHA-256 values and unique anchors,
+rejects a changed/missing/extra patch-input file or duplicate application, validates
+all inputs before writing either file, and logs before/after hashes plus the full
+unified diff. It changes only these two files inside disposable verified QEMU
+source, after acquisition and before any source build code. The original archive,
+commit, dependency pins, license notices and provenance remain unchanged. The
+oslib file's existing permissive notice is retained; no new third-party dependency
+or production adoption is made. This is a repository-owned research adaptation.
+
+| Patched file | Original SHA-256 | Patched SHA-256 |
+|---|---|---|
+| meson.build | `7d45b715ca8e740d787eee6d4a1e8ae4a7456aecfe16dda2a7d32a0f2cc10591` | `51ac2ab6820b085cce6eaab28adb087885ef12465d81db47ff7899cea117fe6c` |
+| util/oslib-posix.c | `ad7bc820a4ab61fa0b00502a0a04540228a7cc60da5cb8908fcbc2af2419b869` | `0e473f258bce59cad1e63d90b424c3994c02816529fbbb4349564b2704876bdc` |
+
+The following UTF-8/LF zero-context unified diff, including its final newline, has SHA-256
+`7b9289b30f08c53e29049530c496e1572ac133ae39a0182116e3bc26299c1441`:
+
+```diff
+--- a/meson.build
++++ b/meson.build
+@@ -1372 +1372,29 @@
+-if host_os != 'windows'
++if cc.get_define('__ANDROID__') != ''
++  if not cc.links('''#ifndef _GNU_SOURCE
++#define _GNU_SOURCE
++#endif
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <unistd.h>
++#include <fcntl.h>
++#if !defined(__ANDROID__) || !defined(__BIONIC__) || !defined(__aarch64__) || __ANDROID_API__ != 30
++#error PDVA research requires Android Bionic AArch64 API 30
++#endif
++int main(void)
++{
++    int fd = memfd_create("pdva-shm-control", MFD_CLOEXEC);
++    void *p;
++    if (fd < 0) { return 1; }
++    if (fchmod(fd, 0) || ftruncate(fd, 4096) || fcntl(fd, F_GETFD) != FD_CLOEXEC) {
++        close(fd);
++        return 2;
++    }
++    p = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++    if (p == MAP_FAILED) { close(fd); return 3; }
++    if (munmap(p, 4096)) { close(fd); return 4; }
++    return close(fd);
++}
++''', name: 'PDVA Android shared memfd')
++    error('PDVA Android shared memfd functionality unavailable')
++  endif
++elif host_os != 'windows'
+--- a/util/oslib-posix.c
++++ b/util/oslib-posix.c
+@@ -984,0 +985,28 @@
++#if defined(__ANDROID__)
++/* PDVA research only: anonymous FD, no pathname or fallback authority. */
++#if !defined(__BIONIC__) || !defined(__aarch64__) || __ANDROID_API__ != 30
++#error PDVA research requires Android Bionic AArch64 API 30
++#endif
++int qemu_shm_alloc(size_t size, Error **errp)
++{
++    int fd = memfd_create("qemu-shm", MFD_CLOEXEC);
++
++    if (fd < 0) {
++        error_setg_errno(errp, errno, "failed to create Android shared memfd");
++        return -1;
++    }
++    /* Preserve the original mode-0 restriction on reopening through a path. */
++    if (fchmod(fd, 0) == -1) {
++        error_setg_errno(errp, errno, "failed to restrict Android shared memfd");
++        close(fd);
++        return -1;
++    }
++    if (ftruncate(fd, size) == -1) {
++        error_setg_errno(errp, errno,
++                         "failed to resize Android shared memfd to %zu", size);
++        close(fd);
++        return -1;
++    }
++    return fd;
++}
++#else
+@@ -1035,0 +1064 @@
++#endif /* __ANDROID__ */
+```
+
+### PCRE2 warnings and explicit minimal targets
+
+The exact PCRE2 10.46 `configure --help`, `configure.ac`, `Makefile.am` and generated
+`Makefile.in` were inspected and matched to the pinned archive. There are no
+`--disable-pcre2grep` or `--disable-pcre2test` options. The previous configure
+completed with both warnings; its selected 8-bit configuration includes pcre2grep,
+and pcre2test is a default program. Successful default `make` therefore implies
+those targets were built by the reviewed Makefile, not disabled by the rejected
+flags. The run did not expose their individual artifact hashes or quiet compiler
+logs, so exact utility binaries/object inventory cannot be independently reported.
+The installed two library hashes above are direct log evidence.
+
+The revision removes the unsupported flags and adds supported
+`--enable-option-checking=fatal`. It explicitly builds `libpcre2-8.la` and
+`libpcre2-posix.la` and installs only the reviewed library, include-header,
+generated-header and pkg-config targets. Existing static/PIC, no JIT, no 16/32-bit
+settings remain. Build/install commands are now logged; the recipe requires both
+libraries, headers and pkg-config files and rejects grep/test program outputs in
+the build, .libs and installed bin directories. This is target selection, not
+warning suppression. The new target sequence awaits execution on Linux.
+
+### Local validation and next evidence boundary
+
+Local Windows controls reverified the actual pinned QEMU archive, rendered the
+exact patch, compiled the added qemu_shm_alloc function against real r28c API-30
+headers (object only, QEMU Error API declared but not stub-linked), and linked the
+standalone shared-memory control without librt. Wrong API 29, x86-64 Android,
+non-Android identity and a deliberately missing memfd symbol were rejected.
+Non-Android preprocessing of the patched function exactly matched the original.
+The resulting standalone control was 7,056 bytes, SHA-256
+`e678e948ff1dbd497d5e1b4117df7df4a30d766539d684f4fc01fdbe82c02493`:
+ELF64/AArch64 PIE with `/system/bin/linker64`, libc.so/libdl.so, LIBC/LIBC_R
+imports, RELRO/bind-now, non-executable stack and 0x4000 LOAD alignment; no
+SONAME/RPATH/RUNPATH/TEXTREL/GLIBC versions. Undefined dynamic imports were
+memfd_create, fchmod, ftruncate, fcntl, close, mmap, munmap and the normal Bionic
+startup imports __libc_init, __cxa_atexit, __register_atfork. This is a link-control
+executable, **not QEMU or a JNI library**, and was never executed.
+
+The regression suite now contains 47 tests, preserving all prior 39 unchanged:
+43 pass locally, four explicitly skip on Windows (three filesystem tests and one
+host-C unit/control test). The new controls cover patch identity, anchors,
+duplicate application, exact file set, target/platform isolation and library-only
+PCRE2 targets. The next Linux run will also compile/run modeled host syscall-failure/
+cleanup tests and reject absent APIs/identities; these are test fixtures, never production API
+stubs or Android runtime results. Foundation/Markdown links, harness, Python
+syntax, unchanged-workflow shell/manual YAML review, whitespace, exact-base modes,
+immutable pins, dependency/license/provenance and public secret/binary checks are
+passed before commit. No standalone YAML parser is available locally.
+
+Next: let the unchanged bounded Ubuntu workflow attempt QEMU configure and Ninja
+compile/link with this explicit patch, then review the first actual result at the
+new exact head. If linking succeeds, inspect the QEMU ELF and full runner-local
+link map/inventory before a separate narrow PIC/export/loader experiment. If it
+fails, preserve its first genuine diagnostic. Neither local control results nor
+successful dependencies imply a QEMU build. New CI remains pending at publication;
+no post-push polling or reruns. No phone, ADB, emulator, Cloud, privileged host
+installation, Android permission/broker change, host VpnService, guest image or
+committed native binary. Gate 0 Unresolved; A–G Not reached; ADR-0002 Proposed;
+no production-engine, containment, security or performance claim.
+
+## Second revision record: GLib subproject materialization (2026-10-09)
 
 **Head `b981a47430f5781d79d783237282f42d71a3c092` proved the corrected Git
 source verification on Linux, then failed at the existing gvdb directory.**
@@ -377,8 +632,9 @@ must be reviewed from the actual configuration and link map before distribution.
 PCRE2 and libffi use their reviewed release configure scripts, so their Meson
 wrapdb patches are **not adopted**. Proxy and gvdb are pre-extracted into the exact
 GLib subproject names. QEMU's existing Berkeley Meson overlays are copied explicitly;
-no C portability patch, fake API, disabled compiler failure or warning bypass is
-introduced. The sole QEMU configuration addition is `CONFIG_ARM_VIRT=y` in
+the original recipe introduced no C portability patch, fake API, disabled compiler
+failure or warning bypass. The third revision adds the explicit Android patch
+recorded above. The original QEMU configuration addition is `CONFIG_ARM_VIRT=y` in
 `configs/devices/aarch64-softmmu/pdva.mak` inside temporary source storage.
 
 Host tools are separate: Ubuntu supplies Python, pip/setuptools/wheel, native
@@ -478,8 +734,9 @@ An ET_DYN executable with PT_INTERP is not a JNI library. No SONAME/export-map,
 linker-namespace compatibility, Android load success or 16-KiB runtime behavior
 is asserted from its filename or static alignment alone. In particular, segment
 alignment is only one page-size check; future packaging and runtime checks remain.
-There is presently no new output hash, native size, resolved QEMU DT_NEEDED list,
-compiled device result or Linux compiler error to report.
+There is no QEMU output hash, native size, resolved QEMU DT_NEEDED list or
+compiled-device result. The third Linux run above records successful dependency
+builds and the first fatal QEMU configuration diagnostic.
 
 | Next integration question | Source-based disposition; all runtime outcomes Unknown |
 |---|---|
@@ -517,5 +774,7 @@ the narrow validator/test updates and evidence documentation. No Android source
 or permission changed; no source archive, guest/runtime binary, secret or local
 private path is intentionally tracked. At original publication all hosted results
 were pending; the later observed source-acquisition failure is recorded above.
-No dependency or QEMU compiler/configuration/link result exists. The revised
-head remains pending and must not inherit a success from these local checks.
+At original publication no Linux dependency or QEMU build result existed. The
+third run above now establishes dependency builds and a QEMU configuration
+failure. The newly patched head remains pending and must not inherit a QEMU
+success from local controls or prior dependency results.

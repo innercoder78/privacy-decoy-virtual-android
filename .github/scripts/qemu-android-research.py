@@ -6,6 +6,7 @@ runner temporary directory, never in the checkout. Every failed stage is fatal.
 No target program is run, installed into Android, uploaded or published.
 """
 import hashlib
+import difflib
 import os
 from pathlib import Path, PurePosixPath
 import platform
@@ -63,6 +64,79 @@ WHEELS = {
 }
 GIB = 1024 ** 3
 
+# Local research adaptation of QEMU 4fc49f46..., not an upstream change.
+# Whole-file hashes are from the independently verified, unmodified archive.
+QEMU_PATCH_INPUTS = {
+    'meson.build': '7d45b715ca8e740d787eee6d4a1e8ae4a7456aecfe16dda2a7d32a0f2cc10591',
+    'util/oslib-posix.c': 'ad7bc820a4ab61fa0b00502a0a04540228a7cc60da5cb8908fcbc2af2419b869',
+}
+ANDROID_SHM_PROBE = '''#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#if !defined(__ANDROID__) || !defined(__BIONIC__) || !defined(__aarch64__) || __ANDROID_API__ != 30
+#error PDVA research requires Android Bionic AArch64 API 30
+#endif
+int main(void)
+{
+    int fd = memfd_create("pdva-shm-control", MFD_CLOEXEC);
+    void *p;
+    if (fd < 0) { return 1; }
+    if (fchmod(fd, 0) || ftruncate(fd, 4096) || fcntl(fd, F_GETFD) != FD_CLOEXEC) {
+        close(fd);
+        return 2;
+    }
+    p = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (p == MAP_FAILED) { close(fd); return 3; }
+    if (munmap(p, 4096)) { close(fd); return 4; }
+    return close(fd);
+}
+'''
+ANDROID_SHM_IMPL = '''#if defined(__ANDROID__)
+/* PDVA research only: anonymous FD, no pathname or fallback authority. */
+#if !defined(__BIONIC__) || !defined(__aarch64__) || __ANDROID_API__ != 30
+#error PDVA research requires Android Bionic AArch64 API 30
+#endif
+int qemu_shm_alloc(size_t size, Error **errp)
+{
+    int fd = memfd_create("qemu-shm", MFD_CLOEXEC);
+
+    if (fd < 0) {
+        error_setg_errno(errp, errno, "failed to create Android shared memfd");
+        return -1;
+    }
+    /* Preserve the original mode-0 restriction on reopening through a path. */
+    if (fchmod(fd, 0) == -1) {
+        error_setg_errno(errp, errno, "failed to restrict Android shared memfd");
+        close(fd);
+        return -1;
+    }
+    if (ftruncate(fd, size) == -1) {
+        error_setg_errno(errp, errno,
+                         "failed to resize Android shared memfd to %zu", size);
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+#else
+'''
+QEMU_RT_ANCHOR = """rt = not_found
+if host_os != 'windows'
+  have_shm_open = cc.has_function('shm_open')
+  if not have_shm_open
+    rt = cc.find_library('rt', required: true)
+  endif
+endif
+"""
+QEMU_SHM_ANCHOR = 'int qemu_shm_alloc(size_t size, Error **errp)\n{'
+PCRE2_BUILD_TARGETS = ('libpcre2-8.la', 'libpcre2-posix.la')
+PCRE2_INSTALL_TARGETS = ('install-libLTLIBRARIES', 'install-includeHEADERS',
+                         'install-nodist_includeHEADERS', 'install-pkgconfigDATA')
+
 
 def digest(path):
     with Path(path).open('rb') as stream:
@@ -74,6 +148,52 @@ def verify(path, expected):
     if actual != expected:
         raise RuntimeError(f'Hash mismatch: {Path(path).name}: {actual}')
     print(f'VERIFIED {Path(path).name} sha256={actual}', flush=True)
+
+
+def render_android_patch(sources, target):
+    if target != 'aarch64-linux-android30' or set(sources) != set(QEMU_PATCH_INPUTS):
+        raise RuntimeError('Unexpected QEMU patch target or file set')
+    for name, expected in QEMU_PATCH_INPUTS.items():
+        if hashlib.sha256(sources[name]).hexdigest() != expected:
+            raise RuntimeError(f'QEMU patch input identity mismatch: {name}')
+    meson, oslib = (sources[name].decode('utf-8') for name in QEMU_PATCH_INPUTS)
+    if (meson.count(QEMU_RT_ANCHOR) != 1 or oslib.count(QEMU_SHM_ANCHOR) != 1
+            or not oslib.endswith('    return fd;\n}\n')):
+        raise RuntimeError('QEMU patch anchors mismatch')
+    # Compiler identity matters: QEMU configure calls Bionic "linux".
+    android_rt = ("rt = not_found\nif cc.get_define('__ANDROID__') != ''\n"
+                  "  if not cc.links('''" + ANDROID_SHM_PROBE +
+                  "''', name: 'PDVA Android shared memfd')\n"
+                  "    error('PDVA Android shared memfd functionality unavailable')\n"
+                  "  endif\nelif host_os != 'windows'\n")
+    patched = {
+        'meson.build': meson.replace(QEMU_RT_ANCHOR, QEMU_RT_ANCHOR.replace(
+            "rt = not_found\nif host_os != 'windows'\n", android_rt), 1).encode(),
+        'util/oslib-posix.c': (oslib.replace(QEMU_SHM_ANCHOR,
+            ANDROID_SHM_IMPL + QEMU_SHM_ANCHOR, 1) + '#endif /* __ANDROID__ */\n').encode(),
+    }
+    return patched
+
+
+def apply_android_patch(qemu, emit):
+    sources = {}
+    for name in QEMU_PATCH_INPUTS:
+        path = qemu / name
+        if (not stat.S_ISREG(path.lstat().st_mode) or path.is_symlink()
+                or any(p.is_symlink() for p in path.parents)):
+            raise RuntimeError('Unsafe QEMU patch input')
+        sources[name] = path.read_bytes()
+    patched = render_android_patch(sources, 'aarch64-linux-android30')
+    diff = ''.join(''.join(difflib.unified_diff(
+        sources[name].decode().splitlines(keepends=True),
+        patched[name].decode().splitlines(keepends=True),
+        fromfile='a/' + name, tofile='b/' + name, n=0)) for name in sorted(patched))
+    # Validate all input identities before writing either file; duplicate use fails.
+    for name, data in patched.items():
+        (qemu / name).write_bytes(data)
+        verify(qemu / name, hashlib.sha256(data).hexdigest())
+        emit(f'PATCH {name} before={QEMU_PATCH_INPUTS[name]} after={digest(qemu / name)}')
+    emit('LOCAL RESEARCH PATCH sha256=' + hashlib.sha256(diff.encode()).hexdigest() + '\n' + diff)
 
 
 def download(url, destination, expected):
@@ -432,6 +552,8 @@ class Research:
             materialize_glib_subproject(name, self.root / (name + '.archive'), sources[name], glib)
         for name, sha in WHEELS.items():
             verify(qemu / 'python/wheels' / name, sha)
+        self.phase('reviewed Android shared-memory adaptation')
+        apply_android_patch(qemu, self.emit)
         self.phase('declared Kconfig closure control')
         (qemu / 'configs/devices/aarch64-softmmu/pdva.mak').write_text('CONFIG_ARM_VIRT=y\n')
         closure = self.run(sys.executable, 'scripts/minikconf.py', '--allnoconfig',
@@ -498,6 +620,13 @@ class Research:
         probe.write_text('#include <zlib.h>\n#include <iconv.h>\nint main(void) { iconv_t c=iconv_open("UTF-8","UTF-8"); iconv_close(c); return zlibVersion()==0; }\n')
         self.run(cc, '-Werror', '-fPIE', '-pie', '-Wl,-z,relro,-z,now,-z,max-page-size=16384', probe, '-lz', '-o', self.root / 'control')
         self.inspect(self.root / 'control', toolbin)
+        self.phase('Android shared-memory link control')
+        probe = self.root / 'shm-control.c'
+        probe.write_text(ANDROID_SHM_PROBE)
+        self.run(cc, '-Werror', '-fPIE', '-pie', '-Wl,-z,relro,-z,now,-z,max-page-size=16384',
+                 probe, '-o', self.root / 'shm-control')
+        self.inspect(self.root / 'shm-control', toolbin)
+        self.emit('LINKED Android shared-memory control; NOT EXECUTED; runtime authority Unknown')
         self.phase('host Meson preparation')
         self.run(sys.executable, '-m', 'venv', '--system-site-packages', self.root / 'host-tools')
         host_python = self.root / 'host-tools/bin/python'
@@ -517,10 +646,10 @@ class Research:
         # incorrectly prepend it to our already absolute target prefix.
         native = self.root / 'native.ini'
         native.write_text("[binaries]\nc = '/usr/bin/cc'\ncpp = '/usr/bin/c++'\nar = '/usr/bin/ar'\nstrip = '/usr/bin/strip'\n")
-        # Autoconf release scripts; no autoreconf, Meson patches, JIT or tests.
+        # Autoconf release scripts; no autoreconf, PCRE2 JIT or target tests.
         for name, options in (
             ('pcre2', ['--disable-shared', '--enable-static', '--with-pic', '--disable-jit',
-                       '--disable-pcre2grep', '--disable-pcre2test', '--disable-pcre2-16', '--disable-pcre2-32']),
+                       '--enable-option-checking=fatal', '--disable-pcre2-16', '--disable-pcre2-32']),
             ('libffi', ['--disable-shared', '--enable-static', '--with-pic', '--disable-docs', '--disable-multi-os-directory']),
         ):
             self.phase(name + ' Android build')
@@ -528,8 +657,25 @@ class Research:
             build.mkdir()
             self.run('sh', sources[name] / 'configure', '--host=aarch64-linux-android',
                      f'--prefix={prefix}', f'--libdir={prefix}/lib', *options, cwd=build, env=target_env, show=True)
-            self.run('make', '-j2', cwd=build, env=target_env)
-            self.run('make', 'install', cwd=build, env=target_env)
+            if name == 'pcre2':
+                # PCRE2 10.46's Autoconf build has no switch to omit programs.
+                # only its reviewed library/header/pkg-config Makefile targets.
+                self.run('make', '-j2', 'V=1', *PCRE2_BUILD_TARGETS,
+                         cwd=build, env=target_env, show=True)
+                self.run('make', *PCRE2_INSTALL_TARGETS, cwd=build, env=target_env, show=True)
+                for directory in (build, build / '.libs', prefix / 'bin'):
+                    for tool in ('pcre2grep', 'pcre2test', 'pcre2posix_test', 'pcre2_jit_test'):
+                        if os.path.lexists(directory / tool):
+                            raise RuntimeError('Unexpected PCRE2 program built or installed')
+                for artifact in ('lib/libpcre2-8.a', 'lib/libpcre2-posix.a', 'include/pcre2.h',
+                                 'include/pcre2posix.h', 'lib/pkgconfig/libpcre2-8.pc',
+                                 'lib/pkgconfig/libpcre2-posix.pc'):
+                    if not (prefix / artifact).is_file():
+                        raise RuntimeError('Missing PCRE2 library build output')
+                self.emit('VERIFIED PCRE2 library/header/pkg-config outputs; grep/test programs absent')
+            else:
+                self.run('make', '-j2', cwd=build, env=target_env)
+                self.run('make', 'install', cwd=build, env=target_env)
             self.emit(f'BUILT {name}; target execution NOT RUN')
             for artifact in sorted((prefix / 'lib').glob('*.a')):
                 self.emit(f'DEPENDENCY {artifact.name} sha256={digest(artifact)}')
