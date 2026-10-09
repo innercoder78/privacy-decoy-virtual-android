@@ -20,32 +20,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           clean: false
-      - name: Avoid rebuilding unchanged research inputs
-        id: inputs
-        shell: bash
-        env:
-          PREVIOUS_HEAD: ${{ github.event.before }}
-          EVENT_ACTION: ${{ github.event.action }}
-        run: |
-          set -euo pipefail
-          changed=true
-          if [[ "$EVENT_ACTION" == synchronize ]]; then
-            [[ "$PREVIOUS_HEAD" =~ ^[0-9a-f]{40}$ ]]
-            git fetch --no-tags --depth=1 origin "$PREVIOUS_HEAD"
-            result=0
-            git diff --quiet "$PREVIOUS_HEAD" HEAD -- \
-              .github/scripts/qemu-android-research.py \
-              .github/workflows/qemu-android-research.yml || result=$?
-            if [[ "$result" == 0 ]]; then
-              changed=false
-              echo 'Research inputs unchanged; no new build result. Consult the prior exact-head run.'
-            elif [[ "$result" != 1 ]]; then
-              exit "$result"
-            fi
-          fi
-          echo "changed=$changed" >> "$GITHUB_OUTPUT"
       - name: Validate source and run bounded research
-        if: steps.inputs.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail

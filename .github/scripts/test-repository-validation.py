@@ -3,6 +3,9 @@
 import contextlib
 import importlib.util
 import io
+import os
+import subprocess
+import zlib
 from pathlib import Path
 import tempfile
 import tarfile
@@ -102,6 +105,125 @@ class ResearchInputTests(unittest.TestCase):
             with self.assertRaises(tarfile.FilterError):
                 research.unpack(archive, root / "extracted")
             self.assertFalse((root / "escaped").exists())
+
+
+class GitSourceTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='pdva-git-source-test-')
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.repo = self.root / 'objects'
+        self.env = os.environ | {
+            'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': os.devnull,
+            'GIT_NO_REPLACE_OBJECTS': '1',
+            'GIT_AUTHOR_NAME': 'Source integrity fixture', 'GIT_AUTHOR_EMAIL': 'fixture@example.invalid',
+            'GIT_COMMITTER_NAME': 'Source integrity fixture', 'GIT_COMMITTER_EMAIL': 'fixture@example.invalid',
+        }
+        subprocess.run(['git', 'init', '--quiet', str(self.repo)], env=self.env, check=True)
+        self.payloads = {
+            '.gitattributes': b'ignored.txt export-ignore\nsubst.txt export-subst\n* text eol=crlf\n',
+            'ignored.txt': b'keep this file\n',
+            'subst.txt': b'$Format:%H$\n',
+            'run.sh': b'#!/bin/sh\nexit 0\n',
+        }
+        entries = []
+        self.ids = {}
+        for name, data in self.payloads.items():
+            oid = self.git('hash-object', '-w', '--stdin', data=data).decode().strip()
+            self.ids[name] = oid
+            mode = '100755' if name == 'run.sh' else '100644'
+            entries.append(f'{mode} blob {oid}\t{name}\0')
+        self.tree = self.git('mktree', '-z', data=''.join(entries).encode()).decode().strip()
+        self.commit = self.git('commit-tree', self.tree, data=b'synthetic fixture\n').decode().strip()
+        self.destination = self.root / 'source'
+
+    def git(self, *args, data=None):
+        return subprocess.check_output(['git', '-C', str(self.repo), *args], input=data,
+                                       env=self.env, stderr=subprocess.PIPE)
+
+    def materialize(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            research.materialize_git_source(self.repo, self.commit, self.tree,
+                                            self.destination, self.env)
+        return research.git_source_manifest(self.repo, self.commit, self.tree, self.env)
+
+    def test_exact_source_ignores_crlf_and_export_transformations(self):
+        self.git('config', 'core.autocrlf', 'true')
+        manifest = self.materialize()
+        self.assertEqual(set(self.payloads), set(manifest))
+        self.assertEqual('100755', manifest['run.sh'][0])
+        for name, data in self.payloads.items():
+            self.assertEqual(data, (self.destination / name).read_bytes())
+
+    def test_wrong_tree_pin_is_rejected(self):
+        empty_tree = self.git('mktree', data=b'').decode().strip()
+        with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+            research.git_source_manifest(self.repo, self.commit, empty_tree, self.env)
+
+    def test_corrupt_git_object_is_rejected(self):
+        oid = self.ids['ignored.txt']
+        path = self.repo / '.git/objects' / oid[:2] / oid[2:]
+        path.chmod(0o644)
+        path.write_bytes(zlib.compress(b'blob 7\0changed'))
+        with self.assertRaises(subprocess.CalledProcessError):
+            research.git_source_manifest(self.repo, self.commit, self.tree, self.env)
+
+    def test_modified_file_is_rejected(self):
+        manifest = self.materialize()
+        (self.destination / 'ignored.txt').write_bytes(b'substituted\n')
+        with self.assertRaisesRegex(RuntimeError, 'blob mismatch'):
+            research.verify_source_tree(self.destination, manifest)
+
+    def test_missing_file_is_rejected(self):
+        manifest = self.materialize()
+        (self.destination / 'ignored.txt').unlink()
+        with self.assertRaisesRegex(RuntimeError, 'Missing source'):
+            research.verify_source_tree(self.destination, manifest)
+
+    def test_extra_file_and_directory_are_rejected(self):
+        manifest = self.materialize()
+        extra = self.destination / 'extra'
+        extra.write_text('unreviewed')
+        with self.assertRaisesRegex(RuntimeError, 'Extra source'):
+            research.verify_source_tree(self.destination, manifest)
+        extra.unlink()
+        extra.mkdir()
+        with self.assertRaisesRegex(RuntimeError, 'unexpected directory'):
+            research.verify_source_tree(self.destination, manifest)
+
+    def test_unsafe_paths_and_symlink_targets_are_rejected(self):
+        for name in ('../escape', '/absolute', 'a//b', 'a/./b', 'C:/drive', 'a\\b', '.git/config'):
+            with self.subTest(name=name), self.assertRaises(RuntimeError):
+                research.source_path(name)
+        for target in (b'../../escape', b'/absolute', b'C:/drive', b'a\\b', b'../.git/config'):
+            with self.subTest(target=target), self.assertRaises(RuntimeError):
+                research.source_link('dir/link', target)
+        self.assertEqual('../run.sh', research.source_link('dir/link', b'../run.sh'))
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX executable modes are enforced on Linux')
+    def test_materialized_executable_mode_is_checked(self):
+        manifest = self.materialize()
+        (self.destination / 'run.sh').chmod(0o644)
+        with self.assertRaisesRegex(RuntimeError, 'mode mismatch'):
+            research.verify_source_tree(self.destination, manifest)
+
+    @unittest.skipIf(os.name == 'nt', 'Real POSIX symlink types are enforced on Linux')
+    def test_real_symlink_and_type_substitution(self):
+        oid = self.git('hash-object', '-w', '--stdin', data=b'run.sh').decode().strip()
+        rows = [f'{"100755" if name == "run.sh" else "100644"} blob {value}\t{name}\0'
+                for name, value in self.ids.items()]
+        rows.append(f'120000 blob {oid}\tlink\0')
+        self.tree = self.git('mktree', '-z', data=''.join(rows).encode()).decode().strip()
+        self.commit = self.git('commit-tree', self.tree, data=b'symlink fixture\n').decode().strip()
+        manifest = self.materialize()
+        link = self.destination / 'link'
+        self.assertTrue(link.is_symlink())
+        research.verify_source_tree(self.destination, manifest)
+        link.unlink()
+        link.write_bytes(b'run.sh')
+        with self.assertRaisesRegex(RuntimeError, 'symlink type mismatch'):
+            research.verify_source_tree(self.destination, manifest)
+
 
 class ManifestTests(unittest.TestCase):
     def setUp(self): self.source = harness.SOURCE.read_text(encoding="utf-8")

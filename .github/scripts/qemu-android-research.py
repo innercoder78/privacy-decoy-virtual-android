@@ -7,7 +7,7 @@ No target program is run, installed into Android, uploaded or published.
 """
 import hashlib
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import platform
 import re
 import stat
@@ -42,16 +42,17 @@ ARCHIVES = {
              'gvdb-2b42fc75f09dbe1cd1057580b5782b08f2dcb400'),
 }
 # Upstream GitLab archives are bot-blocked. Fetch only these exact Git objects,
-# then verify the reviewed SHA-256 of git archive --format=tar before extraction.
+# then verify pinned commit/tree objects and every raw blob, type and mode.
+# No git archive/checkout: attributes, CRLF filters and export rules cannot edit source.
 GIT_INPUTS = {
     'dtc': ('b6910bec11614980a21e46fbccc35934b671bd81',
-            '1df504e71aa4704157ec94f37da2aa82d672349f20bd92ca79516a0a56a1a29a'),
+            '5de1e174f53a6ea499a49ac7b5eb7fe816dd9902'),
     'keycodemapdb': ('f5772a62ec52591ff6870b7e8ef32482371f22c6',
-                     '54e42a198ccd43b41386be6295ef4dd6cfd5225bafd6cee36797efdda8dc1992'),
+                     'eaa3f9fb1e2c7687b334f57cb605140cb5450f16'),
     'berkeley-softfloat-3': ('b64af41c3276f97f0e181920400ee056b9c88037',
-                            '5e0704d7cf6f00234f7689ff32c72a64175a5dd92bb16225e82bb067f0bbf7e1'),
+                            '5f46f374bcf9aef50442ba5fd25f3b5bcdf963c4'),
     'berkeley-testfloat-3': ('e7af9751d9f9fd3b47911f51a5cfd08af256a9ab',
-                            'f83932121e59493c19edb61c79ff36b5d6fc0c0445f655ffc4484cb502e4323a'),
+                            '9e166ce5ee90e0cb45f975a89c877bc4114de601'),
 }
 NDK_URL = 'https://dl.google.com/android/repository/android-ndk-r28c-linux.zip'
 NDK_SHA256 = 'dfb20d396df28ca02a8c708314b814a4d961dc9074f9a161932746f815aa552f'
@@ -100,6 +101,164 @@ def unpack(archive, destination):
         source.extractall(destination, members=members, filter='data')
 
 
+def git_object_id(kind, data):
+    return hashlib.sha1(kind.encode('ascii') + b' ' + str(len(data)).encode('ascii') + b'\0' + data).hexdigest()
+
+
+def source_path(name):
+    if (not name or any(ord(c) < 32 for c in name) or '\\' in name or ':' in name
+            or any(part in ('', '.', '..') or part.lower() == '.git' for part in name.split('/'))):
+        raise RuntimeError('Unsafe source path')
+    return PurePosixPath(name)
+
+
+def source_link(name, data):
+    link = data.decode('utf-8')
+    # Symlinks may use .. only while staying inside this source root. Never
+    # follow links while writing files; reject file/link ancestor conflicts too.
+    if (not link or link.startswith('/') or '\\' in link or ':' in link
+            or any(ord(c) < 32 for c in link)):
+        raise RuntimeError('Unsafe source symlink')
+    parts = list(source_path(name).parent.parts)
+    for part in link.split('/'):
+        if part == '..':
+            if not parts:
+                raise RuntimeError('Escaping source symlink')
+            parts.pop()
+        elif part not in ('', '.'):
+            if part.lower() == '.git':
+                raise RuntimeError('Unsafe source symlink')
+            parts.append(part)
+    return link
+
+
+def git_source_manifest(repository, revision, tree, env):
+    """Trust anchors are reviewed pins, never freshly computed expected hashes."""
+    if not all(re.fullmatch(r'[0-9a-f]{40}', oid) for oid in (revision, tree)):
+        raise RuntimeError('Immutable Git pins required')
+    def git(*args):
+        return subprocess.check_output(['git', '-C', str(repository), *args], env=env,
+                                       stderr=subprocess.PIPE, timeout=60)
+    # fsck verifies recursive object hashes/structure, including nested trees.
+    git('fsck', '--strict', '--no-reflogs', '--no-dangling')
+    commit = git('cat-file', 'commit', revision)
+    if git_object_id('commit', commit) != revision or commit.splitlines()[0] != b'tree ' + tree.encode():
+        raise RuntimeError('Commit/tree identity mismatch')
+    if git_object_id('tree', git('cat-file', 'tree', tree)) != tree:
+        raise RuntimeError('Tree object mismatch')
+    manifest = {}
+    for entry in git('ls-tree', '-rz', '--full-tree', tree).split(b'\0'):
+        if not entry:
+            continue
+        metadata, path = entry.split(b'\t', 1)
+        mode, kind, oid = metadata.decode('ascii').split()
+        name = path.decode('utf-8')
+        source_path(name)
+        if mode not in ('100644', '100755', '120000') or kind != 'blob' or name in manifest:
+            raise RuntimeError('Unsupported or duplicate Git source entry')
+        manifest[name] = (mode, oid)
+    if not manifest or len(manifest) > 100000:
+        raise RuntimeError('Source entry budget exceeded')
+    for name in manifest:
+        if any(parent.as_posix() in manifest for parent in source_path(name).parents):
+            raise RuntimeError('Source file/link ancestor conflict')
+    return manifest
+
+
+def verify_source_tree(destination, manifest):
+    """Compare every materialized leaf and directory; never follow a symlink."""
+    expected_dirs = {p.as_posix() for name in manifest for p in source_path(name).parents
+                     if p.as_posix() != '.'}
+    seen, directories = set(), set()
+    for base, dirs, files in os.walk(destination, followlinks=False):
+        for name in dirs[:]:
+            path = Path(base) / name
+            if path.is_symlink():
+                dirs.remove(name)
+                files.append(name)
+            else:
+                directories.add(path.relative_to(destination).as_posix())
+        for name in files:
+            path = Path(base) / name
+            relative = path.relative_to(destination).as_posix()
+            if relative not in manifest:
+                raise RuntimeError('Extra source file')
+            mode, oid = manifest[relative]
+            info = path.lstat()
+            if mode == '120000':
+                if not stat.S_ISLNK(info.st_mode):
+                    raise RuntimeError('Source symlink type mismatch')
+                data = os.readlink(path).encode('utf-8')
+                source_link(relative, data)
+                if not path.resolve().is_relative_to(destination.resolve()):
+                    raise RuntimeError('Escaping source symlink chain')
+            else:
+                if not stat.S_ISREG(info.st_mode):
+                    raise RuntimeError('Source file type mismatch')
+                if info.st_size > 128 * 1024 ** 2:
+                    raise RuntimeError('Source blob budget exceeded')
+                data = path.read_bytes()
+                # Windows cannot represent POSIX executable mode. Production
+                # main() requires Linux; its filesystem-mode check is mandatory.
+                if os.name != 'nt' and stat.S_IMODE(info.st_mode) != int(mode[-3:], 8):
+                    raise RuntimeError('Source file mode mismatch')
+            if git_object_id('blob', data) != oid:
+                raise RuntimeError('Source blob mismatch')
+            seen.add(relative)
+    if seen != set(manifest) or directories != expected_dirs:
+        raise RuntimeError('Missing source or unexpected directory')
+
+
+def materialize_git_source(repository, revision, tree, destination, env):
+    manifest = git_source_manifest(repository, revision, tree, env)
+    names = list(manifest)
+    request = ''.join(manifest[name][1] + '\n' for name in names).encode('ascii')
+    command = ['git', '-C', str(repository), 'cat-file']
+    # Bound sizes before asking Git for contents. Binary stdout goes to a
+    # temporary file, never through text decoding/newline conversion or logs.
+    sizes = subprocess.check_output(command + ['--batch-check'], input=request,
+                                    env=env, stderr=subprocess.PIPE, timeout=60).splitlines()
+    total = 0
+    if len(sizes) != len(names):
+        raise RuntimeError('Missing Git blob metadata')
+    for name, record in zip(names, sizes):
+        oid, kind, size = record.decode('ascii').split()
+        count = int(size)
+        if oid != manifest[name][1] or kind != 'blob' or not 0 <= count <= 128 * 1024 ** 2:
+            raise RuntimeError('Invalid Git blob metadata')
+        total += count
+    if total > 2 * GIB:
+        raise RuntimeError('Source byte budget exceeded')
+    destination.mkdir()
+    links = []
+    with tempfile.TemporaryFile(dir=destination.parent) as blobs:
+        subprocess.run(command + ['--batch'], input=request, stdout=blobs,
+                       stderr=subprocess.PIPE, env=env, timeout=90, check=True)
+        if blobs.tell() != total + sum(len(row) + 2 for row in sizes):
+            raise RuntimeError('Unexpected Git blob stream length')
+        blobs.seek(0)
+        for name, record in zip(names, sizes):
+            if blobs.readline(256).rstrip(b'\n') != record:
+                raise RuntimeError('Substituted Git blob header')
+            count = int(record.split()[2])
+            data = blobs.read(count)
+            mode, oid = manifest[name]
+            if len(data) != count or blobs.read(1) != b'\n' or git_object_id('blob', data) != oid:
+                raise RuntimeError('Corrupt Git blob')
+            path = destination.joinpath(*source_path(name).parts)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if mode == '120000':
+                links.append((path, source_link(name, data)))
+            else:
+                with path.open('xb') as output:
+                    output.write(data)
+                path.chmod(int(mode[-3:], 8))
+    for path, link in links:
+        path.symlink_to(link)
+    verify_source_tree(destination, manifest)
+    print(f'VERIFIED Git commit={revision} tree={tree} files={len(manifest)} bytes={total}', flush=True)
+
+
 def tree_size(root):
     return sum(p.stat().st_size for p in root.rglob('*') if p.is_file() and not p.is_symlink())
 
@@ -118,7 +277,7 @@ class Research:
         self.env.update(LC_ALL='C.UTF-8', LANG='C.UTF-8', TZ='UTC',
                         PIP_NO_INDEX='1', PIP_DISABLE_PIP_VERSION_CHECK='1',
                         PYTHONNOUSERSITE='1', GIT_TERMINAL_PROMPT='0',
-                        GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL='/dev/null',
+                        GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL='/dev/null', GIT_NO_REPLACE_OBJECTS='1',
                         PKG_CONFIG_PATH='', PKG_CONFIG_DIR='')
 
     def emit(self, value):
@@ -145,7 +304,10 @@ class Research:
                         if tree_size(self.root) > 8 * GIB:
                             raise RuntimeError('Research storage exceeds 8 GiB')
             except BaseException:
-                os.killpg(process.pid, signal.SIGKILL)
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
                 process.wait()
                 raise
         with log.open('rb') as stream:
@@ -182,17 +344,13 @@ class Research:
             unpack(archive, destination)
             sources[name] = destination / directory
         qemu, glib = sources['qemu'], sources['glib']
-        for name, (revision, sha) in GIT_INPUTS.items():
+        for name, (revision, tree) in GIT_INPUTS.items():
             repository = self.root / (name + '-git')
             self.run('git', 'init', '--quiet', repository)
             self.run('git', '-C', repository, '-c', 'protocol.file.allow=never', 'fetch',
                      '--depth=1', '--no-tags', f'https://gitlab.com/qemu-project/{name}.git', revision, timeout=180)
-            archive = self.root / (name + '.tar')
-            self.run('git', '-C', repository, '-c', 'tar.umask=0002', 'archive', '--format=tar',
-                     f'--output={archive}', revision)
-            verify(archive, sha)
             destination = qemu / 'subprojects' / name
-            unpack(archive, destination)
+            materialize_git_source(repository, revision, tree, destination, self.env)
             # QEMU's reviewed packagefiles are the wrap overlays, not new patches.
             overlay = qemu / 'subprojects/packagefiles' / name
             if overlay.exists():
@@ -231,9 +389,15 @@ class Research:
                 source.extract(entry, self.root)
                 if not entry.is_dir():
                     target.chmod((entry.external_attr >> 16) & 0o777)
+            link_paths = {target for target, _ in links}
+            if any(parent in link_paths for target, _ in links for parent in target.parents):
+                raise RuntimeError('NDK symlink ancestor conflict')
             for target, link in links:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.symlink_to(link)
+            for target, _ in links:
+                if not target.resolve().is_relative_to(self.root / 'android-ndk-r28c'):
+                    raise RuntimeError('Unsafe NDK symlink chain')
         ndk = self.root / 'android-ndk-r28c'
         properties = (ndk / 'source.properties').read_text()
         if '28.2.13676358' not in properties:
@@ -388,10 +552,17 @@ def main():
     if sys.version_info < (3, 12) or platform.system() != 'Linux' or platform.machine() != 'x86_64':
         raise RuntimeError('Requires Linux x86-64 and Python >=3.12; no target executed')
     research = Research()
+    def terminated(signum, _frame):
+        # Raising unwinds run() and kills its separate process group on timeout
+        # or cancellation instead of leaving compiler descendants behind.
+        raise SystemExit(128 + signum)
+    signal.signal(signal.SIGTERM, terminated)
     try:
         research.build()
     except Exception as exc:
         research.emit(f'FAILED [{research.stage}]: {exc}; later stages NOT RUN; no gate change.')
+        if isinstance(exc, subprocess.CalledProcessError) and exc.stderr:
+            research.emit(exc.stderr[-24000:].decode('utf-8', errors='replace'))
         # Preserve bounded, sanitized compiler diagnostics, including configure failures.
         for path in sorted(research.root.rglob('meson-log.txt')) + sorted(research.root.rglob('config.log')):
             with path.open('rb') as stream:

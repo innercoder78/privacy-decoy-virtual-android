@@ -1,9 +1,143 @@
 # Gate 0: Linux-hosted QEMU Android cross-build research
 
-**2026-10-08. Gate 0: Unresolved. Gates Aâ€“G: Not reached.**
+**2026-10-08. Gate 0: Unresolved. Gates A–G: Not reached.**
 ADR-0001 remains Accepted; ADR-0002 remains Proposed. No engine selected.
 
-## Result at publication
+## Revision review: original Linux failure and correction (2026-10-09)
+
+**The original Linux run failed in source acquisition. No dependency compiled,
+no QEMU configure ran, and no QEMU ELF exists.** The revised head's Linux result
+is pending publication and subsequent owner review; it is not inferred from
+local source-verification tests. Gate 0 remains Unresolved; A–G Not reached.
+
+The live revision preflight matched main
+`d5466f1943e3cd7e33cbd62c8a23571e4de52ae5` and the only open PR, #6, head
+`96b0e3c9aab1ede4907d4d6fa0d22c2409126b2a`. The full six-file base diff and
+100644 modes were inspected. Foundation and Android checks succeeded; cross-build
+failed. No reviews, issue/review comments or unresolved threads were present;
+combined statuses were empty. GitHub Status reported operational, page update
+`2026-10-09T04:09:18.387Z`. The clean existing branch, one worktree, absence of
+stashes, unchanged harness/manifest, provenance policy and dependency inventory
+were checked. No new branch or PR, runtime dependency or native binary is added.
+
+### Observed original run
+
+[Run 37859565828](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/37859565828),
+job `113591801036`, tested original head `96b0e3c...` on 2026-10-08 UTC. Its
+runner was Ubuntu 24.04.5, image `20261004.327.1`, Git 2.55.0, Python 3.12.3,
+GCC 13.3.0, Make 4.3, Ninja 1.13.2, pkg-config 1.8.1 and host
+setuptools/wheel/pip 68.1.2/0.42.0/24.0. These are observed host tools, not
+executed Android compilers. The exact-head log shows:
+
+```text
+STAGE verified source acquisition
+[six upstream source archives verified]
+[pinned dtc commit fetched; git archive --format=tar run]
+FAILED [verified source acquisition]: Hash mismatch: dtc.tar:
+1fb660c56f7c255b930f9763f58e0b3f3c59d1815fa11bc5cb01d01823540ba4
+Process completed with exit code 1
+```
+
+Expected Windows-generated tar SHA-256:
+`1df504e71aa4704157ec94f37da2aa82d672349f20bd92ca79516a0a56a1a29a`.
+Actual Ubuntu tar SHA-256:
+`1fb660c56f7c255b930f9763f58e0b3f3c59d1815fa11bc5cb01d01823540ba4`.
+This is a source-verification/tooling defect in the recipe, not a Bionic compiler
+failure or GitHub outage. NDK acquisition, the declared Kconfig control, Meson
+preparation, PCRE2, libffi, libfdt, GLib, QEMU configure/compile/link and ELF
+inspection were **NOT RUN**. No later-stage success or compiler error is reported.
+
+### Established root cause, not a tar-metadata assumption
+
+Local Git 2.56.0.windows.2 inherited system `core.autocrlf=true`. The original
+review command's `git archive` applied CRLF conversion. With the same dtc commit,
+`tar.umask=0002` and **only** `core.autocrlf=false`, local Git reproduced the
+Ubuntu digest exactly. Thus Git-version difference is not needed to explain this
+failure. The Windows archive was 1,116,160 bytes; the LF archive 1,095,680 bytes.
+
+Both archives have the same 317 paths: 310 regular files and seven directories,
+no symlinks or gitlinks. Exactly 305 file contents differ; for each, converting
+CRLF to LF reproduces the other byte-for-byte. All 310 LF files independently
+match their Git blob IDs. The same pinned commit references tree
+`5de1e174f53a6ea499a49ac7b5eb7fe816dd9902`. Modes, uid/gid, mtime, entry type,
+link target, owner/group names and PAX metadata match; the PAX commit comment is
+unchanged. Content sizes, consequent header checksums/block offsets/padding and
+archive length differ. No dtc export-ignore/export-subst attribute is present.
+The old tar hash therefore attested transformed files, not exact repository bytes.
+
+The other inputs were reviewed for the same issue. In particular, keycodemapdb's
+`.gitattributes` marks `.gitattributes` and `.gitignore` export-ignore. Merely
+setting autocrlf=false would still omit tracked source files from that archive.
+Export-subst can likewise rewrite content. These transformations are bypassed,
+not accepted as alternative exact-source identities.
+
+### Corrected source identity and review
+
+For the four Git inputs, the recipe now pins both the original **commit ID** and
+an independently reviewed **tree ID** (table below). Fresh temporary upstream
+fetches reproduced the tree IDs from the prior local objects. No source revision
+changed. `git fsck --strict` checks recursive object integrity; raw commit and root
+tree hashes are independently recomputed and the commit's tree header must match
+the pin. The complete recursive tree supplies paths, blob IDs and modes; only
+regular 100644/100755 files and 120000 symlinks are allowed. Gitlinks, unsafe paths
+and leaf/ancestor conflicts are rejected.
+
+`git cat-file --batch` reads raw blobs without checkout/archive filters. Before
+writing, every object's type, size and independently recomputed Git blob ID are
+checked, with count/per-blob/total-size bounds. The destination must be new. Files
+are created exclusively with exact bytes and executable modes; relative in-root
+symlinks are deferred until ordinary writes finish. The resulting tree is checked
+again for exact content/type/mode correspondence, missing or extra files and
+unexpected directories. Symlink text and resolved chains must remain inside the
+source root; unsafe paths, type changes and modified contents fail closed. Linux
+requires POSIX mode checks. Windows local tests verify pinned mode metadata but
+cannot establish actual POSIX filesystem execute bits; main() still refuses a
+Windows build. SHA-1 here is Git's object identity, not a newly asserted signature
+or independent SHA-256 supply-chain guarantee.
+
+All four freshly fetched inputs passed raw-object materialization locally:
+310 dtc files, 19 keycodemapdb files, 478 SoftFloat files and 206 TestFloat files.
+This is **source-integrity evidence only**. The six upstream archive URLs and
+SHA-256 pins, NDK pin, bundled wheel pins, library versions and license scope
+remain unchanged. QEMU's previously reviewed Berkeley build overlays are applied
+after upstream-tree verification; they remain explicit source modifications from
+the separately hash-verified QEMU archive, not part of the upstream tree identity.
+No source build code executes before these checks.
+
+The successful-skip optimization was removed. Every triggered workflow attempts
+its real bounded pipeline; there is no per-step success condition, informational
+compiler failure or continue-on-error. Existing path filters, read-only permissions,
+checkout pin, runner/time/resource limits and no-upload policy remain. The script
+review also found that its separate compiler process groups needed explicit
+cleanup on SIGTERM: the new handler unwinds run() so it kills that process group
+on timeout/cancellation. Linux cancellation behavior is source-reviewed, not
+claimed locally executed on Windows. Host/target routing, API 30, configuration,
+ELF checks and all build stages remain intact; no speculative portability patch
+or fake API was added. NDK extraction additionally rejects symlink ancestor
+conflicts and resolved chains outside the NDK root; all 35 links in the pinned
+archive were inspected for ancestor conflicts locally.
+
+### Revision validation and next evidence boundary
+
+Local Windows: 29 tests discovered, 27 passed, two explicit POSIX filesystem
+mode/symlink tests skipped because Windows cannot provide that observation. Those
+two tests run on Linux, including the unchanged foundation workflow. Added tests
+cover exact bytes despite CRLF/export attributes, wrong tree pins, corrupt Git
+objects, modified/missing/extra files, extra directories and unsafe paths/links.
+Foundation, harness authority, Python syntax, workflow shell/static review,
+whitespace, exact-base modes, unchanged archive pins and binary/public-data review
+passed before this revision's commit. No standalone YAML parser is available
+locally; the straightforward YAML structure is manually reviewed, not claimed
+parser-validated. Source-copy success is not any library or emulator build success.
+
+The updated branch will trigger a new real Linux attempt. Its checks/results
+remain **pending** at publication. The next exact-head review must record the
+first actual later-stage result, if any, without rewriting this original failure.
+No phone, ADB, Android emulator, Android execution, host root or Codex Cloud is
+used. No selected production QEMU engine; ADR-0002 remains Proposed. Publication
+updates only PR #6 and stops without polling or rerunning Actions.
+
+## Original publication record (2026-10-08)
 
 **No new QEMU compilation or link result is available.** Local Linux was unavailable,
 so this change prepares a constrained GitHub Actions Ubuntu 24.04 attempt. The
@@ -31,7 +165,7 @@ artifacts are not a working emulator and are not Linux-hosted results.
 | Unsupported | Root/KVM/privileged host repair, broad storage, shipping this experimental payload | Intentional scope restrictions, not measured denials |
 | Unknown | Every Linux build stage, Android load/run, ART coexistence, isolated-worker containment and performance | No gate pass or platform support claim |
 
-## Preflight and preservation
+## Original preflight and preservation
 
 The original clean PR #5 branch was preserved. One existing worktree and no
 stashes were observed. Fetch verified remote main; the new
@@ -78,7 +212,7 @@ recipe. [Official versioned NDK download metadata](https://github.com/android/nd
 is the publisher reference. Neither SHA-1 agreement nor HTTPS is an independently
 verified signature. No target library is downloaded as an opaque prebuilt.
 
-| Input | Immutable source identity | Reviewed archive SHA-256 |
+| Input | Immutable source identity | Archive SHA-256 or current Git tree ID |
 |---|---|---|
 | QEMU v11.1.2 | `4fc49f46dc95d4a27de2509e7fceb2931e91faeb` | `a5a78e7d395ed096a7b2d98375978d0e2cf73f62c49a081ca48fa665d479b09f` |
 | GLib 2.90.1 | `e05063ccc6c8f222465a1080927f4c14349f3de6` | `9c74d8dc96a547a544f3f479bc6f2fe8a333524ff44c997998ebe9963a63ad52` |
@@ -86,18 +220,18 @@ verified signature. No target library is downloaded as an opaque prebuilt.
 | libffi 3.5.2 | tag `e2eda0cf72a0598b44278cc91860ea402273fa29` | `f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc` |
 | proxy-libintl 0.5 | tag `33934de09af6a6627eb44e310a8079df009abdbb` | `f7a1cbd7579baaf575c66f9d99fb6295e9b0684a28b095967cfda17857595303` |
 | gvdb | GLib wrap `2b42fc75f09dbe1cd1057580b5782b08f2dcb400` | `069a00aa1fc893f18423602f4e095583be5a220429f6e8a58d70511490b4b019` |
-| libfdt / dtc | QEMU wrap `b6910bec11614980a21e46fbccc35934b671bd81` | `1df504e71aa4704157ec94f37da2aa82d672349f20bd92ca79516a0a56a1a29a` |
-| keycodemapdb | QEMU wrap `f5772a62ec52591ff6870b7e8ef32482371f22c6` | `54e42a198ccd43b41386be6295ef4dd6cfd5225bafd6cee36797efdda8dc1992` |
-| Berkeley SoftFloat test input | QEMU wrap `b64af41c3276f97f0e181920400ee056b9c88037` | `5e0704d7cf6f00234f7689ff32c72a64175a5dd92bb16225e82bb067f0bbf7e1` |
-| Berkeley TestFloat | QEMU wrap `e7af9751d9f9fd3b47911f51a5cfd08af256a9ab` | `f83932121e59493c19edb61c79ff36b5d6fc0c0445f655ffc4484cb502e4323a` |
+| libfdt / dtc | QEMU wrap `b6910bec11614980a21e46fbccc35934b671bd81` | tree `5de1e174f53a6ea499a49ac7b5eb7fe816dd9902` |
+| keycodemapdb | QEMU wrap `f5772a62ec52591ff6870b7e8ef32482371f22c6` | tree `eaa3f9fb1e2c7687b334f57cb605140cb5450f16` |
+| Berkeley SoftFloat test input | QEMU wrap `b64af41c3276f97f0e181920400ee056b9c88037` | tree `5f46f374bcf9aef50442ba5fd25f3b5bcdf963c4` |
+| Berkeley TestFloat | QEMU wrap `e7af9751d9f9fd3b47911f51a5cfd08af256a9ab` | tree `9e166ce5ee90e0cb45f975a89c877bc4114de601` |
 | Linux NDK r28c | Google `28.2.13676358`, Android API 30 target | `dfb20d396df28ca02a8c708314b814a4d961dc9074f9a161932746f815aa552f` |
 
 QEMU/GLib/gvdb use exact-commit GitHub source archives; PCRE2/libffi use upstream
 release source archives; proxy uses the hash-pinned upstream tag archive. GitLab
 archive endpoints for dtc/keycodemapdb returned bot challenges, so the four QEMU
-subproject rows instead identify SHA-256 of **uncompressed `git archive --format=tar`**
-from fetched exact upstream Git objects, with `tar.umask=0002`. Hash changes fail
-closed, including future archive-generator differences. No floating ref is built.
+subproject rows now identify independently reviewed **Git tree IDs**. The original
+host-transformed archive checks were replaced by the complete object/manifest
+verification described above. No floating ref is built.
 QEMU source correspondence was checked by recomputing Git blob IDs for every
 archive file against the prior verified exact-commit checkout, including symlinks.
 
@@ -188,9 +322,8 @@ runner, global cleanup, caches, artifact uploads, release, firmware installation
 or target program execution is used. Cost is bounded by one standard hosted job;
 account billing/minute availability was not inspected or promised free.
 
-Only the workflow and build script trigger this research job. A synchronized PR
-with unchanged research inputs explicitly skips the expensive attempt and says
-there is **no new build result**; metadata/diff failures remain fatal. New pushes
+Only the workflow and build script trigger this research job. Every triggered relevant PR head runs the real attempt; the original
+unchanged-input skip has been removed. New pushes
 cancel older work for the same PR. The existing Android path filter includes
 `.github/**`, so this PR can also trigger its existing 25-minute harness job,
 plus the five-minute foundation check. Those scopes/timeouts are unchanged.
@@ -268,7 +401,7 @@ that justified bounded issue and rerun under a separately reviewed head. No phon
 is a prerequisite for either next step. No production engine, APK emulator payload,
 complete Android 17 guest, security/performance claim or ADR acceptance follows.
 
-## Local validation versus hosted results
+## Original local validation (2026-10-08)
 
 Local Windows validation passed: foundation/Markdown links, all 20 repository
 regression tests (including corrupt-download and traversal rejection), harness
@@ -281,7 +414,7 @@ was unavailable locally; no package was installed to conceal that limitation.
 The exact-base diff and mode/inventory review cover only the two research files,
 the narrow validator/test updates and evidence documentation. No Android source
 or permission changed; no source archive, guest/runtime binary, secret or local
-private path is intentionally tracked. Linux tools/versions, compiler diagnostics,
-configuration results, linked output and hosted checks remain **pending**, and
-must not be filled using the previous Windows observations. Publication is the
-mandatory stop boundary; this turn performs no CI polling, waiting or rerun.
+private path is intentionally tracked. At original publication all hosted results
+were pending; the later observed source-acquisition failure is recorded above.
+No dependency or QEMU compiler/configuration/link result exists. The revised
+head remains pending and must not inherit a success from these local checks.
