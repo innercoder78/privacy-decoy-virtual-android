@@ -6,6 +6,7 @@ runner temporary directory, never in the checkout. Every failed stage is fatal.
 No target program is run, installed into Android, uploaded or published.
 """
 import hashlib
+import json
 import difflib
 import os
 from pathlib import Path, PurePosixPath
@@ -592,6 +593,269 @@ def select_host_ninja(env, run, emit):
     return path, sha
 
 
+def inspect_android_elf(data, mode):
+    """Bounded structural inspection, not runtime or static-startup acceptance."""
+    def require(condition, message):
+        if not condition:
+            raise RuntimeError('ELF: ' + message)
+
+    def block(offset, size):
+        require(0 <= offset <= len(data) and 0 <= size <= len(data) - offset, 'truncated/out-of-range data')
+        return data[offset:offset + size]
+
+    def unpack(fmt, offset):
+        return struct.unpack(fmt, block(offset, struct.calcsize(fmt)))
+
+    def string(table, index):
+        require(0 <= index < len(table), 'invalid string index')
+        end = table.find(b'\0', index)
+        require(end >= index, 'unterminated string')
+        return table[index:end].decode('ascii', errors='strict')
+
+    require(mode in ('dynamic', 'static'), 'unknown requested mode')
+    require(64 <= len(data) <= 256 * 1024 * 1024, 'file size outside inspection bound')
+    h = unpack('<16sHHIQQQIHHHHHH', 0)
+    require(h[0][:9] == b'\x7fELF\x02\x01\x01\0\0' and h[1:4] == (3, 183, 1),
+            'expected little-endian Android AArch64 ELF64 ET_DYN')
+    require(h[8:10] == (64, 56) and 1 <= h[10] <= 128, 'invalid program header table')
+    require(h[11] == 64 and 1 <= h[12] <= 4096 and h[13] < h[12], 'missing/invalid section table')
+    require(h[5] >= 64 and h[6] >= 64, 'header tables overlap ELF header')
+    ph = [unpack('<IIQQQQQQ', h[5] + i * 56) for i in range(h[10])]
+    sh = [unpack('<IIQQQQIIQQ', h[6] + i * 64) for i in range(h[12])]
+    for p in ph:
+        block(p[2], p[5])
+        require(p[5] <= p[6], 'segment file size exceeds memory size')
+    for s in sh:
+        if s[1] != 8:  # SHT_NOBITS has no file contents.
+            block(s[4], s[5])
+    names = block(sh[h[13]][4], sh[h[13]][5])
+    sections = {string(names, s[0]): s for s in sh}
+    require(len(sections) == len(sh), 'duplicate section names')
+    loads = [p for p in ph if p[0] == 1]
+    require(len(loads) >= 2, 'missing LOAD segments')
+    for p in loads:
+        require(p[1] & 7 == p[1] and p[1] & 3 != 3, 'writable/executable or invalid LOAD flags')
+        require(p[7] >= 16384 and p[7] & (p[7] - 1) == 0 and p[2] % p[7] == p[3] % p[7],
+                'invalid 16 KiB LOAD alignment/congruence')
+    ordered = sorted(loads, key=lambda p: p[3])
+    require(all(a[3] + a[6] <= b[3] for a, b in zip(ordered, ordered[1:])), 'overlapping LOAD segments')
+
+    def mapped(address, size, flag=0, file_backed=False):
+        return [p for p in loads if p[1] & flag == flag and p[3] <= address
+                and address + size <= p[3] + (p[5] if file_backed else p[6])]
+
+    for s in sh:
+        if s[2] & 2 and s[5]:
+            parents = mapped(s[3], s[5], file_backed=s[1] != 8)
+            require(len(parents) == 1, 'allocated section outside LOAD')
+            if s[1] != 8:
+                require(s[4] == parents[0][2] + s[3] - parents[0][3], 'section/LOAD offset mismatch')
+    require(h[4] > 0 and len(mapped(h[4], 4, 1, True)) == 1, 'entrypoint outside executable file-backed LOAD')
+    stack = [p for p in ph if p[0] == 0x6474e551]
+    require(len(stack) == 1 and stack[0][1] & 1 == 0, 'missing or executable GNU_STACK')
+    relro = [p for p in ph if p[0] == 0x6474e552]
+    require(len(relro) == 1 and relro[0][6] > 0 and mapped(relro[0][3], relro[0][6], 2), 'invalid GNU_RELRO')
+    dynamic = [p for p in ph if p[0] == 2]
+    require(len(dynamic) == 1 and dynamic[0][5] % 16 == 0, 'invalid PT_DYNAMIC')
+    dp = dynamic[0]
+    ds = sections.get('.dynamic')
+    require(ds is not None and ds[1] == 6 and (ds[3], ds[4], ds[5]) == (dp[3], dp[2], dp[5]),
+            'section/PT_DYNAMIC mismatch')
+    require(relro[0][3] <= dp[3] and dp[3] + dp[6] <= relro[0][3] + relro[0][6], 'dynamic table outside RELRO')
+    tags = {}
+    terminated = False
+    for offset in range(dp[2], dp[2] + dp[5], 16):
+        tag, value = unpack('<qQ', offset)
+        if tag == 0:
+            terminated = True
+            break
+        require(tag == 1 or tag not in tags, 'duplicate dynamic tag')
+        tags.setdefault(tag, []).append(value)
+    require(terminated, 'unterminated dynamic table')
+    get = lambda tag, default=0: tags.get(tag, [default])[0]
+    require(not {14, 15, 22, 29}.intersection(tags) and get(30) & 4 == 0, 'SONAME/RPATH/RUNPATH/TEXTREL forbidden')
+    require(get(0x6ffffffb) & 0x08000000, 'missing DF_1_PIE executable flag')
+    require(24 in tags or get(30) & 8 or get(0x6ffffffb) & 1, 'missing bind-now')
+    dynstr = sections.get('.dynstr')
+    require(dynstr is not None and get(5) == dynstr[3] and get(10) == dynstr[5], 'dynamic string table mismatch')
+    strings = block(dynstr[4], dynstr[5])
+    needed = [string(strings, index) for index in tags.get(1, [])]
+    interp = [block(p[2], p[5]) for p in ph if p[0] == 3]
+    if mode == 'dynamic':
+        require(interp == [b'/system/bin/linker64\0'], 'dynamic PIE requires Android interpreter')
+        require(needed and set(needed) <= {'libc.so', 'libdl.so', 'libm.so', 'libz.so', 'liblog.so'},
+                'unexpected or empty dynamic dependencies')
+    else:
+        require(not interp and not needed, 'static PIE must have no interpreter or dependencies')
+
+    notes = []
+    for s in sh:
+        if s[1] != 7:
+            continue
+        pos, end = s[4], s[4] + s[5]
+        while pos < end:
+            require(pos + 12 <= end, 'truncated note')
+            nsize, dsize, kind = unpack('<III', pos)
+            start = pos + 12
+            desc = start + ((nsize + 3) & ~3)
+            pos = desc + ((dsize + 3) & ~3)
+            require(pos <= end, 'note exceeds section')
+            if block(start, nsize) == b'Android\0' and kind == 1:
+                notes.append(block(desc, dsize))
+    require(len(notes) == 1 and len(notes[0]) == 132, 'missing/ambiguous Android identification note')
+    note = notes[0]
+    require(struct.unpack_from('<I', note)[0] == 30 and note[4:68].split(b'\0')[0] == b'r28c'
+            and note[68:].split(b'\0')[0] == b'13676358', 'wrong Android API/NDK identity')
+
+    symbols, undefined = {}, []
+    require(sum(s[1] == 11 for s in sh) == 1 and sum(s[1] == 2 for s in sh) == 1,
+            'missing/ambiguous dynamic or static symbol table')
+    for s in sh:
+        if s[1] == 3:
+            require(b'GLIBC_' not in block(s[4], s[5]), 'glibc symbol-version contamination')
+        if s[1] not in (2, 11):
+            continue
+        require(s[9] == 24 and s[5] % 24 == 0 and s[6] < len(sh), 'invalid symbol table')
+        st = sh[s[6]]
+        require(st[1] == 3, 'invalid symbol string table')
+        strings = block(st[4], st[5])
+        if s[1] == 11:
+            require(get(6) == s[3] and get(11) == 24, 'dynamic symbol table mismatch')
+            if mode == 'static':
+                require(s[5] == 24 and block(s[4], 24) == bytes(24), 'static PIE has dynamic symbols')
+        for offset in range(s[4], s[4] + s[5], 24):
+            name, info, other, index, value, size = unpack('<IBBHQQ', offset)
+            name = string(strings, name)
+            if index and name:
+                symbols[name] = (value, size, info & 15)
+            elif name and s[1] == 2:
+                undefined.append((name, info >> 4))
+    require('_start' in symbols and symbols['_start'][0] == h[4] and symbols['_start'][2] == 2,
+            'missing executable _start at entrypoint')
+
+    relocations = {}
+    if mode == 'static':
+        require(not {17, 18, 19, 23, 35, 36, 37, 0x6000000f, 0x60000010, 0x60000011, 0x60000012}.intersection(tags),
+                'unsupported static REL/PLT/packed relocation encoding')
+        rela = sections.get('.rela.dyn')
+        require(rela is not None and rela[1] == 4 and rela[9] == 24 and rela[5] > 0 and rela[5] % 24 == 0
+                and get(7) == rela[3] and get(8) == rela[5] and get(9) == 24, 'missing/mismatched static RELA table')
+        require(get(0x6ffffff9) == rela[5] // 24, 'static RELACOUNT mismatch')
+        require(all(s[1] not in (4, 9, 19) or not s[2] & 2 or s == rela for s in sh), 'unexpected allocated relocation table')
+        targets = set()
+        for offset in range(rela[4], rela[4] + rela[5], 24):
+            target, info, addend = unpack('<QQq', offset)
+            require(info == 1027, 'unsupported static relocation (requires reviewed R_AARCH64_RELATIVE)')
+            require(target % 8 == 0 and len(mapped(target, 8, 2)) == 1 and target not in targets,
+                    'invalid/duplicate relocation target')
+            require(addend >= 0 and mapped(addend, 1), 'relative relocation addend outside image')
+            targets.add(target)
+        relocations['R_AARCH64_RELATIVE'] = len(targets)
+        require('__libc_init' in symbols and symbols['__libc_init'][2] == 2
+                and mapped(symbols['__libc_init'][0], 4, 1, True), 'missing Bionic static startup symbol')
+        allowed_local = {'__rela_iplt_start', '__rela_iplt_end'}
+        require(all(bind == 2 or name in allowed_local and bind == 0 for name, bind in undefined),
+                'unresolved non-weak static symbol')
+    return {'mode': mode, 'classification': mode + ' Android PIE candidate', 'entry': hex(h[4]),
+            'size': len(data), 'sha256': hashlib.sha256(data).hexdigest(), 'needed': needed,
+            'load_segments': len(loads), 'relocations': relocations, 'android_api': 30,
+            'ndk': 'r28c/13676358', 'undefined_static_symbols': undefined[:32] if mode == 'static' else [],
+            'static_startup_accepted': False}
+
+
+def require_static_startup(report, evidence):
+    if (report.get('mode') != 'static' or evidence.get('binary_sha256') != report['sha256'] or evidence.get('mode') != 'static'
+            or not evidence.get('crtbegin') or not evidence.get('libc_static_init')):
+        raise RuntimeError('Static PIE startup evidence missing or does not match output/mode')
+    # No supported self-relocating startup has been established for this exact
+    # NDK route. An ELF shape, Android note, flag or caller boolean cannot waive it.
+    raise RuntimeError('Unsupported Android static PIE startup: NDK r28c selects crtbegin_dynamic.o; '
+                       'Bionic self-relocation and load-bias-aware RELRO are not established. '
+                       'Candidate linked; executable acceptance FAILED; NOT EXECUTED')
+
+
+def qemu_link_evidence(binary, build, toolbin, commands_log, compile_log, emit):
+    """Capture real Ninja/driver/map evidence before ELF acceptance can fail."""
+    def read_bounded(path, limit):
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > limit:
+            raise RuntimeError('Missing/unsafe/oversized link evidence: ' + path.name)
+        return path.read_text(encoding='utf-8', errors='strict')
+
+    def output_path(args):
+        if args.count('-o') != 1:
+            return None
+        index = args.index('-o')
+        if index + 1 == len(args):
+            return None
+        return (build / args[index + 1]).resolve()
+
+    commands = read_bounded(commands_log, 32 * 1024 * 1024).splitlines()
+    drivers = read_bounded(compile_log, 32 * 1024 * 1024).splitlines()
+    final = []
+    for line in commands:
+        args = shlex.split(line)
+        if output_path(args) == binary.resolve():
+            final.append((line, args))
+    if len(final) != 1:
+        raise RuntimeError('Missing/ambiguous generated QEMU final link command')
+    line, args = final[0]
+    if (len(line) > 60000 or any(a.startswith('@') or a in ('&&', ';', '|') for a in args)
+            or Path(args[0]).resolve() not in { (toolbin / ('aarch64-linux-android30-clang' + suffix)).resolve()
+                                               for suffix in ('', '++') }
+            or args.count('-static-pie') != 1 or any(a in args for a in ('-shared', '-static', '-no-pie'))):
+        raise RuntimeError('Unsupported/ambiguous QEMU link command or target/mode mismatch')
+    emit('ACTUAL NINJA FINAL LINK\n' + line)
+    compiler_sha = digest(Path(args[0]))
+    linker = []
+    for line in drivers:
+        # Only the verbose Clang driver linker invocation; build progress is not shell code.
+        if 'ld.lld' not in line:
+            continue
+        args = shlex.split(line)
+        if args and Path(args[0]).resolve() == (toolbin / 'ld.lld').resolve() and output_path(args) == binary.resolve():
+            linker.append((line, args))
+    if len(linker) != 1 or len(linker[0][0]) > 60000:
+        raise RuntimeError('Missing/ambiguous/bounded-out actual NDK linker invocation')
+    line, args = linker[0]
+    emit('ACTUAL NDK LINKER\n' + line)
+    if not {'-static', '-pie', '--no-dynamic-linker'}.issubset(args) or '-shared' in args:
+        raise RuntimeError('Actual linker mode disagrees with static PIE request')
+    sysroot = toolbin.parent / 'sysroot/usr/lib/aarch64-linux-android'
+    crt = {}
+    for name in ('crtbegin_dynamic.o', 'crtend_android.o'):
+        expected = (sysroot / '30' / name).resolve()
+        found = [a for a in args if Path(a).name == name]
+        if len(found) != 1 or Path(found[0]).resolve() != expected:
+            raise RuntimeError('Missing/substituted Android API-30 CRT input')
+        crt[name] = digest(expected)
+    mapfile = build / 'qemu.map'
+    maptext = read_bounded(mapfile, 64 * 1024 * 1024)
+    inputs = sorted(set(re.findall(r'^\s*[0-9a-f]+\s+[0-9a-f]+\s+[0-9a-f]+\s+\d+\s+(.+):\(', maptext, re.M)))
+    libc = sysroot / 'libc.a'
+    # Resolve only actual map paths; a symbol or substring cannot supply CRT provenance.
+    static_init = any(item.endswith('(libc_init_static.o)') and
+                      Path(item.split('(', 1)[0]).resolve() == libc.resolve() for item in inputs)
+    if not inputs or not static_init:
+        raise RuntimeError('No exact NDK libc.a static startup input in link map')
+    records = {}
+    for item in inputs:
+        source = (build / item.split('(', 1)[0]).resolve()
+        if source.suffix in ('.a', '.o') and source.is_file() and str(source) not in records:
+            if not source.is_relative_to(build.parent):
+                raise RuntimeError('Link input outside verified research tree')
+            records[str(source)] = {'size': source.stat().st_size, 'sha256': digest(source)}
+    evidence = {'mode': 'static', 'binary_sha256': digest(binary), 'size': binary.stat().st_size,
+                'compiler_sha256': compiler_sha, 'linker_sha256': digest(toolbin / 'ld.lld'),
+                'verified_ndk_archive_sha256': NDK_SHA256,
+                'crtbegin': crt, 'libc_static_init': static_init, 'libc_sha256': digest(libc),
+                'commands_sha256': digest(commands_log), 'compile_log_sha256': digest(compile_log),
+                'map_sha256': digest(mapfile), 'map_input_count': len(inputs)}
+    emit('LINK EVIDENCE ' + json.dumps(evidence, sort_keys=True))
+    emit('ACTUAL MAP INPUTS (bounded display; complete map identified above)\n' + '\n'.join(inputs))
+    emit('LINK INPUT IDENTITIES ' + json.dumps(records, sort_keys=True))
+    return evidence
+
+
 def tree_size(root):
     return sum(p.stat().st_size for p in root.rglob('*') if p.is_file() and not p.is_symlink())
 
@@ -618,6 +882,9 @@ class Research:
     def emit(self, value):
         value = str(value).replace(str(self.root), '$RESEARCH')
         value = value.replace(str(Path.home()), '$HOME')
+        if len(value) > 65536:
+            sha = hashlib.sha256(value.encode()).hexdigest()
+            value = value[:64000] + f'\n[bounded display; full sanitized text chars={len(value)} sha256={sha}]'
         print(value, flush=True)
 
     def run(self, *args, cwd=None, env=None, timeout=900, show=False):
@@ -888,20 +1155,23 @@ class Research:
                  '--disable-gio', '--disable-modules', '--disable-install-blobs', '--audio-drv-list=',
                  '--disable-slirp', '--disable-virtfs', '--disable-libusb', '--disable-opengl', '--disable-kvm',
                  f'--extra-cflags=-I{prefix}/include',
-                 f'--extra-ldflags=-L{prefix}/lib -Wl,-Map,{build}/qemu.map',
+                 f'--extra-ldflags=-L{prefix}/lib -Wl,-Map,{build}/qemu.map -v',
                  '-Dprefer_static=true', '-Db_staticpic=true', cwd=build, env=target_env, show=True)
         self.emit('CONFIGURED QEMU; compilation not yet proved')
         for path in sorted(build.glob('*config*.mak')) + sorted(build.glob('*config*.h')):
             self.emit(f'CONFIG {path.name} sha256={digest(path)}\n{path.read_text()}')
         self.phase('QEMU Android compile and link')
         self.run(self.host_ninja, '-j2', 'qemu-system-aarch64', cwd=build, env=target_env, timeout=1500)
+        compile_log = self.logs / f'{self.sequence:03d}.log'
         binary = build / 'qemu-system-aarch64'
         self.emit(f'BUILT QEMU size={binary.stat().st_size} sha256={digest(binary)}')
+        self.phase('actual QEMU link provenance before ELF acceptance')
+        self.run(self.host_ninja, '-t', 'commands', 'qemu-system-aarch64', cwd=build)
+        evidence = qemu_link_evidence(binary, build, toolbin, self.logs / f'{self.sequence:03d}.log',
+                                      compile_log, self.emit)
         self.phase('native output inspection')
-        self.inspect(binary, toolbin)
+        self.inspect(binary, toolbin, mode='static', evidence=evidence)
         self.run(toolbin / 'llvm-size', '-A', binary, show=True)
-        commands = self.run(self.host_ninja, '-t', 'commands', 'qemu-system-aarch64', cwd=build)
-        self.emit('BUILD COMMANDS tail (full log retained only on runner)\n' + commands)
         linkmap = build / 'qemu.map'
         self.emit(f'LINK MAP sha256={digest(linkmap)}')
         inventory = sorted({line.strip() for line in linkmap.read_text().splitlines()
@@ -913,8 +1183,15 @@ class Research:
             self.emit(f'DEPENDENCY {path.name} size={path.stat().st_size} sha256={digest(path)}')
         self.emit('COMPLETE: cross-build only. Android execution Unknown. Gate 0 Unresolved; A-G Not reached.')
 
-    def inspect(self, binary, toolbin):
+    def inspect(self, binary, toolbin, mode='dynamic', evidence=None):
         text = self.run(toolbin / 'llvm-readelf', '-h', '-l', '-d', '-W', binary, show=True)
+        if binary.stat().st_size > 256 * 1024 * 1024:
+            raise RuntimeError('ELF exceeds inspection budget')
+        report = inspect_android_elf(binary.read_bytes(), mode)
+        self.emit('STRUCTURED ELF ' + json.dumps(report, sort_keys=True))
+        if mode == 'static':
+            require_static_startup(report, evidence or {})
+        # Keep every original dynamic-PIE control check as an additional gate.
         if ('AArch64' not in text or 'ELF64' not in text or
                 '/system/bin/linker64' not in text or 'DYN' not in text):
             raise RuntimeError('Output is not the expected Android AArch64 PIE')

@@ -3,6 +3,223 @@
 **2026-10-08. Gate 0: Unresolved. Gates A–G: Not reached.**
 ADR-0001 remains Accepted; ADR-0002 remains Proposed. No engine selected.
 
+## Sixth revision: static-PIE classification and unsupported startup (2026-10-10)
+
+**Head `d51345b107334de7c5ff528256dd20cc95e1e48b` successfully configured,
+compiled and linked a QEMU Android ARM64 static-PIE candidate. Its subsequent
+dynamic-PIE inspector failed. This was not a compilation or link failure.**
+The local investigation below establishes a separate startup acceptance blocker;
+the revision does not turn that candidate into an accepted executable by deleting
+the interpreter/dependency requirements.
+
+### Live preflight and actual Ubuntu output
+
+Live main remained `d5466f1943e3cd7e33cbd62c8a23571e4de52ae5`; sole open PR #6
+targeted main at `d51345b`. Foundation and Android checks succeeded; cross-build
+failed. Reviews, comments and review threads were empty, and combined statuses
+had no contexts. GitHub Status was operational, updated
+`2026-10-10T03:24:25.123Z`. The existing branch was clean, with one worktree and
+no stashes. Full exact-base diff/files/100644 modes, workflows and job logs,
+requirements/ADRs/architecture/Gate 0, dependency/license/provenance and tracked
+binary inventory were reviewed. The historical repository remains read-only.
+
+[Run 38024537948](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/38024537948),
+job `114132450158`, passed all 72 Linux regression tests, source/Git-object/NDK
+verification, Android API/link controls, PCRE2/libffi/libfdt/GLib builds and the
+libfdt archive/symbol checks. QEMU Meson setup completed and Ninja compiled and
+linked `qemu-system-aarch64`. The separate Android job passed assembly, lint,
+release authority inspection and 48 protocol/report checks.
+
+The actual linked QEMU output was **70,336,120 bytes**, SHA-256
+`56045e40939c95af0d1619da9f3556e4fc685b1ba7d28b14c0e7033e147e3dbc`.
+Its recorded ELF properties were ELF64 little-endian AArch64 ET_DYN, entry
+`0x4b82c0` in the executable LOAD, four LOAD segments aligned to `0x4000`, no
+writable/executable LOAD, GNU_RELRO, non-executable GNU_STACK and FLAGS/FLAGS_1
+`BIND_NOW`/`NOW PIE`. It had **no PT_INTERP and no DT_NEEDED**, a `.note.android.ident`
+section and a RELA table of 1,655,112 bytes, with `RELACOUNT=68963`. The old command
+did not decode the Android note descriptor or individual relocations/symbols.
+Those remain unverified for that exact artifact; the note's section name alone
+does not establish its content or toolchain identity.
+
+The inspector required `/system/bin/linker64` and nonempty shared dependencies,
+and failed at `FAILED [native output inspection]: Output is not the expected
+Android AArch64 PIE`. LLVM section sizes, generated final-link command, link-map
+inventory and post-link Meson inventories followed that gate and were NOT RUN.
+The runner artifact was not uploaded; no local QEMU copy or retrospective complete
+inspection is claimed.
+
+### Why static PIE was selected, and what the old log cannot prove
+
+The reverified QEMU archive remains SHA-256
+`a5a78e7d395ed096a7b2d98375978d0e2cf73f62c49a081ca48fa665d479b09f`,
+commit `4fc49f46dc95d4a27de2509e7fceb2931e91faeb` (v11.1.2).
+Its upstream `meson.build:3` defaults `b_pie=true`; lines 437–439 add
+`-static-pie` when `prefer_static=true` and PIE is enabled. The actual configure
+command requested `-Dprefer_static=true -Db_staticpic=true` and did not override
+`b_pie`. Thus upstream source selects a static PIE, consistent with the output.
+
+**The old run did not print its final generated linker command.** The source and
+ELF evidence support the static-PIE explanation, but cannot substitute for an
+observed exact command. The revision adds Clang's `-v` link diagnostic and moves
+bounded link-evidence capture before ELF acceptance. It records the actual final
+Ninja command and the actual verbose NDK `ld.lld` invocation, rather than replaying
+a guessed link or representing a `-###` plan as an executed command.
+
+The capture requires one command producing the exact output, the verified NDK
+API-30 compiler path, `-static-pie`, and matching linker `-static -pie
+--no-dynamic-linker`. Missing/ambiguous commands, response-file indirection or
+unsupported shell composition fail explicitly. The maximum displayed command is
+60,000 characters; input logs/maps are bounded, and larger public inventories
+carry explicit display-truncation length/hash markers. Only the existing verified
+Ninja and separate build directory are used.
+
+Before strict ELF acceptance, it also records output/command-log/build-log/map
+SHA-256 identities, exact API-30 CRT paths/hashes, compiler/linker hashes, the
+verified NDK archive hash, actual map inputs and input artifact hashes. It requires
+the exact NDK `libc.a(libc_init_static.o)` map input. All paths emitted through the
+runner are sanitized; no binary or raw log artifact is uploaded. Remaining full
+size/device/Meson inventories still depend on successful executable acceptance.
+
+### NDK/Bionic startup review: linking is not sufficient
+
+The installed reviewed NDK is r28c `28.2.13676358`, Clang 19.0.1/r530567e.
+Its compiler source is
+[`97a699bf4812a18fb657c2779f5296a4ab2694d2`](https://android.googlesource.com/toolchain/llvm-project/+/97a699bf4812a18fb657c2779f5296a4ab2694d2/clang/lib/Driver/ToolChains/Gnu.cpp).
+The exact `Gnu.cpp` driver emits `-static -pie --no-dynamic-linker -z text` for
+`-static-pie`. Android skips the non-Android `rcrt1.o` branch, and its static-PIE
+branch selects **`crtbegin_dynamic.o`**, not a reviewed self-relocating startup.
+The actual local verbose link confirmed that selection and `crtend_android.o`,
+with NDK compiler-rt builtins, libunwind and static libc.
+
+The compiler's `manifest_13624864.xml` names Bionic
+`b86008a9cd14a7748867d2232e6de439e4809c10`. Reviewed source observations:
+
+- [`crtbegin.c`](https://android.googlesource.com/platform/bionic/+/b86008a9cd14a7748867d2232e6de439e4809c10/libc/arch-common/bionic/crtbegin.c)
+  supplies AArch64 `_start`, branches to `_start_main`, and calls `__libc_init`.
+  `CRTBEGIN_STATIC` and dynamic startup prepare different constructor/destructor
+  metadata. SHA-256: `25e4e95c97e263fb402ee73774598a0f9886babe4f5cbbb0530aa7d888fd5d2d`.
+- [`libc_init_static.cpp`](https://android.googlesource.com/platform/bionic/+/b86008a9cd14a7748867d2232e6de439e4809c10/libc/bionic/libc_init_static.cpp)
+  initializes TLS, globals and static runtime state, calls IFUNC resolvers and
+  applies GNU_RELRO using program-header virtual addresses. That is not a general
+  load-bias-aware `R_AARCH64_RELATIVE` self-relocator. The reviewed path passes
+  load bias zero to its static MTE setup and does not establish static-PIE rebasing.
+  SHA-256: `3cd059892ca8fd7084ac4c6a46d8bb02f74082d54d9de2c65d815325ecc3ad7f`.
+
+The source-manifest reference is compiler-build context, not independent proof
+that every NDK sysroot archive was rebuilt from that same commit. Actual local
+driver/map/symbol/disassembly evidence independently establishes the selected
+CRT and `libc_init_static.o` startup route, but full source-to-binary correspondence
+of every prebuilt NDK runtime member remains limited by the reviewed distribution.
+There is no evidence here of an approved self-relocator fixing the candidate's
+relative relocations before Bionic startup, or correctly applying RELRO after
+rebasing. **Static-PIE executable acceptance is therefore Unsupported**, even
+when structural checks pass. This is not a claim that all Android static PIE
+implementations are impossible, and no Android execution was attempted.
+
+The already adopted NDK distribution supplies these research inputs. Bionic's
+reviewed startup files carry BSD-style notices; Clang/compiler-rt/libunwind and
+Scudo have their own LLVM/Apache and file-specific terms. Static linking includes
+runtime code rather than dynamic import stubs. The original QEMU GPL and static
+GLib/LGPL source/redistribution obligations remain; no product adoption or binary
+distribution is authorized by the successful link.
+
+### Genuine local positive and negative controls
+
+On the local Windows host, the same reviewed NDK produced a minimal Android
+ARM64/API-30 static PIE from a real pointer-relocation control:
+
+```c
+#include <stdint.h>
+#if !defined(__ANDROID__) || !defined(__BIONIC__) || !defined(__aarch64__) || __ANDROID_API__ != 30
+#error wrong target
+#endif
+static int value = 7;
+static int *volatile pointer = &value;
+int main(void) { return *pointer != 7; }
+```
+
+Sanitized executed command (private local paths replaced with aliases):
+
+```sh
+"$NDK_BIN/clang.exe" --target=aarch64-linux-android30 -Werror -fPIE -static-pie \
+  -Wl,-z,relro,-z,now,-z,max-page-size=16384 -Wl,-Map,"$RESEARCH/static.map" \
+  -v "$RESEARCH/control.c" -o "$RESEARCH/static"
+```
+
+It linked: **2,150,336 bytes**, SHA-256
+`6d019554bce1ad1bad92e6d0856d89ff9729d5c3b9128c4bb1f24ef4a29aa1ff`.
+It has entry `0x1d900` at defined `_start`, no interpreter/NEEDED, a decoded
+Android API-30/r28c/13676358 note, one null dynamic symbol and **425
+R_AARCH64_RELATIVE relocations**. Its map includes the actual NDK
+`crtbegin_dynamic.o`, `crtend_android.o` and `libc.a(libc_init_static.o)`;
+disassembly of `_start` and `__libc_init` corroborates the startup route. It passes
+structural classification, then **fails the mandatory startup acceptance gate**.
+This is a positive link/structure control and a negative executable-acceptance
+control, not a working Android executable or a valid reviewed static startup.
+
+The same source linked with `-pie` instead of `-static-pie`: 5,952 bytes, SHA-256
+`83ee516473991c24a91798c3c2a609e924b73992229eb0d9e6bf558b31b3734b`.
+It passes dynamic classification with Android linker64 and libc/libdl dependencies.
+Fresh positive (zlib/iconv) and shared-memory controls, plus the existing genuine
+libfdt control, also pass both the new structured checks and **all original dynamic
+inspector checks**. No control executable was run. No complete local Linux QEMU
+build is claimed.
+
+### Strict inspection, regression coverage and remaining work
+
+The new standard-library parser validates bounded ELF headers, program/section
+tables and their file/virtual mapping correspondence, ELF64 little-endian AArch64
+ET_DYN, PIE flag, `_start` at a nonzero executable file-backed entrypoint,
+non-overlapping LOADs without W+X, non-executable stack, 16 KiB alignment and offset
+congruence, GNU_RELRO containing the dynamic table, bind-now, forbidden
+SONAME/RPATH/RUNPATH/text relocations, decoded Android API/NDK note, symbol-table
+structure and glibc-version contamination. Dynamic mode still requires the exact
+Android interpreter and a nonempty reviewed DT_NEEDED closure. Ordinary shared
+libraries and mode mismatches do not gain acceptance from ET_DYN alone.
+
+Static structural classification separately requires no interpreter/NEEDED,
+one null dynamic symbol, defined Bionic startup, no unresolved strong static
+symbols, and the reviewed RELA-only R_AARCH64_RELATIVE form with matching dynamic
+metadata/counts, writable aligned relocation targets and image-relative addends.
+Other relocation encodings/types remain unsupported. It then requires matching
+output/link/CRT provenance and reaches the explicit **unsupported startup gate**.
+No caller boolean, note, hash, empty dependency list or structural success can
+waive that gate. No accepted-static positive test is invented when no supported
+startup has been established.
+
+Local regression result: **88 tests, 84 passed, four existing Windows skips**.
+All original 72 tests remain unchanged. Sixteen new tests exercise structural
+dynamic success, static-candidate classification with rejection at acceptance,
+missing interpreter, foreign dependencies/ABI/NDK, wrong entrypoint/segment
+structure, W+X, executable stack, alignment, RELRO/bind-now, unsupported/invalid
+relocations, glibc contamination, missing startup evidence, link/mode/CRT mismatch,
+ambiguous map/command evidence and malformed/truncated/substituted ELF. Fixtures
+are never executed. Genuine NDK controls above exercise the production inspector
+independently of those fixtures.
+
+Foundation/Markdown links, harness authority, Python/workflow Bash syntax,
+manual YAML review, source/wheel/patch integrity, whitespace, complete exact-base
+diff/modes, dependency/license/provenance and public binary/secret inventory passed
+before publication. No standalone YAML parser is installed; parser validation is
+not claimed. No Android source, permission, workflow or immutable input changed.
+
+The new Ubuntu result is **pending** at publication. The recipe will capture the
+real link evidence and fail static executable acceptance if startup support is
+still unsupported; a green check is not manufactured. Full LLVM size/sections,
+post-acceptance device/map/Meson dependency/options and native-facility inventories
+remain gated. No new QEMU linker failure is claimed. The next smallest proposed
+non-physical experiment is a **dynamic Android PIE** with explicitly reviewed
+dependency routing; it is not implemented here and does not select a shipping
+architecture. Adding a Bionic self-relocator would require separate source review.
+
+Android launch/loading, APK packaging/installation, SELinux/isolated UID, memory
+and FD lifetime, signal/ART interaction, runtime 16 KiB behavior, containment and
+performance remain Unknown. Gate 0 **Unresolved**, Gates A–G **Not reached**,
+ADR-0002 **Proposed**. No phone/ADB, Android execution, Cloud, privilege/permission
+expansion, VpnService, QEMU import into the shipping app, committed binary/firmware/
+guest image or production-engine selection is involved. Earlier attempts retain
+their actual outcomes below.
+
 ## Fifth revision: consistent host Ninja selection (2026-10-10)
 
 **Head `2887ae2cfa3876b7461c4f6a4a093235e90dbd29` resolved libfdt discovery,

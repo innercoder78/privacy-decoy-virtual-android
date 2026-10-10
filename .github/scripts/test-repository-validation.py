@@ -538,6 +538,181 @@ class GitSourceTests(unittest.TestCase):
             research.verify_source_tree(self.destination, manifest)
 
 
+class ElfInspectionTests(unittest.TestCase):
+    def fixture(self, mode='static'):
+        # Structured synthetic ELF for inspection only, never executable evidence.
+        data = bytearray(0x5000)
+        pack = lambda fmt, offset, *values: research.struct.pack_into(fmt, data, offset, *values)
+        names = ['.text', '.dynstr', '.dynsym', '.rela.dyn', '.note.android.ident',
+                 '.dynamic', '.data', '.strtab', '.symtab', '.shstrtab']
+        shstrings = b'\0' + b''.join(n.encode() + b'\0' for n in names)
+        strtab = b'\0_start\0__libc_init\0'
+        dynstr = b'\0libc.so\0'
+        note = research.struct.pack('<III', 8, 132, 1) + b'Android\0'
+        note += research.struct.pack('<I', 30) + b'r28c'.ljust(64, b'\0') + b'13676358'.ljust(64, b'\0')
+        for offset, content in ((0x400, note), (0x600, dynstr), (0x3500, shstrings), (0x3600, strtab)):
+            data[offset:offset+len(content)] = content
+        pack('<QQq', 0x900, 0xa300, 1027, 0x5000)
+        pack('<IBBHQQ', 0x3718, 1, 0x12, 0, 1, 0x5000, 4)
+        pack('<IBBHQQ', 0x3730, 8, 0x12, 0, 1, 0x5004, 4)
+        tags = [(30, 8), (0x6ffffffb, 0x08000001), (5, 0x600), (10, len(dynstr)), (6, 0x800), (11, 24)]
+        tags += [(1, 1)] if mode == 'dynamic' else [(7, 0x900), (8, 24), (9, 24), (0x6ffffff9, 1)]
+        tags += [(0, 0)]
+        for i, (tag, value) in enumerate(tags): pack('<qQ', 0x2100 + i*16, tag, value)
+        ph = [(1,4,0,0,0,0x1000,0x1000,0x4000),
+              (1,5,0x1000,0x5000,0x5000,0x100,0x100,0x4000),
+              (1,6,0x2000,0xa000,0xa000,0x1000,0x1000,0x4000),
+              (2,6,0x2100,0xa100,0xa100,len(tags)*16,len(tags)*16,8),
+              (0x6474e551,6,0,0,0,0,0,0),
+              (0x6474e552,4,0x2000,0xa000,0xa000,0x1000,0x1000,1)]
+        if mode == 'dynamic':
+            interp = b'/system/bin/linker64\0'; data[0x500:0x500+len(interp)] = interp
+            ph.append((3,4,0x500,0x500,0x500,len(interp),len(interp),1))
+        for i,p in enumerate(ph): pack('<IIQQQQQQ',64+i*56,*p)
+        specs = [(1,6,0x5000,0x1000,0x100,0,0), (3,2,0x600,0x600,len(dynstr),0,0),
+                 (11,2,0x800,0x800,24,2,24), (4,2,0x900,0x900,24,3,24),
+                 (7,2,0x400,0x400,len(note),0,0), (6,3,0xa100,0x2100,len(tags)*16,2,16),
+                 (1,3,0xa000,0x2000,0x1000,0,0), (3,0,0,0x3600,len(strtab),0,0),
+                 (2,0,0,0x3700,72,8,24), (3,0,0,0x3500,len(shstrings),0,0)]
+        for i,(name,s) in enumerate(zip(names,specs),1):
+            kind,flags,addr,offset,size,link,entsize=s
+            pack('<IIQQQQIIQQ',0x4000+i*64,shstrings.index(name.encode()+b'\0'),kind,flags,addr,offset,size,link,0,8,entsize)
+        pack('<16sHHIQQQIHHHHHH',0,b'\x7fELF\x02\x01\x01'+bytes(9),3,183,1,0x5000,64,0x4000,0,64,56,len(ph),64,11,10)
+        return data
+
+    def inspect(self, data, mode='static'):
+        return research.inspect_android_elf(bytes(data), mode)
+
+    def test_valid_dynamic_structure_and_static_candidate_are_distinct(self):
+        self.assertEqual(self.inspect(self.fixture('dynamic'),'dynamic')['needed'], ['libc.so'])
+        report = self.inspect(self.fixture())
+        self.assertEqual(report['relocations'], {'R_AARCH64_RELATIVE': 1})
+        self.assertFalse(report['static_startup_accepted'])
+
+    def test_static_candidate_cannot_be_promoted_by_boolean_or_elf_shape(self):
+        report = self.inspect(self.fixture())
+        evidence = {'binary_sha256': report['sha256'], 'mode': 'static',
+                    'crtbegin': {'crtbegin_dynamic.o': 'fixture'}, 'libc_static_init': True,
+                    'static_startup_accepted': True}
+        with self.assertRaisesRegex(RuntimeError, 'Unsupported Android static PIE startup'):
+            research.require_static_startup(report,evidence)
+
+    def test_missing_and_substituted_startup_evidence_rejected(self):
+        report = self.inspect(self.fixture())
+        for evidence in ({}, {'binary_sha256':'wrong','mode':'static','crtbegin':True,'libc_static_init':True},
+                         {'binary_sha256':report['sha256'],'mode':'dynamic','crtbegin':True,'libc_static_init':True}):
+            with self.assertRaisesRegex(RuntimeError, 'evidence missing'):
+                research.require_static_startup(report,evidence)
+
+    def test_modes_cannot_bypass_interpreter_or_dependency_checks(self):
+        for actual,requested in (('static','dynamic'),('dynamic','static')):
+            with self.assertRaises(RuntimeError): self.inspect(self.fixture(actual),requested)
+        data=self.fixture('dynamic'); research.struct.pack_into('<I',data,64+6*56,0)
+        with self.assertRaisesRegex(RuntimeError,'interpreter'): self.inspect(data,'dynamic')
+
+    def test_foreign_dependency_and_glibc_version_rejected(self):
+        data=self.fixture('dynamic'); data[0x601:0x608]=b'evil.so'
+        with self.assertRaisesRegex(RuntimeError,'dependencies'): self.inspect(data,'dynamic')
+        data=self.fixture(); data[0x601:0x607]=b'GLIBC_'
+        with self.assertRaisesRegex(RuntimeError,'glibc'): self.inspect(data)
+
+    def test_wrong_architecture_class_byte_order_and_ndk_rejected(self):
+        for offset,value in ((4,1),(5,2),(18,62),(0x414,29),(0x418,ord('x'))):
+            data=self.fixture(); data[offset]=value
+            with self.subTest(offset=offset),self.assertRaises(RuntimeError): self.inspect(data)
+
+    def test_invalid_entrypoint_or_shared_library_without_pie_flag_rejected(self):
+        for entry in (0,0xa100,0x6000):
+            data=self.fixture(); research.struct.pack_into('<Q',data,24,entry)
+            with self.assertRaisesRegex(RuntimeError,'entrypoint'): self.inspect(data)
+        data=self.fixture(); research.struct.pack_into('<Q',data,0x2118,1)
+        with self.assertRaisesRegex(RuntimeError,'PIE'): self.inspect(data)
+
+    def test_wx_load_executable_stack_and_bad_alignment_rejected(self):
+        for offset,value in ((64+56+4,7),(64+4*56+4,7),(64+48,4096)):
+            data=self.fixture(); research.struct.pack_into('<I',data,offset,value)
+            with self.assertRaises(RuntimeError): self.inspect(data)
+
+    def test_invalid_segment_size_overlap_and_relro_rejected(self):
+        for offset,value in ((64+40,1),(64+56+16,0),(64+5*56+16,0xb000)):
+            data=self.fixture(); research.struct.pack_into('<Q',data,offset,value)
+            with self.assertRaises(RuntimeError): self.inspect(data)
+
+    def test_forbidden_paths_textrel_and_missing_now_rejected(self):
+        for tag in (14,15,22,29):
+            data=self.fixture(); research.struct.pack_into('<q',data,0x2100,tag)
+            with self.assertRaisesRegex(RuntimeError,'forbidden'): self.inspect(data)
+        data=self.fixture(); research.struct.pack_into('<Q',data,0x2108,0)
+        research.struct.pack_into('<Q',data,0x2118,0x08000000)
+        with self.assertRaisesRegex(RuntimeError,'bind-now'): self.inspect(data)
+
+    def test_unsupported_relocations_and_invalid_targets_rejected(self):
+        for offset,value in ((0x908,1032),(0x908,1027+(1<<32)),(0x900,0x5000),(0x910,0xffff)):
+            data=self.fixture(); research.struct.pack_into('<Q',data,offset,value)
+            with self.assertRaisesRegex(RuntimeError,'relocation'): self.inspect(data)
+
+    def test_start_symbol_and_static_libc_definition_required(self):
+        for offset in (0x3718+6,0x3730+6):
+            data=self.fixture(); research.struct.pack_into('<H',data,offset,0)
+            with self.assertRaises(RuntimeError): self.inspect(data)
+
+    def test_substituted_truncated_and_malformed_tables_rejected(self):
+        for data in (b'MZ'+bytes(500),bytes(self.fixture()[:60]),bytes(self.fixture()[:0x4100])):
+            with self.assertRaises(RuntimeError): self.inspect(data)
+        for offset,value in ((32,2**64-1),(40,2**64-1),(0x4000+3*64+56,8)):
+            data=self.fixture(); research.struct.pack_into('<Q',data,offset,value)
+            with self.assertRaises(RuntimeError): self.inspect(data)
+
+    def link_fixture(self, root):
+        build = root / 'qemu-build'; build.mkdir()
+        toolbin = root / 'ndk/bin'; toolbin.mkdir(parents=True)
+        for name in ('aarch64-linux-android30-clang', 'ld.lld'):
+            (toolbin / name).write_bytes(b'fixture never executed')
+        lib = root / 'ndk/sysroot/usr/lib/aarch64-linux-android'
+        (lib / '30').mkdir(parents=True)
+        for name in ('crtbegin_dynamic.o', 'crtend_android.o'):
+            (lib / '30' / name).write_bytes(b'inspection fixture only')
+        (lib / 'libc.a').write_bytes(b'synthetic archive, never executed')
+        binary = build / 'qemu-system-aarch64'; binary.write_bytes(self.fixture())
+        commands = root / 'commands.log'; compile_log = root / 'compile.log'
+        commands.write_text(research.shlex.join([str(toolbin / 'aarch64-linux-android30-clang'),
+                            '-static-pie', '-o', 'qemu-system-aarch64'])+'\n')
+        compile_log.write_text(research.shlex.join([str(toolbin / 'ld.lld'), '-static', '-pie',
+            '--no-dynamic-linker', '-o', 'qemu-system-aarch64', str(lib / '30/crtbegin_dynamic.o'),
+            str(lib / '30/crtend_android.o')])+'\n')
+        (build / 'qemu.map').write_text('  5000 5000 40 4 '+str(lib / 'libc.a')+'(libc_init_static.o):(.text)\n')
+        return binary, build, toolbin, commands, compile_log
+
+    def test_link_evidence_is_bound_to_output_and_actual_input_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args = self.link_fixture(Path(directory))
+            evidence = research.qemu_link_evidence(*args, lambda _: None)
+            self.assertEqual(evidence['binary_sha256'], research.digest(args[0]))
+            self.assertEqual(evidence['mode'], 'static')
+            self.assertTrue(evidence['libc_static_init'])
+            with self.assertRaisesRegex(RuntimeError,'Unsupported'):
+                research.require_static_startup(self.inspect(args[0].read_bytes()), evidence)
+
+    def test_generated_link_mode_and_actual_driver_mismatch_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args = self.link_fixture(Path(directory))
+            for path,old,new in ((args[3],'-static-pie','-shared'),
+                                 (args[4],'--no-dynamic-linker','--dynamic-linker=foreign'),
+                                 (args[4],'crtbegin_dynamic.o','crtbegin_so.o')):
+                original=path.read_text(); path.write_text(original.replace(old,new))
+                with self.assertRaises(RuntimeError): research.qemu_link_evidence(*args, lambda _: None)
+                path.write_text(original)
+
+    def test_missing_map_startup_and_ambiguous_final_command_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args = self.link_fixture(Path(directory))
+            path=args[3]; original=path.read_text(); path.write_text(original*2)
+            with self.assertRaisesRegex(RuntimeError,'ambiguous'): research.qemu_link_evidence(*args, lambda _: None)
+            path.write_text(original)
+            (args[1]/'qemu.map').write_text('libc_init_static.o is mentioned but is not a map input\n')
+            with self.assertRaisesRegex(RuntimeError,'startup input'): research.qemu_link_evidence(*args, lambda _: None)
+
+
 class NinjaSelectionTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
