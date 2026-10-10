@@ -3,6 +3,191 @@
 **2026-10-08. Gate 0: Unresolved. Gates A–G: Not reached.**
 ADR-0001 remains Accepted; ADR-0002 remains Proposed. No engine selected.
 
+## Fourth revision: verified static-library discovery (2026-10-09)
+
+**Head `9f218ec5a794f2912398f36db1e7bd64be943c03` passed the Android
+shared-memory correction, then stopped at QEMU's required libfdt discovery.**
+The new revision fixes the reproduced discovery defect; full QEMU configuration,
+Ninja compilation/linking and QEMU ELF inspection remain **pending** at publication.
+No target executable was run. Earlier failed runs below retain their actual results.
+
+### Live preflight and fourth Linux result
+
+Live main remained `d5466f1943e3cd7e33cbd62c8a23571e4de52ae5`; sole open
+PR #6 had head `9f218ec`. Its foundation and Android jobs succeeded; cross-build
+failed. Reviews, comments and unresolved threads were empty, and combined commit
+statuses contained no contexts. The actual workflow/job results determine check
+outcomes. GitHub Status reported operational, updated `2026-10-09T21:52:10.224Z`.
+Resumption preserved the existing three-file libfdt work on the canonical branch,
+with one worktree, no staged changes and no stashes. The
+full six-file exact-base changes, 100644 file modes, workflows, dependencies,
+source/license/provenance ledger, requirements, ADRs and Gate 0 boundaries were
+reviewed. Remote main and PR head were rechecked unchanged before publication.
+The historical repository remains untouched and read-only.
+
+[Run 37997290702](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/37997290702),
+job `114046462310`, checked out the exact `9f218ec` head. It passed all 47 Linux
+regression tests, pinned source verification, both subproject materializations,
+NDK acquisition, Android positive and shared-memory link controls, host Meson,
+PCRE2 library-only targets, libffi, libfdt and GLib build/installation. QEMU's
+own `Checking if "PDVA Android shared memfd" links: YES` confirms the prior
+portability correction advanced configuration beyond the shm_open/librt blocker.
+Its next fatal diagnostic was:
+
+```text
+meson.build:2076:11: ERROR: C prefer_static library 'fdt' not found
+FAILED [QEMU Android configure]: Command exit 1; dependent stages NOT RUN
+```
+
+The installed Linux libfdt archive was 62,028 bytes, SHA-256
+`a541b09de75db673691c3779bee30391a54fbd8211a5a6ffd212685f68d0d356`.
+This is a completed dependency build, not a successful QEMU link. The separate
+foundation job passed 47 tests; the Android job built its harness and passed 48
+protocol/report checks. No QEMU compilation/linking or QEMU ELF inspection occurred.
+
+### Source review, direct probe and reproduced cause
+
+The independently rehashed QEMU archive still matches
+`a5a78e7d395ed096a7b2d98375978d0e2cf73f62c49a081ca48fa665d479b09f`,
+QEMU v11.1.2 commit `4fc49f46dc95d4a27de2509e7fceb2931e91faeb`.
+Its unmodified `meson.build:2048` calls `cc.find_library('fdt', required: ...)`,
+then `cc.links` against both headers and `fdt_find_max_phandle`. Configure
+propagates `--extra-ldflags` into generated `c_link_args`/`cpp_link_args`; the
+executed shared-memory probe also shows the target `-L` option. It was not lost.
+
+The bundled Meson 1.11.1 wheel was reverified against its unchanged SHA-256
+`9b3a023657e393dbc5335b95c561337d49b7a458f5541e47ec44f2cc566e0d80`.
+Its `interpreter/compiler.py:find_library_method` selects PREFER_STATIC, while
+`compilers/mixins/clike.py:_find_library_real` bypasses the initial `-lfdt` link
+attempt for that mode and searches explicit directories plus compiler-reported
+library directories. `mixins/gnu.py:_get_search_dirs` uses a compile-mode
+`--print-search-dirs` control. The target prefix is neither an explicit directory
+in the original call nor a compiler directory. Local NDK controls confirmed that
+adding `-L` does not add the prefix to Clang's reported library directories.
+Thus a valid archive can link directly while remaining undiscovered in this mode.
+
+Before adding the discovery patch, a separate local Windows x86-64 research
+control rematerialized dtc from the verified raw Git commit
+`b6910bec11614980a21e46fbccc35934b671bd81`, tree
+`5de1e174f53a6ea499a49ac7b5eb7fe816dd9902`: 310 files, 825,954 bytes.
+It rebuilt the same ten libfdt objects with the already reviewed NDK r28c
+`28.2.13676358`, Clang 19.0.1/r530567e, explicit Android ARM64/API-30 target.
+NDK llvm-ar/readelf/nm confirmed the exact ten members, every member ELF64,
+little-endian AArch64 ET_REL, and one global text definition of
+`fdt_find_max_phandle`. No downloaded or host library supplied the function.
+The local archive was 61,740 bytes, SHA-256
+`4152c382c137ec57a4a3ce012c12e0c23db9d143db4dec9596a12585caa4980e`.
+Its different host/path-dependent identity does not replace the Linux artifact
+hash or establish cross-host reproducibility.
+
+The exact successful local command, with private paths replaced by aliases, was:
+
+```sh
+"$NDK_BIN/clang.exe" --target=aarch64-linux-android30 -Werror -fPIE -pie \
+  -Wl,-z,relro,-z,now,-z,max-page-size=16384 \
+  -I "$RESEARCH/target/include" "$RESEARCH/fdt-production-control.c" \
+  "$RESEARCH/target/lib/libfdt.a" -o "$RESEARCH/fdt-production-control"
+```
+
+The control uses the recipe's actual C probe, includes libfdt.h/libfdt_env.h,
+requires Android/Bionic/AArch64/API 30 and references `fdt_find_max_phandle`.
+It linked successfully: 21,800 bytes, SHA-256
+`7ef840299bb2a077f49e32b7a0b119f2668f0660935c1539277e6d54e43ca339`.
+ELF inspection establishes AArch64 ELF64 PIE, Android linker64, libc.so/libdl.so,
+RELRO/bind-now, non-executable stack and 16 KiB LOAD alignment. No target was
+executed. Wrong API, x86-64 and non-Android controls failed; an ARM64 archive
+without the symbol and a wrong `-L` directory failed to link.
+
+A minimal control using the real pinned Meson wheel, NDK compiler, installed
+headers, source-built archive and `prefer_static=true` reproduced the original
+`C prefer_static library 'fdt' not found` with `c_link_args = ['-L...']`.
+The explicit `dirs`/static control passed. The actual rendered Android branch
+plus QEMU's unchanged required-symbol `cc.links` block also passed; its Meson
+log shows the exact target archive in both successful link commands. These are
+local discovery/link observations, not execution of the full Linux QEMU graph.
+
+### Narrow reviewed patch and runner controls
+
+The recipe retains system FDT and all ten source-built objects. For the Android
+compiler only, it supplies the runner's own absolute `target/lib` directory to
+`cc.find_library` with `static: true`; other platforms retain the original call.
+QEMU's requiredness and independent header/symbol `cc.links` check remain intact.
+No internal subproject switch, disabled FDT, fake function, source revision
+change, warning suppression, host library or new dependency is introduced.
+
+The earlier two-file shared-memory patch is byte-for-byte unchanged. Before the
+new one-file patch, Meson's whole-file SHA-256 must be
+`51ac2ab6820b085cce6eaab28adb087885ef12465d81db47ff7899cea117fe6c`,
+the exact output of that verified adaptation. The FDT anchor must occur once;
+wrong or modified source, missing/duplicate anchors and duplicate application
+fail before writes. The path must be the caller's own separate target prefix,
+with an absolute POSIX path and no quoting/encoding/traversal ambiguity.
+
+The complete additional zero-context diff below uses the documented normalized
+research path `/pdva-review/target/lib`. For that exact substitution, modified
+meson.build SHA-256 is
+`26b635937fe8ba1ae05c688f9a21c92a839da0b528eb349f6f44a229139cda7f`,
+and diff SHA-256 is
+`7616f3487bcf296e068b8644eae4410b0266fe45d0c8d773e668ac32fab4c282`.
+The real runner directory varies; the recipe emits its actual before/after and
+diff hashes plus the complete sanitized diff, rather than claiming these
+normalized output hashes describe every runner path.
+
+```diff
+--- a/meson.build
++++ b/meson.build
+@@ -2075,0 +2076,3 @@
++  if cc.get_define('__ANDROID__') != ''
++    fdt = cc.find_library('fdt', dirs: ['/pdva-review/target/lib'], static: true, required: fdt_opt == 'system')
++  else
+@@ -2076,0 +2080 @@
++  endif
+```
+
+Before this new patch is applied, the unchanged bounded Linux workflow now
+verifies the archive digest captured immediately after its source build and
+installed headers against the verified dtc source. It checks all archive
+members with NDK LLVM tools and requires the symbol, performs the direct
+Android link control, inspects that control's ELF and rechecks artifact identity.
+Any failed control is fatal before the discovery modification. Commands are
+logged by the existing bounded runner. The existing QEMU configure, Ninja
+compile/link, native inspection and earliest-failure handling then continue.
+
+Adjacent `-Wduplicated-branches`/other optional compiler-flag probe failures are
+expected feature-selection results, separate from the required FDT error.
+No compiler warning policy or required functionality was weakened.
+
+### Validation and remaining boundary
+
+Local regression result: **61 tests, 57 passed, four existing Windows skips**.
+All original 47 remain; 14 new tests cover archive/header substitution, every
+member's ABI, missing/ambiguous required symbols, wrong/unsafe search paths,
+wrong targets, input identity/anchors, duplicate application and failure before
+writes. Existing raw-source substitution/security/validator tests remain intact.
+The production archive validator also passed against the actual local NDK-built
+archive. The pinned-archive renderer rejected duplicate application and preserved
+all original source/tool pins and the shared-memory adaptation exactly.
+
+Local offline Android assembly (debug, release and debug instrumentation),
+protocol tests and debug lint passed: **48 protocol/report checks**, 131 Gradle
+tasks (11 executed, 120 up-to-date). The sandboxed Gradle attempt could not load
+its native DLL; the authorized offline rerun with existing-cache access passed.
+Existing AGP/Gradle deprecation warnings were retained. No harness source,
+manifest, permission, dependency or verification
+metadata changed. Foundation/Markdown links, harness authority checks, Python
+syntax, workflow Bash syntax/manual YAML review, whitespace, exact-base modes,
+license/dependency/provenance and public secret/binary inventory passed before
+publication. A standalone YAML parser remains unavailable; no parser
+validation is claimed and no dependency was installed for it.
+
+After publication, checks are **pending**. No Linux full-QEMU result is claimed
+for this revision, and no post-push Actions/check/review polling or rerun occurs.
+Android load/isolated-UID authority, mapping/FD lifetime, signal/ART interaction,
+resource limits, runtime 16 KiB behavior, containment and performance remain
+Unknown. Gate 0 **Unresolved**, Gates A–G **Not reached**, ADR-0002 **Proposed**;
+no production QEMU adoption, physical device, ADB, emulator, Cloud, guest image,
+privileged API, harness permission change or committed binary is involved.
+
 ## Third revision: Android shared-memory portability (2026-10-09)
 
 **Head `6b91edab5f1bf3e6fe78f56daf8e3eb8c1cae30f` built all requested dependency

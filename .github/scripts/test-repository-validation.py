@@ -538,6 +538,123 @@ class GitSourceTests(unittest.TestCase):
             research.verify_source_tree(self.destination, manifest)
 
 
+class FdtDiscoveryTests(unittest.TestCase):
+    def setUp(self):
+        self.source = research.QEMU_FDT_ANCHOR.encode()
+        self.patch_pin = mock.patch.object(research, 'QEMU_FDT_PATCH_INPUT',
+                                           research.hashlib.sha256(self.source).hexdigest())
+        self.patch_pin.start()
+        self.addCleanup(self.patch_pin.stop)
+        self.members = '\n'.join(name + '.o' for name in research.FDT_OBJECTS) + '\n'
+        self.headers = ("Class: ELF64\nData: 2's complement, little endian\n"
+                        "Type: REL (Relocatable file)\nMachine: AArch64\n") * len(research.FDT_OBJECTS)
+        self.symbols = '0000000000000110 T fdt_find_max_phandle\n'
+
+    def render(self, source=None, directory='/review/target/lib', target='aarch64-linux-android30'):
+        return research.render_android_fdt_patch(self.source if source is None else source,
+                                                directory, target)
+
+    def test_android_static_directory_and_original_other_platform_branch(self):
+        text = self.render().decode()
+        self.assertIn("if cc.get_define('__ANDROID__') != ''", text)
+        self.assertIn("dirs: ['/review/target/lib'], static: true", text)
+        self.assertIn("required: fdt_opt == 'system'", text)
+        self.assertIn('  else\n' + research.QEMU_FDT_ANCHOR + '  endif\n', text)
+
+    def test_substituted_source_and_duplicate_application_rejected(self):
+        for source in (self.source + b'changed', self.render()):
+            with self.subTest(source=source), self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                self.render(source)
+
+    def test_missing_or_duplicate_anchor_rejected_even_with_matching_digest(self):
+        for source in (b'wrong anchor\n', self.source * 2):
+            with mock.patch.object(research, 'QEMU_FDT_PATCH_INPUT',
+                                   research.hashlib.sha256(source).hexdigest()):
+                with self.assertRaisesRegex(RuntimeError, 'anchor mismatch'):
+                    self.render(source)
+
+    def test_wrong_target_rejected(self):
+        for target in ('aarch64-linux-android29', 'x86_64-linux-android30', 'aarch64-linux-gnu'):
+            with self.subTest(target=target), self.assertRaisesRegex(RuntimeError, 'patch target'):
+                self.render(target=target)
+
+    def test_unsafe_or_host_search_directories_rejected(self):
+        for directory in ('/usr/lib', '/review/lib', 'target/lib', '/review/../target/lib',
+                          '/review/./target/lib', '/review//target/lib', '/review space/target/lib',
+                          "/review'path/target/lib", '/review\\target/lib', '/review/target/lib\n'):
+            with self.subTest(directory=directory), self.assertRaisesRegex(RuntimeError, 'search path'):
+                self.render(directory=directory)
+
+    def test_every_archive_member_and_required_symbol_accepted(self):
+        research.validate_fdt_inspection(self.members, self.headers, self.symbols)
+
+    def test_missing_extra_or_substituted_archive_members_rejected(self):
+        for members in ('fdt.o\n', self.members + 'host.o\n',
+                        self.members.replace('fdt_ro.o', 'host.o'), self.members.replace('fdt_ro.o\n', '')):
+            with self.subTest(members=members), self.assertRaisesRegex(RuntimeError, 'archive members'):
+                research.validate_fdt_inspection(members, self.headers, self.symbols)
+
+    def test_one_wrong_member_abi_is_rejected(self):
+        for old, new in [('AArch64', 'Advanced Micro Devices X86-64'), ('ELF64', 'ELF32'),
+                         ("little endian", "big endian"), ('REL (Relocatable file)', 'DYN')]:
+            with self.subTest(old=old), self.assertRaisesRegex(RuntimeError, 'target ABI'):
+                research.validate_fdt_inspection(self.members, self.headers.replace(old, new, 1), self.symbols)
+
+    def test_truncated_or_extra_member_inspection_is_rejected(self):
+        for headers in (self.headers.split('Machine:')[0], self.headers + self.headers):
+            with self.assertRaisesRegex(RuntimeError, 'target ABI'):
+                research.validate_fdt_inspection(self.members, headers, self.symbols)
+
+    def test_missing_undefined_or_ambiguous_required_symbol_rejected(self):
+        for symbols in ('', '                 U fdt_find_max_phandle\n',
+                        self.symbols * 2, self.symbols.replace(' T ', ' W ')):
+            with self.subTest(symbols=symbols), self.assertRaisesRegex(RuntimeError, 'required symbol'):
+                research.validate_fdt_inspection(self.members, self.headers, symbols)
+
+    def identity_fixture(self, root):
+        (root / 'lib').mkdir(); (root / 'include').mkdir()
+        (root / 'lib/libfdt.a').write_bytes(b'synthetic source-built archive')
+        hashes = {}
+        for name in research.FDT_HEADERS:
+            (root / 'include' / name).write_bytes(name.encode())
+            hashes[name] = research.digest(root / 'include' / name)
+        return research.digest(root / 'lib/libfdt.a'), hashes
+
+    def test_archive_and_header_substitution_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); archive_sha, hashes = self.identity_fixture(root)
+            with contextlib.redirect_stdout(io.StringIO()):
+                research.verify_fdt_identity(root, archive_sha, hashes)
+                for relative in ('lib/libfdt.a', 'include/libfdt.h', 'include/libfdt_env.h', 'include/fdt.h'):
+                    path = root / relative; original = path.read_bytes(); path.write_bytes(b'host substitution')
+                    with self.subTest(relative=relative), self.assertRaisesRegex(RuntimeError, 'Hash mismatch'):
+                        research.verify_fdt_identity(root, archive_sha, hashes)
+                    path.write_bytes(original)
+                with self.assertRaisesRegex(RuntimeError, 'headers'):
+                    research.verify_fdt_identity(root, archive_sha, {'libfdt.h': hashes['libfdt.h']})
+
+    def test_foreign_target_prefix_rejected_before_source_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); qemu = root / 'qemu-source/pinned'; qemu.mkdir(parents=True)
+            path = qemu / 'meson.build'; path.write_bytes(self.source)
+            with self.assertRaisesRegex(RuntimeError, 'target prefix'):
+                research.apply_android_fdt_patch(qemu, root / 'host/target', lambda _: None)
+            self.assertEqual(self.source, path.read_bytes())
+
+    def test_invalid_source_does_not_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); qemu = root / 'qemu-source/pinned'; qemu.mkdir(parents=True)
+            path = qemu / 'meson.build'; path.write_bytes(b'substituted source')
+            with self.assertRaises(RuntimeError):
+                research.apply_android_fdt_patch(qemu, root / 'target', lambda _: None)
+            self.assertEqual(b'substituted source', path.read_bytes())
+
+    def test_link_control_checks_android_bionic_aarch64_and_api30(self):
+        for token in ('__ANDROID__', '__BIONIC__', '__aarch64__', '__ANDROID_API__ != 30',
+                      '#include <libfdt.h>', '#include <libfdt_env.h>', 'fdt_find_max_phandle(NULL, NULL)'):
+            self.assertIn(token, research.ANDROID_FDT_PROBE)
+
+
 class ManifestTests(unittest.TestCase):
     def setUp(self): self.source = harness.SOURCE.read_text(encoding="utf-8")
     def test_valid(self): harness.manifest(self.source, release=True)

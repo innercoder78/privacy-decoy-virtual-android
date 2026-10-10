@@ -133,6 +133,20 @@ if host_os != 'windows'
 endif
 """
 QEMU_SHM_ANCHOR = 'int qemu_shm_alloc(size_t size, Error **errp)\n{'
+# Exact output of the unchanged, hash-checked shared-memory adaptation above.
+QEMU_FDT_PATCH_INPUT = '51ac2ab6820b085cce6eaab28adb087885ef12465d81db47ff7899cea117fe6c'
+QEMU_FDT_ANCHOR = "  fdt = cc.find_library('fdt', required: fdt_opt == 'system')\n"
+FDT_OBJECTS = ('fdt', 'fdt_addresses', 'fdt_check', 'fdt_empty_tree', 'fdt_overlay',
+               'fdt_ro', 'fdt_rw', 'fdt_strerror', 'fdt_sw', 'fdt_wip')
+FDT_HEADERS = ('libfdt.h', 'libfdt_env.h', 'fdt.h')
+ANDROID_FDT_PROBE = '''#include <libfdt.h>
+#include <libfdt_env.h>
+#if !defined(__ANDROID__) || !defined(__BIONIC__) || !defined(__aarch64__) || __ANDROID_API__ != 30
+#error PDVA research requires Android Bionic AArch64 API 30
+#endif
+int main(void) { fdt_find_max_phandle(NULL, NULL); return 0; }
+'''
+
 PCRE2_BUILD_TARGETS = ('libpcre2-8.la', 'libpcre2-posix.la')
 PCRE2_INSTALL_TARGETS = ('install-libLTLIBRARIES', 'install-includeHEADERS',
                          'install-nodist_includeHEADERS', 'install-pkgconfigDATA')
@@ -194,6 +208,70 @@ def apply_android_patch(qemu, emit):
         verify(qemu / name, hashlib.sha256(data).hexdigest())
         emit(f'PATCH {name} before={QEMU_PATCH_INPUTS[name]} after={digest(qemu / name)}')
     emit('LOCAL RESEARCH PATCH sha256=' + hashlib.sha256(diff.encode()).hexdigest() + '\n' + diff)
+
+
+def validate_fdt_inspection(members, headers, symbols):
+    if members.splitlines() != [name + '.o' for name in FDT_OBJECTS]:
+        raise RuntimeError('Unexpected libfdt archive members')
+    # Inspect every archive member, not merely one compatible ELF header.
+    expected = {'Class': 'ELF64', 'Data': "2's complement, little endian",
+                'Type': 'REL (Relocatable file)', 'Machine': 'AArch64'}
+    for field, value in expected.items():
+        values = re.findall(r'^\s*' + field + r':\s*(.*?)\s*$', headers, re.M)
+        if values != [value] * len(FDT_OBJECTS):
+            raise RuntimeError('Unexpected libfdt target ABI')
+    if len(re.findall(r'^[0-9a-fA-F]+ T fdt_find_max_phandle$', symbols, re.M)) != 1:
+        raise RuntimeError('Missing or ambiguous libfdt required symbol')
+
+
+def verify_fdt_identity(prefix, archive_sha, header_hashes):
+    if set(header_hashes) != set(FDT_HEADERS):
+        raise RuntimeError('Unexpected libfdt headers')
+    artifacts = [(prefix / 'lib/libfdt.a', archive_sha)]
+    artifacts += [(prefix / 'include' / name, header_hashes[name]) for name in FDT_HEADERS]
+    for path, expected in artifacts:
+        if (not stat.S_ISREG(path.lstat().st_mode) or path.is_symlink()
+                or any(p.is_symlink() for p in path.parents)):
+            raise RuntimeError('Unsafe libfdt artifact')
+        verify(path, expected)
+
+
+def render_android_fdt_patch(source, library_dir, target):
+    if target != 'aarch64-linux-android30':
+        raise RuntimeError('Unexpected libfdt patch target')
+    # Production research paths are absolute POSIX paths without shell/Meson
+    # metacharacters. The caller supplies only its own separate target prefix.
+    if (not re.fullmatch(r'/(?:[A-Za-z0-9_.-]+/)*target/lib', library_dir)
+            or any(part in ('.', '..') for part in library_dir.split('/'))):
+        raise RuntimeError('Unexpected libfdt search path')
+    if hashlib.sha256(source).hexdigest() != QEMU_FDT_PATCH_INPUT:
+        raise RuntimeError('QEMU FDT patch input identity mismatch')
+    text = source.decode('utf-8')
+    if text.count(QEMU_FDT_ANCHOR) != 1:
+        raise RuntimeError('QEMU FDT patch anchor mismatch')
+    replacement = ("  if cc.get_define('__ANDROID__') != ''\n"
+                   "    fdt = cc.find_library('fdt', dirs: ['" + library_dir +
+                   "'], static: true, required: fdt_opt == 'system')\n"
+                   "  else\n" + QEMU_FDT_ANCHOR + "  endif\n")
+    return text.replace(QEMU_FDT_ANCHOR, replacement, 1).encode()
+
+
+def apply_android_fdt_patch(qemu, prefix, emit):
+    if prefix != qemu.parent.parent / 'target':
+        raise RuntimeError('Unexpected libfdt target prefix')
+    path = qemu / 'meson.build'
+    if (not stat.S_ISREG(path.lstat().st_mode) or path.is_symlink()
+            or any(p.is_symlink() for p in path.parents)):
+        raise RuntimeError('Unsafe QEMU FDT patch input')
+    source = path.read_bytes()
+    patched = render_android_fdt_patch(source, (prefix / 'lib').as_posix(),
+                                      'aarch64-linux-android30')
+    diff = ''.join(difflib.unified_diff(source.decode().splitlines(keepends=True),
+                   patched.decode().splitlines(keepends=True), fromfile='a/meson.build',
+                   tofile='b/meson.build', n=0))
+    path.write_bytes(patched)
+    emit(f'FDT PATCH meson.build before={QEMU_FDT_PATCH_INPUT} after={digest(path)}')
+    emit('LOCAL FDT RESEARCH PATCH sha256=' + hashlib.sha256(diff.encode()).hexdigest() + '\n' + diff)
 
 
 def download(url, destination, expected):
@@ -682,15 +760,16 @@ class Research:
         self.phase('libfdt Android build')
         fdt = qemu / 'subprojects/dtc/libfdt'
         objects = []
-        for name in ('fdt', 'fdt_addresses', 'fdt_check', 'fdt_empty_tree', 'fdt_overlay',
-                     'fdt_ro', 'fdt_rw', 'fdt_strerror', 'fdt_sw', 'fdt_wip'):
+        for name in FDT_OBJECTS:
             obj = self.root / (name + '.o')
             self.run(cc, *shlex.split(target_env['CFLAGS']), '-I', fdt, '-c', fdt / (name + '.c'), '-o', obj)
             objects.append(obj)
         self.run(toolbin / 'llvm-ar', 'rcsD', prefix / 'lib/libfdt.a', *objects)
-        for name in ('libfdt.h', 'libfdt_env.h', 'fdt.h'):
+        for name in FDT_HEADERS:
             shutil.copy2(fdt / name, prefix / 'include' / name)
         self.emit(f'BUILT libfdt sha256={digest(prefix / "lib/libfdt.a")}; target execution NOT RUN')
+        fdt_archive_sha = digest(prefix / 'lib/libfdt.a')
+        fdt_header_hashes = {name: digest(fdt / name) for name in FDT_HEADERS}
         self.phase('GLib Android configure and build')
         glib_build = self.root / 'glib-build'
         self.run(meson, 'setup', glib_build, glib, '--cross-file', cross, '--native-file', native, '--wrap-mode=nodownload',
@@ -704,6 +783,22 @@ class Research:
         self.emit('BUILT GLib graph; target execution NOT RUN')
         for artifact in sorted((prefix / 'lib').glob('*.a')):
             self.emit(f'DEPENDENCY {artifact.name} size={artifact.stat().st_size} sha256={digest(artifact)}')
+        self.phase('verified libfdt archive and Android link control')
+        archive = prefix / 'lib/libfdt.a'
+        verify_fdt_identity(prefix, fdt_archive_sha, fdt_header_hashes)
+        members = self.run(toolbin / 'llvm-ar', 't', archive, show=True)
+        headers = self.run(toolbin / 'llvm-readelf', '-h', archive, show=True)
+        symbols = self.run(toolbin / 'llvm-nm', '--defined-only', '--extern-only', archive, show=True)
+        validate_fdt_inspection(members, headers, symbols)
+        probe = self.root / 'fdt-control.c'
+        probe.write_text(ANDROID_FDT_PROBE)
+        self.run(cc, '-Werror', '-fPIE', '-pie', '-Wl,-z,relro,-z,now,-z,max-page-size=16384',
+                 '-I', prefix / 'include', probe, archive, '-o', self.root / 'fdt-control')
+        self.inspect(self.root / 'fdt-control', toolbin)
+        verify_fdt_identity(prefix, fdt_archive_sha, fdt_header_hashes)
+        self.emit('LINKED verified Android libfdt control; NOT EXECUTED')
+        self.phase('reviewed Android libfdt discovery adaptation')
+        apply_android_fdt_patch(qemu, prefix, self.emit)
         self.phase('QEMU Android configure')
         (qemu / 'configs/devices/aarch64-softmmu/pdva.mak').write_text('CONFIG_ARM_VIRT=y\n')
         build = self.root / 'qemu-build'
