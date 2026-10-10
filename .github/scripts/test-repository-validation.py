@@ -547,7 +547,7 @@ class ElfInspectionTests(unittest.TestCase):
                  '.dynamic', '.data', '.strtab', '.symtab', '.shstrtab']
         shstrings = b'\0' + b''.join(n.encode() + b'\0' for n in names)
         strtab = b'\0_start\0__libc_init\0'
-        dynstr = b'\0libc.so\0'
+        dynstr = b'\0libc.so\0__libc_init\0'
         note = research.struct.pack('<III', 8, 132, 1) + b'Android\0'
         note += research.struct.pack('<I', 30) + b'r28c'.ljust(64, b'\0') + b'13676358'.ljust(64, b'\0')
         for offset, content in ((0x400, note), (0x600, dynstr), (0x3500, shstrings), (0x3600, strtab)):
@@ -556,7 +556,10 @@ class ElfInspectionTests(unittest.TestCase):
         pack('<IBBHQQ', 0x3718, 1, 0x12, 0, 1, 0x5000, 4)
         pack('<IBBHQQ', 0x3730, 8, 0x12, 0, 1, 0x5004, 4)
         tags = [(30, 8), (0x6ffffffb, 0x08000001), (5, 0x600), (10, len(dynstr)), (6, 0x800), (11, 24)]
-        tags += [(1, 1)] if mode == 'dynamic' else [(7, 0x900), (8, 24), (9, 24), (0x6ffffff9, 1)]
+        tags += [(7, 0x900), (8, 24), (9, 24), (0x6ffffff9, 1)]
+        if mode == 'dynamic':
+            tags += [(1, 1)]
+            pack('<IBBHQQ', 0x818, 9, 0x12, 0, 0, 0, 0)
         tags += [(0, 0)]
         for i, (tag, value) in enumerate(tags): pack('<qQ', 0x2100 + i*16, tag, value)
         ph = [(1,4,0,0,0,0x1000,0x1000,0x4000),
@@ -570,7 +573,7 @@ class ElfInspectionTests(unittest.TestCase):
             ph.append((3,4,0x500,0x500,0x500,len(interp),len(interp),1))
         for i,p in enumerate(ph): pack('<IIQQQQQQ',64+i*56,*p)
         specs = [(1,6,0x5000,0x1000,0x100,0,0), (3,2,0x600,0x600,len(dynstr),0,0),
-                 (11,2,0x800,0x800,24,2,24), (4,2,0x900,0x900,24,3,24),
+                 (11,2,0x800,0x800,48 if mode == 'dynamic' else 24,2,24), (4,2,0x900,0x900,24,3,24),
                  (7,2,0x400,0x400,len(note),0,0), (6,3,0xa100,0x2100,len(tags)*16,2,16),
                  (1,3,0xa000,0x2000,0x1000,0,0), (3,0,0,0x3600,len(strtab),0,0),
                  (2,0,0,0x3700,72,8,24), (3,0,0,0x3500,len(shstrings),0,0)]
@@ -677,10 +680,11 @@ class ElfInspectionTests(unittest.TestCase):
         commands = root / 'commands.log'; compile_log = root / 'compile.log'
         commands.write_text(research.shlex.join([str(toolbin / 'aarch64-linux-android30-clang'),
                             '-static-pie', '-o', 'qemu-system-aarch64'])+'\n')
-        compile_log.write_text(research.shlex.join([str(toolbin / 'ld.lld'), '-static', '-pie',
-            '--no-dynamic-linker', '-o', 'qemu-system-aarch64', str(lib / '30/crtbegin_dynamic.o'),
+        compile_log.write_text('[1/1] '+commands.read_text()+research.shlex.join([str(toolbin / 'ld.lld'), '-static', '-pie', '-m', 'aarch64linux',
+            '--no-dynamic-linker', '-Map', str(build / 'qemu.map'), '-o', 'qemu-system-aarch64', str(lib / '30/crtbegin_dynamic.o'),
             str(lib / '30/crtend_android.o')])+'\n')
-        (build / 'qemu.map').write_text('  5000 5000 40 4 '+str(lib / 'libc.a')+'(libc_init_static.o):(.text)\n')
+        (build / 'qemu.map').write_text('  5000 5000 40 4 '+str(lib / 'libc.a')+'(libc_init_static.o):(.text)\n' +
+            ''.join('  5000 5000 40 4 '+str(lib / '30' / n)+':(.text)\n' for n in ('crtbegin_dynamic.o', 'crtend_android.o')))
         return binary, build, toolbin, commands, compile_log
 
     def test_link_evidence_is_bound_to_output_and_actual_input_paths(self):
@@ -711,6 +715,179 @@ class ElfInspectionTests(unittest.TestCase):
             path.write_text(original)
             (args[1]/'qemu.map').write_text('libc_init_static.o is mentioned but is not a map input\n')
             with self.assertRaisesRegex(RuntimeError,'startup input'): research.qemu_link_evidence(*args, lambda _: None)
+
+
+class LinkProvenanceTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.args = ElfInspectionTests().link_fixture(Path(self.temp.name))
+        self.messages = []
+
+    def inspect(self, mode='static', dependencies=None):
+        return research.qemu_link_evidence(*self.args, self.messages.append, mode, dependencies)
+
+    def command(self, text):
+        old = self.args[3].read_text()
+        self.args[3].write_text(text)
+        self.args[4].write_text(self.args[4].read_text().replace(old, text))
+
+    def response(self):
+        tokens = research.shlex.split(self.args[3].read_text())
+        path = self.args[1] / 'qemu-system-aarch64.rsp'
+        path.write_text(research.shlex.join(tokens[1:]))
+        self.command(research.shlex.join([tokens[0], '@' + path.name]) + '\n')
+        return path
+
+    def dynamic(self):
+        self.command(self.args[3].read_text().replace('-static-pie', '-pie'))
+        lib = self.args[2].parent / 'sysroot/usr/lib/aarch64-linux-android'
+        (lib / '30/libc.so').write_bytes(b'fixture stub, never executed')
+        text = self.args[4].read_text().replace(' -static ', ' ').replace('--no-dynamic-linker',
+                    '-dynamic-linker /system/bin/linker64')
+        text = text.rstrip() + ' ' + research.shlex.join(['-L' + str(lib / '30'), '-lc']) + '\n'
+        self.args[4].write_text(text)
+        (self.args[1] / 'qemu.map').write_text(''.join('  5000 5000 40 4 ' + str(lib / '30' / name) + ':(.text)\n'
+            for name in ('crtbegin_dynamic.o', 'crtend_android.o')))
+
+    def test_retained_response_resolves_output_and_preserves_identity(self):
+        response = self.response()
+        evidence = self.inspect()
+        self.assertEqual(evidence['response']['sha256'], research.digest(response))
+        self.assertTrue(any('"candidate_count": 1' in m for m in self.messages))
+        self.assertTrue(any('"input_truncated": false' in m for m in self.messages))
+
+    def test_response_missing_nested_oversized_and_malformed_fail(self):
+        path = self.response()
+        for content in ('@nested.rsp', '"unterminated', '', 'x' * (1024 * 1024 + 1)):
+            path.write_text(content)
+            with self.subTest(content=content[:24]), self.assertRaises(RuntimeError): self.inspect()
+        path.unlink()
+        with self.assertRaisesRegex(RuntimeError, 'retained response'): self.inspect()
+
+    def test_response_traversal_absolute_and_mixed_arguments_fail(self):
+        original = self.args[3].read_text()
+        compiler = research.shlex.split(original)[0]
+        for ref in ('@../qemu-system-aarch64.rsp', '@/tmp/qemu-system-aarch64.rsp',
+                    '@qemu-system-aarch64.rsp -o qemu-system-aarch64'):
+            self.command(research.shlex.quote(compiler) + ' ' + ref + '\n')
+            with self.assertRaises(RuntimeError): self.inspect()
+
+    def test_response_symlink_and_ancestor_fail(self):
+        path = self.response()
+        original = Path.is_symlink
+        for bad in (path, path.parent):
+            with mock.patch.object(Path, 'is_symlink', lambda p: p == bad or original(p)):
+                with self.assertRaisesRegex(RuntimeError, 'unsafe'): self.inspect()
+
+    def test_wrappers_shell_composition_and_substituted_compiler_fail(self):
+        original = self.args[3].read_text()
+        for text in ('env ' + original, 'sh -c ' + research.shlex.quote(original),
+                     original.rstrip() + ' && true\n', original.replace('android30-clang', 'android29-clang'),
+                     original.rstrip() + ' $(touch sentinel)\n'):
+            self.command(text)
+            with self.subTest(text=text[:40]), self.assertRaises(RuntimeError): self.inspect()
+        self.assertFalse((self.args[1] / 'sentinel').exists())
+
+    def test_output_ambiguity_wrong_output_and_missing_actual_execution_fail(self):
+        original = self.args[3].read_text()
+        for text in (original * 2, original.rstrip() + ' -o other\n',
+                     original.replace('qemu-system-aarch64', 'different'), original.rstrip() + ' -o\n'):
+            self.command(text)
+            with self.assertRaises(RuntimeError): self.inspect()
+        self.command(original)
+        self.args[4].write_text(self.args[4].read_text().replace('[1/1] ' + original, ''))
+        with self.assertRaisesRegex(RuntimeError, 'actual verbose'): self.inspect()
+
+    def test_dynamic_link_evidence_and_static_mode_mismatch(self):
+        self.dynamic()
+        evidence = self.inspect('dynamic')
+        self.assertFalse(evidence['libc_static_init'])
+        self.assertIn('libc.so', evidence['shared_inputs'])
+        with self.assertRaises(RuntimeError): self.inspect('static')
+        self.response()
+        self.assertEqual(self.inspect('dynamic')['mode'], 'dynamic')
+
+    def test_dynamic_foreign_search_missing_library_and_wrong_crt_fail(self):
+        self.dynamic()
+        original = self.args[4].read_text()
+        for text in (original.rstrip() + ' -L/host/lib\n', original.replace('-lc', '-lforeign'),
+                     original.replace('crtbegin_dynamic.o', 'crtbegin_static.o'),
+                     original.replace('aarch64linux', 'elf_x86_64'), original.replace('qemu.map', 'other.map'),
+                     original.rstrip() + ' -m\n'):
+            self.args[4].write_text(text)
+            with self.assertRaises(RuntimeError): self.inspect('dynamic')
+
+    def test_map_missing_input_and_dependency_substitution_fail(self):
+        lib = self.args[2].parent / 'sysroot/usr/lib/aarch64-linux-android/libc.a'
+        lib.unlink()
+        with self.assertRaisesRegex(RuntimeError, 'Link input'): self.inspect()
+        lib.write_bytes(b'fixture')
+        with self.assertRaisesRegex(RuntimeError, 'changed after verification'):
+            self.inspect(dependencies={str(lib): '0' * 64})
+        with self.assertRaisesRegex(RuntimeError, 'Missing source-built'):
+            self.inspect(dependencies={})
+
+    def test_dynamic_relocations_reject_bad_kind_symbol_and_target(self):
+        for offset, value in ((0x908, 1031), (0x908, (999 << 32) | 1025),
+                              (0x900, 0x5000), (0x910, 0xffffffffff)):
+            data = ElfInspectionTests().fixture('dynamic')
+            research.struct.pack_into('<Q', data, offset, value)
+            with self.assertRaisesRegex(RuntimeError, 'relocation'):
+                research.inspect_android_elf(bytes(data), 'dynamic')
+
+    def test_dynamic_startup_import_and_relocation_metadata_required(self):
+        data = ElfInspectionTests().fixture('dynamic')
+        research.struct.pack_into('<H', data, 0x818 + 6, 1)
+        with self.assertRaisesRegex(RuntimeError, 'Bionic startup'):
+            research.inspect_android_elf(bytes(data), 'dynamic')
+        data = ElfInspectionTests().fixture('dynamic')
+        research.struct.pack_into('<Q', data, 0x2100 + 7 * 16 + 8, 48)
+        with self.assertRaisesRegex(RuntimeError, 'RELA'):
+            research.inspect_android_elf(bytes(data), 'dynamic')
+
+    def test_ndk_stub_exports_require_real_structure_and_defined_symbol(self):
+        path = self.args[1] / 'fixture.so'
+        data = ElfInspectionTests().fixture('dynamic')
+        path.write_bytes(data)
+        self.assertNotIn('__libc_init', research.ndk_dynamic_exports(path))
+        research.struct.pack_into('<H', data, 0x818 + 6, 1)
+        path.write_bytes(data)
+        self.assertIn('__libc_init', research.ndk_dynamic_exports(path))
+        for invalid in (bytes(data[:20]), b'MZ' + bytes(100), bytes(data[:0x4050])):
+            path.write_bytes(invalid)
+            with self.assertRaises(RuntimeError): research.ndk_dynamic_exports(path)
+
+    def test_dynamic_source_built_closure_is_bound_before_acceptance(self):
+        self.dynamic()
+        prefix = Path(self.temp.name) / 'target/lib'
+        prefix.mkdir(parents=True)
+        hashes = {}
+        for name in ('libfdt.a', 'libglib-2.0.a', 'libpcre2-8.a'):
+            path = prefix / name
+            path.write_bytes(b'source-build fixture never executed')
+            hashes[str(path.resolve())] = research.digest(path)
+            with (self.args[1] / 'qemu.map').open('a') as stream:
+                stream.write('  5000 5000 40 4 ' + str(path) + '(unit.o):(.text)\n')
+            self.args[4].write_text(self.args[4].read_text().rstrip() + ' ' + research.shlex.quote(str(path)) + '\n')
+        self.assertEqual(self.inspect('dynamic', hashes)['mode'], 'dynamic')
+        (prefix / 'libglib-2.0.a').write_bytes(b'substituted')
+        with self.assertRaisesRegex(RuntimeError, 'changed after verification'):
+            self.inspect('dynamic', hashes)
+
+    def test_actual_crt_must_also_be_present_in_map(self):
+        path = self.args[1] / 'qemu.map'
+        path.write_text('\n'.join(line for line in path.read_text().splitlines() if 'crtend_android.o' not in line))
+        with self.assertRaisesRegex(RuntimeError, 'CRT missing'): self.inspect()
+
+    def test_response_quoting_is_preserved_and_not_display_truncated(self):
+        path = self.response()
+        tokens = research.link_tokens(path.read_text()) + ['a path with spaces.o', 'quoted"name.o'] + ['padding.o'] * 8000
+        path.write_text(research.shlex.join(tokens))
+        self.assertGreater(path.stat().st_size, 60000)
+        expanded, record = research.expand_link_response(['compiler', '@' + path.name], self.args[1], self.args[0])
+        self.assertEqual(expanded[1:], tokens)
+        self.assertEqual(record['sha256'], research.digest(path))
 
 
 class NinjaSelectionTests(unittest.TestCase):

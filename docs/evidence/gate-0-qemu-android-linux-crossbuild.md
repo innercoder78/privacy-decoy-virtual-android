@@ -3,6 +3,190 @@
 **2026-10-08. Gate 0: Unresolved. Gates A–G: Not reached.**
 ADR-0001 remains Accepted; ADR-0002 remains Proposed. No engine selected.
 
+## Seventh revision: response-file provenance and dynamic-PIE attempt (2026-10-10)
+
+**Head `62ae0f8088a188c22d80d3b83e25e9d6a401beda` again compiled and linked
+QEMU. Its provenance parser failed before structured ELF inspection.** The new
+recipe explicitly attempts a dynamic Android PIE; no full dynamic QEMU result is
+available before publication. Static-PIE startup remains **Unsupported**.
+
+### Live preflight and exact-head Linux result
+
+Main remained `d5466f1943e3cd7e33cbd62c8a23571e4de52ae5`, with only PR #6 open
+on the existing `codex/qemu-android-linux-crossbuild` branch at `62ae0f8`.
+The worktree was clean, with one worktree and no stashes. Foundation and Android
+checks passed; cross-build failed. Reviews, issue/review comments and review
+threads were empty; combined statuses had zero contexts. GitHub Status reported
+All Systems Operational, page update `2026-10-10T14:54:18.365Z`. Full base diff,
+files/modes, workflows/logs, requirements, architecture, ADRs, security boundaries,
+source/dependency/license records and tracked binary inventory were rechecked.
+No historical-repository write, new branch, new PR or unrelated work is involved.
+
+[Run 38073378382](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/38073378382),
+job `114275209030`, passed all 88 Linux regressions, source/NDK verification,
+dependency builds, libfdt checks, QEMU Meson configuration and compilation/linking.
+The actual `qemu-system-aarch64` output was **70,345,648 bytes**, SHA-256
+`fb163275f02df8db15caaba9dcada15763b0e767b4e2bc27b72be99dd3f0a903`.
+It then ran `ninja -t commands qemu-system-aarch64` and failed:
+
+```text
+FAILED [actual QEMU link provenance before ELF acceptance]:
+Missing/ambiguous generated QEMU final link command
+```
+
+Structured ELF inspection, startup acceptance and all later inventories were
+**NOT RUN on that artifact**. The prior artifact's ELF observations must not be
+assigned to this output. The separate foundation run `38073378391` passed 88 tests;
+Android run `38073378390` passed builds/lint, 48 protocol/report checks and release
+authority inspection. None of these results is Android QEMU execution evidence.
+
+### Parser defect, reproduction and observational limit
+
+The old parser searched unexpanded command tokens for exactly one `-o`. The
+hash-pinned Meson 1.11.1 wheel bundled in QEMU defines its linker rule in
+`mesonbuild/backend/ninjabackend.py:2497` with `$ARGS -o $out $in $LINK_ARGS` in
+the response-eligible argument list. At the response threshold it emits
+`compiler @$out.rsp` and places that entire argument list in `rspfile_content`
+(lines 231–254, 343–356). `utils/universal.py:2472–2490` sets the default Unix
+threshold to 16,384 bytes. Thus the output option can legitimately be absent
+from the visible command even though the command links exactly the intended file.
+
+The reviewed Ninja 1.13.2 source resolves to commit
+[`3441b633c2fe2c494e958780ba0f4227b1327634`](https://github.com/ninja-build/ninja/tree/3441b633c2fe2c494e958780ba0f4227b1327634).
+Its [`src/ninja.cc`](https://github.com/ninja-build/ninja/blob/3441b633c2fe2c494e958780ba0f4227b1327634/src/ninja.cc)
+prints `EvaluateCommand()` for `-t commands`; `-s` limits this to the final target
+command. [`src/build.cc`](https://github.com/ninja-build/ninja/blob/3441b633c2fe2c494e958780ba0f4227b1327634/src/build.cc)
+writes the response file before linking and removes it after success unless
+`-d keeprsp` is enabled. Reviewed file SHA-256s respectively:
+`9d671f4d44eb06a548bbd97adbc9af33e49d72ef2a9ee11fb6aa59f681ab02c8` and
+`afd4ececbb6462ff55aa67414dca9963d069bed338e7855548e6527f427544ae`.
+This is source review of the observed runner version, not new tool adoption or
+proof of a reproducible runner binary.
+
+A local Ninja command-discovery control printed `clang @control.rsp`, with no
+visible `-o`, reproducing the old search failure. The regression fixture expands
+the reviewed Meson form and finds the intended output. **The old CI log did not
+print candidate commands or preserve its response file.** Its exact candidate
+count, wrapper use, command length and whether it used this form cannot be
+recovered from that log. Response indirection is a source-supported explanation
+and reproduced parser defect, not a retrospectively observed QEMU command. No
+claim of multiple legitimate final commands or truncated input is invented.
+
+The revised build uses the same verified Ninja with `-d keeprsp -v` and obtains
+only `-t commands -s qemu-system-aarch64`. Discovery reports bounded candidate
+counts, raw/expanded output-option counts, executable/output tokens, response
+identity, command lengths, working directory and parse errors before failing.
+Inputs are full bounded files, not the display tail returned by `run()`.
+Public display truncation remains explicit and separate from parsed evidence.
+
+Only direct API-30 NDK compiler invocation or its exact `@qemu-system-aarch64.rsp`
+form is supported. The response must be a regular file directly inside the build
+directory, with no symlink ancestors, traversal, alternate absolute path, nested
+response or mixed wrapper arguments. GNU/POSIX quoting is parsed without shell
+execution; unsupported metacharacters, malformed quoting and commands/responses
+over 1 MiB fail. Input logs remain capped at 32 MiB, map at 64 MiB, and public
+display at the existing bound. Wrappers remain unsupported; none is guessed or
+silently stripped. Output ambiguity remains fatal.
+
+The selected generated command must also appear exactly once in the successful
+verbose Ninja build. The actual verbose Clang `ld.lld` command must name that
+same output with the reviewed AArch64 link mode, interpreter state and exact
+API-30 CRTs. CRTs must also appear in the actual map. Actual library searches are
+limited to the verified NDK and source-built target prefix; unresolved/foreign
+libraries or missing files fail. Source-built dependency hashes are snapshotted
+before QEMU configuration and checked after linking; linked libfdt, GLib and
+PCRE2 inputs are mandatory. Commands, response, compiler/linker, CRTs, linked
+inputs, shared stubs, map and output have recorded hashes. No extracted command
+is executed by the inspector and no raw binary/log artifact is uploaded.
+
+### Explicit dynamic-PIE research mode
+
+Exact QEMU `4fc49f46dc95d4a27de2509e7fceb2931e91faeb` defaults PIE on and adds
+`-static-pie` only inside its `prefer_static` branch at `meson.build:437–439`.
+This revision explicitly sets **`-Dprefer_static=false -Db_pie=true
+-Db_staticpic=true`**. The source-built third-party prefix still contains only
+PIC static archives; PCRE2/libffi/GLib build modes and `pkg-config --static`
+private dependency closure are preserved. That pkg-config option does not force
+the final executable's libc to be static. Target library directories remain
+isolated, and unexpected shared libraries in the third-party prefix fail.
+Both reviewed Android shared-memory and libfdt patches are unchanged.
+
+The already reviewed NDK Clang source at
+[`97a699bf4812a18fb657c2779f5296a4ab2694d2`](https://android.googlesource.com/toolchain/llvm-project/+/97a699bf4812a18fb657c2779f5296a4ab2694d2/clang/lib/Driver/ToolChains/Gnu.cpp)
+uses `-pie -dynamic-linker /system/bin/linker64` and `crtbegin_dynamic.o` for this
+mode, with Bionic shared stubs. Its static mode remains independently recorded
+and rejected by the unchanged `require_static_startup()` guard.
+
+Dynamic ELF acceptance retains all old controls and adds structured RELA checks
+for reviewed AArch64 ABS64, GLOB_DAT, JUMP_SLOT and RELATIVE forms, symbol indices,
+writable aligned unique targets, table/tag correspondence and RELACOUNT prefix.
+Packed/REL/RELR/TLS/IFUNC or other unreviewed forms fail explicitly. Bionic
+[`linker_relocate.cpp` at the reviewed source-context revision](https://android.googlesource.com/platform/bionic/+/b86008a9cd14a7748867d2232e6de439e4809c10/linker/linker_relocate.cpp)
+handles these general dynamic relocations with load bias; file SHA-256
+`1cbdebe6896ce2df48931fb61446eacbaa1555326ccc72772783e580d4870d8e`.
+This platform-source context is not a claim about any physical device's linker.
+
+The executable must import Bionic `__libc_init`, need `libc.so` and use the exact
+Android interpreter. Strong dynamic imports must exist in the inspected API-30
+NDK stub export closure. Every needed stub is hashed and, for QEMU, matched to
+the actual linker evidence. Existing ABI/note/entrypoint/PIE, glibc rejection,
+W+X/stack, 16 KiB alignment, RELRO/NOW and forbidden loader-property checks remain.
+An unsupported relocation or dependency stops acceptance rather than broadening
+the allowed set. Stub symbol availability does not prove on-device symbol-version,
+namespace, installation, SELinux or isolated-UID loading behavior.
+
+### Actual local validation and pending Linux attempt
+
+An existing Windows NDK r28c built the pointer-relocation control from the prior
+section through a real response file with `--target=aarch64-linux-android30`,
+`-Werror -fPIE -pie` and RELRO/NOW/16 KiB flags. It produced **5,952 bytes**, SHA-256
+`83ee516473991c24a91798c3c2a609e924b73992229eb0d9e6bf558b31b3734b`, matching the
+previous direct-command control. It has Android linker64, libc/libdl dependencies,
+five RELATIVE and three JUMP_SLOT relocations, entry `0x4638`, the expected NDK
+note and valid strong-import closure. The response parser recovered the exact
+arguments. The complete production inspector, including all old dynamic checks,
+passed this control and the genuine existing positive, shared-memory and libfdt
+controls. **No Android executable was executed.** These are local controls, not
+a full QEMU dynamic build or Linux-runner result.
+
+Regression coverage now contains **103 tests: 99 local passes and four existing
+Windows skips**. All prior test cases remain; their synthetic dynamic fixture
+now includes the newly required startup import and relocation metadata. Added
+cases reject unsafe/missing/nested/oversized responses, malformed quoting,
+wrappers/shell composition, wrong outputs/compilers/CRT/ABI/search paths, missing
+actual execution or map inputs, altered dependency hashes, unsupported dynamic
+relocations and invalid stub structures. A response larger than the old 60,000
+character limit is parsed completely under the new explicit bound.
+
+Foundation/harness, Python AST, unchanged workflow Bash syntax/manual YAML review,
+source pins and both actual portability patches, Markdown links, whitespace,
+full exact-base diff/100644 modes, licenses/provenance and public secret/binary
+inventory are validated before publication. No standalone YAML parser is
+installed; parser validation is not claimed. The old source-verification helpers,
+Ninja verification and static-startup guard remain unchanged.
+
+No local WSL distribution or Docker executable is available; none was installed.
+The existing constrained Ubuntu workflow will attempt the separately classified
+dynamic QEMU build after publication. Its result and exact artifact hash/ELF
+properties are **pending/Unknown**. A successful link must pass provenance and
+ELF acceptance before section/size, map/device/Kconfig, Meson dependency/options
+and bounded native-facility inventories run. Native source matches are labeled
+context, not syscall reachability or Android authority. No stage is skipped into
+success, no failure is suppressed and no workflow permission/resource setting
+changes. The next smallest non-physical step is review of that exact-head result
+and its first genuine blocker or validated output inventory.
+
+The existing file-level GPL/LGPL/BSD/LLVM/Bionic notices and redistribution limits
+remain; dynamically importing platform stubs does not remove obligations from
+the still-statically-linked third-party code. No new dependency, shipping
+architecture, binary distribution or product engine is approved. Phone/ADB,
+Android execution, Cloud, privileges, manifest/harness expansion, VPN, committed
+QEMU/guest binaries and runtime/security claims remain excluded. **Gate 0:
+Unresolved. Gates A–G: Not reached. ADR-0002: Proposed.** Earlier run history below
+is preserved verbatim. Publication updates only PR #6 and stops after one
+immediately available PR number/branch/head/base verification; CI is reported
+pending without post-push polling or reruns.
+
 ## Sixth revision: static-PIE classification and unsupported startup (2026-10-10)
 
 **Head `d51345b107334de7c5ff528256dd20cc95e1e48b` successfully configured,
