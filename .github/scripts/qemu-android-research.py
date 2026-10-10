@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 import platform
 import re
 import stat
+import struct
 import shlex
 import shutil
 import signal
@@ -530,6 +531,67 @@ def materialize_glib_subproject(name, archive, source, glib):
     print(f'VERIFIED GLib subproject={relative} initial={expected_state} files={len(manifest)}', flush=True)
 
 
+def verify_host_ninja(path, expected_sha=None):
+    # Inspect before execution: this research host is Linux x86-64, not Android.
+    if (not path.is_absolute() or not path.is_file() or path.is_symlink()
+            or not os.access(path, os.X_OK)):
+        raise RuntimeError('Ninja must be an available absolute host executable')
+    with path.open('rb') as stream:
+        header = stream.read(64)
+        if (len(header) != 64 or header[:7] != b'\x7fELF\x02\x01\x01'
+                or struct.unpack_from('<HHI', header, 16) not in ((2, 62, 1), (3, 62, 1))):
+            raise RuntimeError('Ninja must be Linux x86-64 ELF64')
+        offset = struct.unpack_from('<Q', header, 32)[0]
+        entry_size, count = struct.unpack_from('<HH', header, 54)
+        file_size = os.fstat(stream.fileno()).st_size
+        if (entry_size != 56 or not 1 <= count <= 128
+                or offset < 64 or offset + entry_size * count > file_size):
+            raise RuntimeError('Invalid Ninja ELF program headers')
+        interpreters = []
+        for index in range(count):
+            stream.seek(offset + index * entry_size)
+            entry = stream.read(entry_size)
+            if len(entry) != entry_size:
+                raise RuntimeError('Truncated Ninja ELF program headers')
+            if struct.unpack_from('<I', entry)[0] == 3:  # PT_INTERP
+                start, size = struct.unpack_from('<Q', entry, 8)[0], struct.unpack_from('<Q', entry, 32)[0]
+                if not 1 <= size <= 256 or start + size > file_size:
+                    raise RuntimeError('Invalid Ninja host interpreter')
+                stream.seek(start)
+                interpreters.append(stream.read(size))
+        # Require the Ubuntu host-loader ABI; never execute an Android loader.
+        if interpreters not in ([b'/lib64/ld-linux-x86-64.so.2\0'],
+                                [b'/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2\0']):
+            raise RuntimeError('Unexpected Ninja host interpreter (target or unreviewed executable)')
+    actual = digest(path)
+    if expected_sha is not None and actual != expected_sha:
+        raise RuntimeError('Selected Ninja executable changed')
+    return actual
+
+
+def select_host_ninja(env, run, emit):
+    search = env.get('PATH', '')
+    if not search or any(not Path(part).is_absolute() for part in search.split(os.pathsep)):
+        raise RuntimeError('Ninja discovery requires an absolute host PATH')
+    specified = env.get('NINJA')
+    if specified is not None and (not specified or not Path(specified).is_absolute()):
+        raise RuntimeError('NINJA override must be an absolute executable path')
+    selected = specified if specified is not None else shutil.which('ninja', path=search)
+    if not selected:
+        raise RuntimeError('Host Ninja not found; no fallback or installation')
+    path = Path(selected).resolve(strict=True)
+    sha = verify_host_ninja(path)
+    output = run(path, '--version', env=env, timeout=30, show=True).strip()
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', output):
+        raise RuntimeError('Unexpected Ninja version output')
+    if tuple(map(int, output.split('.'))) < (1, 8, 2):
+        raise RuntimeError('Ninja version must be >= 1.8.2')
+    verify_host_ninja(path, sha)
+    emit(f'HOST NINJA selected={selected} resolved={path} version={output} sha256={sha}; '
+         'executable ELF64 x86-64 with Ubuntu host loader; minimum=1.8.2')
+    return path, sha
+
+
 def tree_size(root):
     return sum(p.stat().st_size for p in root.rglob('*') if p.is_file() and not p.is_symlink())
 
@@ -544,6 +606,8 @@ class Research:
         self.logs.mkdir()
         self.stage = 'host preflight'
         self.sequence = 0
+        self.host_ninja = None
+        self.ninja_sha = None
         self.env = {key: os.environ[key] for key in ('PATH', 'HOME', 'TMPDIR') if key in os.environ}
         self.env.update(LC_ALL='C.UTF-8', LANG='C.UTF-8', TZ='UTC',
                         PIP_NO_INDEX='1', PIP_DISABLE_PIP_VERSION_CHECK='1',
@@ -557,12 +621,17 @@ class Research:
         print(value, flush=True)
 
     def run(self, *args, cwd=None, env=None, timeout=900, show=False):
+        env = self.env if env is None else env
+        if self.host_ninja is not None:
+            if env.get('NINJA') != str(self.host_ninja):
+                raise RuntimeError('Selected Ninja environment changed')
+            verify_host_ninja(self.host_ninja, self.ninja_sha)
         self.sequence += 1
         self.emit(f'RUN [{self.stage}] ' + shlex.join(map(str, args)))
         log = self.logs / f'{self.sequence:03d}.log'
         with log.open('wb') as output:
             process = subprocess.Popen(list(map(str, args)), cwd=cwd or self.root,
-                                       env=env or self.env, stdout=output,
+                                       env=env, stdout=output,
                                        stderr=subprocess.STDOUT, start_new_session=True)
             started = time.monotonic()
             try:
@@ -602,8 +671,14 @@ class Research:
             self.emit(f'{name}={os.environ.get(name, "Unknown")}')
         self.emit(Path('/etc/os-release').read_text())
         for command in (['git', '--version'], ['cc', '--version'], ['make', '--version'],
-                        ['ninja', '--version'], ['pkg-config', '--version']):
+                        ['pkg-config', '--version']):
             self.run(*command, show=True)
+        self.run('sh', '-c', 'command -v ninja', show=True)
+        legacy_ninja = Path('/usr/bin/ninja')
+        self.emit(f'NINJA legacy /usr/bin/ninja exists={legacy_ninja.exists()} '
+                  f'executable={os.access(legacy_ninja, os.X_OK)}; not selected by assumption')
+        self.host_ninja, self.ninja_sha = select_host_ninja(self.env, self.run, self.emit)
+        self.env['NINJA'] = str(self.host_ninja)
         self.run(sys.executable, '-c',
                  'import setuptools, wheel, pip; print(setuptools.__version__, wheel.__version__, pip.__version__)', show=True)
         self.phase('verified source acquisition')
@@ -778,7 +853,7 @@ class Research:
                  '-Dintrospection=disabled', '-Dnls=disabled', '-Dlibmount=disabled', '-Dselinux=disabled',
                  '-Dxattr=false', '-Dlibelf=disabled', '-Ddtrace=disabled', '-Dsystemtap=disabled',
                  '-Dsysprof=disabled', env=target_env, show=True)
-        self.run('ninja', '-C', glib_build, '-j2', env=target_env)
+        self.run(self.host_ninja, '-C', glib_build, '-j2', env=target_env)
         self.run(meson, 'install', '-C', glib_build, '--no-rebuild', env=target_env)
         self.emit('BUILT GLib graph; target execution NOT RUN')
         for artifact in sorted((prefix / 'lib').glob('*.a')):
@@ -806,7 +881,7 @@ class Research:
         target_env['PKG_CONFIG'] = '/usr/bin/pkg-config --static'
         self.run('sh', qemu / 'configure', '--target-list=aarch64-softmmu', '--cross-prefix=',
                  f'--cc={cc}', f'--cxx={cxx}', '--host-cc=cc', '--cpu=aarch64',
-                 f'--python={host_python}', '--ninja=/usr/bin/ninja', '--disable-download',
+                 f'--python={host_python}', f'--ninja={self.host_ninja}', '--disable-download',
                  '--without-default-features', '--without-default-devices', '--with-devices-aarch64=pdva',
                  '--enable-tcg', '--enable-stack-protector', '--enable-fdt=system', '--disable-rust', '--disable-docs',
                  '--disable-tools', '--disable-guest-agent', '--disable-plugins', '--disable-pixman',
@@ -819,13 +894,13 @@ class Research:
         for path in sorted(build.glob('*config*.mak')) + sorted(build.glob('*config*.h')):
             self.emit(f'CONFIG {path.name} sha256={digest(path)}\n{path.read_text()}')
         self.phase('QEMU Android compile and link')
-        self.run('ninja', '-j2', 'qemu-system-aarch64', cwd=build, env=target_env, timeout=1500)
+        self.run(self.host_ninja, '-j2', 'qemu-system-aarch64', cwd=build, env=target_env, timeout=1500)
         binary = build / 'qemu-system-aarch64'
         self.emit(f'BUILT QEMU size={binary.stat().st_size} sha256={digest(binary)}')
         self.phase('native output inspection')
         self.inspect(binary, toolbin)
         self.run(toolbin / 'llvm-size', '-A', binary, show=True)
-        commands = self.run('ninja', '-t', 'commands', 'qemu-system-aarch64', cwd=build)
+        commands = self.run(self.host_ninja, '-t', 'commands', 'qemu-system-aarch64', cwd=build)
         self.emit('BUILD COMMANDS tail (full log retained only on runner)\n' + commands)
         linkmap = build / 'qemu.map'
         self.emit(f'LINK MAP sha256={digest(linkmap)}')

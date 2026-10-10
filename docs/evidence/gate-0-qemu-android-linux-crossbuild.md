@@ -3,6 +3,141 @@
 **2026-10-08. Gate 0: Unresolved. Gates A–G: Not reached.**
 ADR-0001 remains Accepted; ADR-0002 remains Proposed. No engine selected.
 
+## Fifth revision: consistent host Ninja selection (2026-10-10)
+
+**Head `2887ae2cfa3876b7461c4f6a4a093235e90dbd29` resolved libfdt discovery,
+then failed at Ninja detection during QEMU Meson generation. QEMU compilation,
+linking and QEMU ELF inspection were NOT RUN.** The new revision's Linux results
+remain pending at publication; no subsequent compiler/linker result is claimed.
+
+### Live state and observed Linux result
+
+Live preflight confirmed main `d5466f1943e3cd7e33cbd62c8a23571e4de52ae5`,
+sole open PR #6 at `2887ae2`, the existing clean branch, one worktree and no
+stashes. Foundation and Android jobs succeeded; cross-build failed. Reviews,
+comments and review threads were empty; combined commit statuses had no contexts.
+GitHub Status was operational, updated `2026-10-10T03:24:25.123Z`. The full
+six-file exact-base diff, ordinary 100644 modes, workflows/logs, source and
+dependency/license inventory, requirements, ADRs and provenance were reviewed.
+The historical repository remains read-only and untouched.
+
+[Run 38008392842](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/38008392842),
+job `114082424430`, used exact head `2887ae2`, Ubuntu 24.04.5 image
+`20261004.327.1`. It passed all 61 Linux regression tests, archive/Git-object and
+NDK verification, Android link controls, PCRE2, libffi, libfdt and GLib builds.
+The new archive/member/header/symbol checks, direct Android ARM64 libfdt link
+control and reviewed patch all passed. QEMU reported `Library fdt found: YES`.
+Meson reached its project configuration summary (710 build targets), then failed:
+
+```text
+ERROR: Could not detect Ninja v1.8.2 or newer
+ERROR: meson setup failed
+FAILED [QEMU Android configure]: Command exit 1; dependent stages NOT RUN
+```
+
+This is not successful completion of Meson setup or Ninja file generation.
+The separate foundation job passed 61 tests. The Android job passed assembly,
+lint, release authority inspection and 48 protocol/report checks.
+
+### Verified mismatch and limits of the diagnosis
+
+The exact job logged `ninja --version` returning `1.13.2`; GLib's Meson logged
+`Found ninja-1.13.2 at /usr/local/bin/ninja` and its Ninja build succeeded.
+The QEMU command instead explicitly supplied `--ninja=/usr/bin/ninja`.
+
+The rehashed pinned QEMU archive retains SHA-256
+`a5a78e7d395ed096a7b2d98375978d0e2cf73f62c49a081ca48fa665d479b09f`.
+Its `configure:629` accepts the explicit value; lines 1011–1022 probe PATH only
+when no value was supplied. Line 1750 records the selected value, and line 1949
+invokes Meson with `NINJA=$ninja`. Thus the reviewed source passes the hard-coded
+path to Meson even though host preflight validated a different executable.
+
+The bundled Meson 1.11.1 wheel still has SHA-256
+`9b3a023657e393dbc5335b95c561337d49b7a458f5541e47ec44f2cc566e0d80`.
+`mesonbuild/tooldetect.py:105–131` checks only the `NINJA` override when nonempty.
+It requires a found executable, successful version command and version >=1.8.2;
+it does not fall back to PATH when that override fails. Its generic final error
+does not distinguish absence, permission failure or an unsupported version.
+
+The [exact image installation recipe](https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/scripts/build/install-ninja.sh)
+selects the x64 Ninja release asset and extracts it to `/usr/local/bin`. This
+corroborates the successful path in the log. The
+[Ninja 1.13.2 Linux release recipe](https://github.com/ninja-build/ninja/blob/v1.13.2/.github/workflows/linux.yml)
+builds the `ninja-linux.zip` asset in Rocky Linux 8; the separately named musl
+recipe is not the runner's selected asset. These source observations support the
+GNU/Linux host ABI check but do not establish a runner binary's immutable identity.
+**Whether `/usr/bin/ninja` existed
+in the completed job is Unknown:** the old job did not run `test -e`, `test -x`,
+`command -v` or an explicit version probe on that path, and its filesystem is
+no longer available here. Absence is a plausible explanation, not a verified
+fact. The proven defect is inconsistent selection: preflight/GLib and QEMU
+validated different paths, and QEMU's override failed Meson's detector.
+
+A local control reverified the actual bundled Meson sources against the pinned
+wheel and used the already installed Windows host Ninja 1.10.2 from the reviewed
+Android SDK CMake 3.22.1 package. PATH discovery succeeded; a nonexistent absolute
+`NINJA` override failed despite that working PATH; setting the override to that
+same working executable succeeded. This validates real Meson override behavior
+on Windows, not the historical Ubuntu path's existence or a Linux QEMU build.
+No Android executable was invoked and no Ninja was installed or downloaded.
+
+### Narrow correction and executable controls
+
+Host preflight now logs `command -v ninja`, the legacy `/usr/bin/ninja` existence
+and execute-access results, and the selected/resolved path, version and SHA-256.
+The selected path comes from the sanitized host PATH, whose components must be
+absolute. The existing environment allowlist does not inherit ambient `NINJA`.
+The helper rejects invalid explicit overrides without fallback if called with
+one. It resolves symlinks once, checks a regular executable before invocation,
+and requires ELF64 little-endian x86-64 ET_EXEC/ET_DYN with bounded program headers
+and the Ubuntu GNU/Linux host interpreter. ARM64, Android linker64, Windows PE,
+scripts, malformed/truncated headers and unreviewed loader forms fail before
+execution. Static or other-loader Ninja variants are deliberately not accepted
+without further host-source review; their availability on a future runner is
+not assumed.
+
+Only that absolute executable runs `--version`, with a 30-second command limit.
+A failed command, malformed output or version below 1.8.2 is fatal. A before/after
+digest detects substitution during the probe. Later subprocess launches recheck
+its executable/ELF identity and digest and require the selected `NINJA` environment
+value. The captured digest detects changes within the run; it is not an independent
+upstream binary pin or a guarantee against concurrent hostile filesystem races.
+Runner Ninja remains mutable host infrastructure under the existing provenance
+limitation, not an adopted Android library or product security boundary.
+
+The same resolved path is supplied through `NINJA` to GLib/Meson, through
+`--ninja=<resolved path>` to QEMU configure, and directly to GLib compilation,
+QEMU compilation and Ninja command inventory. No new Ninja installation,
+runner change, QEMU/Meson source modification or relaxed version check is involved.
+The existing shared-memory and FDT patches, source identities, target controls,
+bounded workflow and earliest-failure handling remain unchanged.
+
+### Validation and remaining boundary
+
+Local repository regression result: **72 tests, 68 passed, four existing Windows
+skips**. All prior 61 tests are unchanged. Eleven new tests cover host discovery,
+explicit/missing paths, executable access, version failures, wrong ABI/loader,
+malformed ELF bounds, path/environment and file substitution, and configure/build
+selection consistency. Synthetic ELF fixtures are inspection-only and never run.
+The real pinned-Meson override control above passed independently of those mocks.
+
+Foundation/Markdown links, harness authority, Python AST, workflow Bash syntax
+and manual YAML review, preserved source/patch identities, whitespace, exact-base
+file modes and dependency/license/provenance/binary/secret inventory passed before
+publication. No standalone YAML parser is installed; parser validation is not
+claimed. No Android tree, manifest, permission, workflow, dependency or source pin
+changed in this revision.
+
+The existing bounded Ubuntu job will attempt full QEMU Meson setup, Ninja
+compilation/linking and ELF inspection only after success. New-head CI is
+**pending** at publication. Android loading, isolated-UID authority, FD/mapping
+lifetime, signals/ART, resource limits, runtime 16 KiB behavior, containment and
+performance remain Unknown. Gate 0 **Unresolved**, Gates A–G **Not reached**,
+ADR-0002 **Proposed**; QEMU remains an experimental candidate. No phone, ADB,
+Android execution, Cloud, privileged Android capability, VpnService, guest image,
+firmware or committed native executable is involved. Earlier failures below
+retain their original results.
+
 ## Fourth revision: verified static-library discovery (2026-10-09)
 
 **Head `9f218ec5a794f2912398f36db1e7bd64be943c03` passed the Android

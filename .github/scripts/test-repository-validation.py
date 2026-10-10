@@ -538,6 +538,134 @@ class GitSourceTests(unittest.TestCase):
             research.verify_source_tree(self.destination, manifest)
 
 
+class NinjaSelectionTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.path = self.root / 'ninja'
+        self.path.write_bytes(self.elf())
+        self.env = {'PATH': str(self.root)}
+        self.run = mock.Mock(return_value='1.13.2\n')
+        self.access = mock.patch.object(research.os, 'access', return_value=True)
+        self.access.start(); self.addCleanup(self.access.stop)
+        self.which = mock.patch.object(research.shutil, 'which', return_value=str(self.path))
+        self.which.start(); self.addCleanup(self.which.stop)
+
+    @staticmethod
+    def elf(machine=62, interpreter=b'/lib64/ld-linux-x86-64.so.2\0'):
+        # Synthetic bytes for inspection only; never executed as a tool.
+        header = bytearray(64)
+        header[:7] = b'\x7fELF\x02\x01\x01'
+        research.struct.pack_into('<HHI', header, 16, 3, machine, 1)
+        research.struct.pack_into('<Q', header, 32, 64)
+        research.struct.pack_into('<HH', header, 54, 56, 1)
+        entry = bytearray(56)
+        research.struct.pack_into('<I', entry, 0, 3)
+        research.struct.pack_into('<Q', entry, 8, 120)
+        research.struct.pack_into('<Q', entry, 32, len(interpreter))
+        return bytes(header + entry) + interpreter
+
+    def select(self):
+        return research.select_host_ninja(self.env, self.run, lambda _: None)
+
+    def test_host_discovery_and_minimum_version(self):
+        for version in ('1.8.2', '1.13.2', '2.0.0'):
+            self.run.return_value = version + '\n'
+            path, sha = self.select()
+            self.assertEqual(path, self.path.resolve())
+            self.assertEqual(sha, research.digest(path))
+            self.assertEqual(self.run.call_args.args, (path, '--version'))
+            self.assertEqual(self.run.call_args.kwargs['env'], self.env)
+
+    def test_missing_discovery_and_explicit_path_never_fall_back(self):
+        with mock.patch.object(research.shutil, 'which', return_value=None):
+            with self.assertRaisesRegex(RuntimeError, 'not found'): self.select()
+        self.env['NINJA'] = str(self.root / 'missing')
+        with self.assertRaises(FileNotFoundError): self.select()
+        self.run.assert_not_called()
+
+    def test_explicit_absolute_tool_is_the_only_candidate(self):
+        self.env['NINJA'] = str(self.path)
+        with mock.patch.object(research.shutil, 'which', side_effect=AssertionError('fallback')):
+            self.assertEqual(self.select()[0], self.path.resolve())
+
+    def test_relative_or_empty_environment_paths_rejected(self):
+        for path in ('', '.', str(self.root) + os.pathsep, str(self.root) + os.pathsep + 'relative'):
+            self.env = {'PATH': path}
+            with self.assertRaisesRegex(RuntimeError, 'host PATH'): self.select()
+        for override in ('', 'ninja', './ninja'):
+            self.env = {'PATH': str(self.root), 'NINJA': override}
+            with self.assertRaisesRegex(RuntimeError, 'override'): self.select()
+        self.run.assert_not_called()
+
+    def test_non_executable_and_directory_rejected_before_execution(self):
+        with mock.patch.object(research.os, 'access', return_value=False):
+            with self.assertRaisesRegex(RuntimeError, 'host executable'): self.select()
+        self.env['NINJA'] = str(self.root)
+        with self.assertRaisesRegex(RuntimeError, 'host executable'): self.select()
+        self.run.assert_not_called()
+
+    def test_old_malformed_and_failed_version_commands_rejected(self):
+        for output in ('1.8.1', '0.99.99', '', 'ninja 1.13.2', '1.13.2\n1.13.2', '1.13.2.git'):
+            self.run.return_value = output
+            with self.subTest(output=output), self.assertRaisesRegex(RuntimeError, 'version'):
+                self.select()
+        self.run.side_effect = RuntimeError('Command exit 1')
+        with self.assertRaisesRegex(RuntimeError, 'Command exit 1'): self.select()
+
+    def test_android_foreign_and_script_files_never_executed(self):
+        for data in (self.elf(machine=183), self.elf(interpreter=b'/system/bin/linker64\0'),
+                     b'MZ' + bytes(128), b'#!/bin/sh\necho 1.13.2\n', b'\x7fELF'):
+            self.path.write_bytes(data)
+            with self.assertRaises(RuntimeError): self.select()
+        self.run.assert_not_called()
+
+    def test_corrupt_program_headers_and_interpreter_rejected(self):
+        for position, replacement in ((54, b'\x00\x00'), (56, b'\xff\xff'),
+                                      (32, b'\xff' * 8), (96, b'\xff' * 8)):
+            data = bytearray(self.elf()); data[position:position+len(replacement)] = replacement
+            self.path.write_bytes(data)
+            with self.assertRaises((RuntimeError, OverflowError, OSError)): self.select()
+        self.run.assert_not_called()
+
+    def test_substitution_during_version_probe_rejected(self):
+        def substitute(*args, **kwargs):
+            self.path.write_bytes(self.elf() + b'changed')
+            return '1.13.2'
+        self.run.side_effect = substitute
+        with self.assertRaisesRegex(RuntimeError, 'executable changed'): self.select()
+
+    def test_later_environment_and_file_substitution_rejected_before_spawn(self):
+        path, sha = self.select()
+        runner = object.__new__(research.Research)
+        runner.host_ninja, runner.ninja_sha = path, sha
+        runner.env = {'NINJA': str(path)}
+        with mock.patch.object(research.subprocess, 'Popen') as spawn:
+            with self.assertRaisesRegex(RuntimeError, 'environment changed'):
+                runner.run(path, '--version', env={'NINJA': str(self.root / 'other')})
+            self.path.write_bytes(self.elf() + b'changed')
+            with self.assertRaisesRegex(RuntimeError, 'executable changed'):
+                runner.run(path, '--version')
+            spawn.assert_not_called()
+
+    def test_configure_and_build_use_selected_identity(self):
+        import ast
+        import inspect
+        tree = ast.parse(inspect.getsource(research))
+        build = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == 'build')
+        calls = [n for n in ast.walk(build) if isinstance(n, ast.Call)
+                 and isinstance(n.func, ast.Attribute) and n.func.attr == 'run']
+        ninja_calls = [n for n in calls if n.args and isinstance(n.args[0], ast.Attribute)
+                       and n.args[0].attr == 'host_ninja']
+        self.assertEqual(len(ninja_calls), 3)  # GLib build, QEMU build, command inventory.
+        config = next(n for n in calls if any(isinstance(a, ast.Constant)
+                                             and a.value == '--target-list=aarch64-softmmu' for a in n.args))
+        option = next(a for a in config.args if isinstance(a, ast.JoinedStr)
+                      and isinstance(a.values[0], ast.Constant) and a.values[0].value == '--ninja=')
+        self.assertEqual(ast.unparse(option.values[1].value), 'self.host_ninja')
+
+
 class FdtDiscoveryTests(unittest.TestCase):
     def setUp(self):
         self.source = research.QEMU_FDT_ANCHOR.encode()
