@@ -71,5 +71,9 @@ jobs:
             exit 1
           fi
           python3 .github/scripts/validate-harness.py --apkanalyzer "$apkanalyzer_path" --apk android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk
+          python3 .github/scripts/validate-harness.py --apkanalyzer "$apkanalyzer_path" --apk android/gate0-harness/build/outputs/apk/debug/gate0-harness-debug.apk --variant debug
+          # Hash source/tool identities alongside package bytes; never execute the ARM64 payload here.
+          sha256sum android/gate0-harness/src/main/cpp/launch* android/gate0-harness/build.gradle android/gradle/verification-metadata.xml
+          sha256sum "$ANDROID_HOME/ndk/28.2.13676358/source.properties" "$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
           unzip -l android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk
           sha256sum android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk

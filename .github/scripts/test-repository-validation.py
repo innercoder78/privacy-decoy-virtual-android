@@ -6,6 +6,8 @@ import io
 import os
 import shutil
 import subprocess
+import struct
+import zipfile
 import zlib
 from pathlib import Path
 import tempfile
@@ -1156,6 +1158,81 @@ class ManifestTests(unittest.TestCase):
     def test_debuggable_release(self):
         with self.assertRaises(ValueError):
             harness.manifest(self.source.replace('<application ', '<application android:debuggable="true" '), True)
+    def test_extraction_and_sdk_required_in_package(self):
+        packaged = self.source.replace('<application ', '<uses-sdk android:minSdkVersion="30" '
+                'android:targetSdkVersion="37"/><application android:extractNativeLibs="true" ')
+        harness.manifest(packaged, True, True)
+        for old, new in [('extractNativeLibs="true"', 'extractNativeLibs="false"'),
+                         ('targetSdkVersion="37"', 'targetSdkVersion="28"'),
+                         ('minSdkVersion="30"', 'minSdkVersion="29"'),
+                         ('usesCleartextTraffic="false"', 'usesCleartextTraffic="true"'),
+                         ('fullBackupContent="false"', 'fullBackupContent="true"')]:
+            with self.subTest(old=old), self.assertRaises(ValueError):
+                harness.manifest(packaged.replace(old, new), True, True)
+
+
+class LaunchElfTests(unittest.TestCase):
+    def fixture(self, executable=True, machine=183):
+        data = bytearray(2048)
+        struct.pack_into('<16sHHIQQQIHHHHHH', data, 0, b'\x7fELF\x02\x01\x01',
+                         3, machine, 1, 0x10100 if executable else 0, 64, 0, 0, 64, 56, 6, 0, 0, 0)
+        strings = b'\0libc.so\0__stack_chk_fail\0libsubstrate.so\0'
+        data[800:800+len(strings)] = strings
+        interp = b'/system/bin/linker64\0'
+        data[512:512+len(interp)] = interp
+        tags = [(1,1), (5,0x10000+800), (10,len(strings)), (24,0)]
+        tags.append((0x6ffffffb,0x08000001) if executable else (14,strings.index(b'libsubstrate')))
+        tags.append((0,0))
+        for i, item in enumerate(tags): struct.pack_into('<qQ', data, 600+i*16, *item)
+        note = struct.pack('<III',8,132,1) + b'Android\0' + struct.pack('<I',30)
+        note += b'r28c'.ljust(64,b'\0') + b'13676358'.ljust(64,b'\0')
+        data[1024:1024+len(note)] = note
+        segments = [(1,5,0,0x10000,0,len(data),len(data),16384),
+                    (3 if executable else 0,4,512,0,0,len(interp),len(interp),1),
+                    (2,6,600,0,0,len(tags)*16,len(tags)*16,8),
+                    (0x6474e551,6,0,0,0,0,0,0),
+                    (0x6474e552,4,600,0,0,128,128,1),
+                    (4,4,1024,0,0,len(note),len(note),4)]
+        for i, segment in enumerate(segments): struct.pack_into('<IIQQQQQQ', data, 64+i*56, *segment)
+        return data
+    def test_pie_and_jni_are_distinct(self):
+        harness.elf(self.fixture(),183,True)
+        harness.elf(self.fixture(False),183,False)
+        harness.elf(self.fixture(False,62),62,False)
+        for executable in (False,True):
+            with self.assertRaises(ValueError): harness.elf(self.fixture(executable),183,not executable)
+    def test_wrong_abi_interpreter_and_hardening(self):
+        for offset, fmt, value in [(18,'H',62), (16,'H',2), (24,'Q',0),
+                                   (64+4,'I',7), (64+48,'Q',4096),
+                                   (64+3*56+4,'I',7), (64+4*56,'I',0),
+                                   (600+4*16+8,'Q',1), (600+3*16,'q',0),
+                                   (1024+20,'I',29)]:
+            data = self.fixture(); struct.pack_into('<'+fmt,data,offset,value)
+            with self.subTest(offset=offset), self.assertRaises(ValueError): harness.elf(data,183,True)
+        for old, new in [(b'/system/bin/linker64',b'/other_/bin/linker64'),
+                         (b'libc.so',b'evil.so'), (b'r28c',b'r27c')]:
+            with self.assertRaises(ValueError): harness.elf(self.fixture().replace(old,new),183,True)
+    def test_truncated_and_unbounded_headers(self):
+        for length in (0,4,63,100,600,900,1100):
+            with self.subTest(length=length), self.assertRaises(ValueError): harness.elf(self.fixture()[:length],183,True)
+        data = self.fixture(); struct.pack_into('<Q',data,32,2**63)
+        with self.assertRaises(ValueError): harness.elf(data,183,True)
+    def test_unknown_binary_and_missing_payload(self):
+        expected = {'lib/arm64-v8a/libsubstrate.so':self.fixture(False),
+                    'lib/x86_64/libsubstrate.so':self.fixture(False,62),
+                    'lib/arm64-v8a/libpdva_launch.so':self.fixture()}
+        with tempfile.TemporaryDirectory() as directory:
+            apk = Path(directory)/'synthetic.apk'
+            def write(entries):
+                with zipfile.ZipFile(apk,'w',compression=zipfile.ZIP_DEFLATED) as archive:
+                    for name,data in entries.items(): archive.writestr(name,data)
+            write(expected)
+            with contextlib.redirect_stdout(io.StringIO()): harness.inventory(apk)
+            for name in ('lib/arm64-v8a/libunknown.so','assets/renamed.bin'):
+                write({**expected,name:self.fixture()})
+                with self.assertRaises(ValueError): harness.inventory(apk)
+            write({k:v for k,v in expected.items() if 'pdva_launch' not in k})
+            with self.assertRaises(ValueError): harness.inventory(apk)
 
 if __name__ == "__main__":
     unittest.main()

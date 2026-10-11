@@ -13,6 +13,15 @@ and [build dependency inventory](../docs/evidence/gate-0-isolated-worker-depende
 explain the new build trust. All application and probe sources are new PDVA work;
 no historical Android source or Gradle scaffold was copied.
 
+The [native-launch control](../docs/evidence/gate-0-isolated-native-launch.md) adds
+one PDVA-owned ARM64/API-30 dynamic PIE. `libpdva_launch.so` is an executable name
+chosen for installer extraction, **not a JNI library**. Its synthetic operation
+returns 42. Target SDK stays 37; x86_64 retains JNI behavior and reports
+`UNSUPPORTED` for the new executable. Normal sessions attempt one fixed launch
+after the original probes, with separate creation/exec/identity/cleanup results.
+Uncertain reaping or a lost cleanup reply persistently blocks future sessions,
+including after restart. Do not clear state to bypass that lockout.
+
 ## Build
 
 Use Python 3.11+, JDK 17, and an Android SDK installed from Google. Set
@@ -79,6 +88,11 @@ will identify future physical-device tasks separately.
 4. Run **five start/stop cycles**, then **Worker death / rebind exercise**.
    Compare synthetic epochs, UID/PID observations, stale requests and Binder death.
    Numeric UID reuse is not evidence of instance reuse.
+
+   For the executable control, first run **one** fresh epoch using its
+   [bounded procedure](../docs/evidence/gate-0-isolated-native-launch.md#next-bounded-physical-experiment).
+   Repetition requires known cleanup; a lost reply or incomplete reaping means stop.
+   The existing death exercise does not inject death during exec.
 5. Rotate and background/foreground during a run. The Activity cancels its run
    when stopped and the next launch begins a fresh epoch. No foreground service,
    exemption or persistence mechanism is installed.

@@ -29,10 +29,51 @@ android {
     externalNativeBuild {
         cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.22.1' }
     }
+    // Installer extracts lib*.so names even when the ELF is an executable.
+    // This is a packaging convention only; the payload is NEVER dlopened.
+    packaging { jniLibs { useLegacyPackaging = true } }
+}
+
+abstract class LaunchPayloadTask extends DefaultTask {
+    @InputFile abstract RegularFileProperty getPayloadSource()
+    @InputFile abstract RegularFileProperty getWireHeader()
+    @InputFile abstract RegularFileProperty getNdkIdentity()
+    @Internal abstract DirectoryProperty getNdkDirectory()
+    @OutputDirectory abstract DirectoryProperty getOutputDirectory()
+    @Inject abstract ExecOperations getExecOperations()
+    @TaskAction void buildPayload() {
+        def host = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = host.contains('windows') ? 'windows-x86_64' :
+                       host.contains('linux') ? 'linux-x86_64' : null
+        if (platform == null) throw new GradleException('Unsupported research build host')
+        def ndk = ndkDirectory.get().asFile
+        def compiler = new File(ndk, "toolchains/llvm/prebuilt/${platform}/bin/clang" +
+                (host.contains('windows') ? '.exe' : ''))
+        def output = outputDirectory.file('arm64-v8a/libpdva_launch.so').get().asFile
+        output.parentFile.mkdirs()
+        execOperations.exec {
+            commandLine compiler, '--target=aarch64-linux-android30', '-std=c11', '-O2',
+                '-Wall', '-Wextra', '-Werror', '-fPIE', '-pie', '-fstack-protector-strong',
+                '-D_FORTIFY_SOURCE=2', '-Wl,-z,relro,-z,now,-z,noexecstack',
+                '-Wl,-z,max-page-size=16384', '-Wl,--build-id=sha1',
+                payloadSource.get().asFile, '-o', output
+        }
+    }
+}
+def launchTask = tasks.register('buildLaunchPayload', LaunchPayloadTask) {
+    payloadSource = layout.projectDirectory.file('src/main/cpp/launch_payload.c')
+    wireHeader = layout.projectDirectory.file('src/main/cpp/launch_wire.h')
+    ndkDirectory = androidComponents.sdkComponents.ndkDirectory
+    ndkIdentity = androidComponents.sdkComponents.ndkDirectory.map { it.file('source.properties') }
+    outputDirectory = layout.buildDirectory.dir('launch-jni')
+}
+androidComponents.onVariants(androidComponents.selector().all()) { variant ->
+    variant.sources.jniLibs.addGeneratedSourceDirectory(launchTask) { it.outputDirectory }
 }
 tasks.register('compileProtocolTests', JavaCompile) {
     source = files('src/main/java/org/pdva/gate0/Protocol.java',
                    'src/main/java/org/pdva/gate0/Report.java',
+                   'src/main/java/org/pdva/gate0/LaunchResult.java',
                    'src/test/java/org/pdva/gate0/ProtocolTest.java')
     classpath = files()
     destinationDirectory = layout.buildDirectory.dir('protocol-tests')

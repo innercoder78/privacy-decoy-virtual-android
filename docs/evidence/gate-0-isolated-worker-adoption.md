@@ -1,5 +1,20 @@
 # Gate 0 isolated-worker tool adoption record
 
+## Native executable research extension — 2026-10-10
+
+The [native-launch record](gate-0-isolated-native-launch.md) adopts only original
+PDVA C/Java/test/validator source for one ARM64 dynamic-PIE control, using the same
+r28c/API-30 toolchain and verified build graph. Native inventory now contains the
+two existing JNI ABI libraries plus `lib/arm64-v8a/libpdva_launch.so`, an executable
+despite its suffix. No QEMU, guest, runtime Maven dependency or external runtime
+is adopted. Existing NDK CRT/toolchain notices and rights remain applicable; no
+general repository license is inferred. The repository owner maintains this work.
+Host-only wait controls use existing LLVM tools locally and the runner's printed
+C-compiler identity in foundation CI. No generated binaries are committed. Earlier
+inventory paragraphs below retain their original two-library scope and history.
+
+## Original adoption record
+
 Review date: **2026-10-07**. Adoption scope: building and testing the
 [pre-QEMU research harness](gate-0-isolated-worker-harness.md), under the explicit
 first-implementation request. No production engine, guest dependency or opaque
