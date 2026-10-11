@@ -25,5 +25,11 @@ jobs:
           python3 .github/scripts/validate-foundation.py
           python3 .github/scripts/test-repository-validation.py
           python3 .github/scripts/validate-harness.py
+      - name: Exercise native wait controls on host only
+        run: |
+          mkdir -p android/build/host-controls
+          cc --version
+          cc -std=c11 -Wall -Wextra -Werror android/gate0-harness/src/test/cpp/launch_wait_test.c -o android/build/host-controls/launch-wait-test
+          timeout 5s android/build/host-controls/launch-wait-test
       - name: Check whitespace
         run: git show --format= --check HEAD

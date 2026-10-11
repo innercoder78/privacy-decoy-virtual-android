@@ -74,6 +74,12 @@ final class Session {
 
     String run(boolean simulateDeath) {
         Report report = new Report(epoch, Build.VERSION.SDK_INT);
+        SharedPreferences launchState = context.getSharedPreferences("launch_lifetime", Context.MODE_PRIVATE);
+        if (launchState.getBoolean("uncertain_child", false)) {
+            report.add("launch_lockout", "known_cleanup", "blocked", 0, "UNKNOWN",
+                    "A previous launch lacks cleanup acknowledgement. No automatic retry after restart");
+            return report.json();
+        }
         if (!ACTIVE.compareAndSet(false, true)) {
             report.add("session", "exclusive", "busy", 0, "UNKNOWN", "Another experiment still owns resources");
             return report.json();
@@ -182,6 +188,26 @@ final class Session {
                             row.getLong("errno"), row.getString("status"), row.getString("limitations"));
                 }
                 report.bool("repeated_run_rejected", rejected(Protocol.RUN, epoch, d -> {}), "One native run per worker");
+                report.bool("launch_stale_epoch_rejected", rejected(Protocol.LAUNCH,
+                        "0".repeat(32), d -> {}), "Launch requires the authorized current epoch");
+                report.bool("launch_trailing_rejected", rejected(Protocol.LAUNCH, epoch,
+                        d -> d.writeInt(1)), "No launch arguments or path accepted");
+                // Durable BEFORE IPC: owner death or a lost reply must not enable a new launch.
+                if (!launchState.edit().putBoolean("uncertain_child", true).commit())
+                    throw new IllegalStateException("launch_guard");
+                p = request(Protocol.LAUNCH, epoch, d -> {});
+                long[] launchValues = new long[LaunchResult.COUNT];
+                p.readLongArray(launchValues); // Reject a different length before allocation.
+                LaunchResult launch = new LaunchResult(launchValues);
+                if (p.dataAvail() != 0) throw new IllegalArgumentException("launch_trailing");
+                p.recycle();
+                launch.append(report);
+                if (launch.cleanupKnown()) {
+                    if (!launchState.edit().putBoolean("uncertain_child", false).commit())
+                        throw new IllegalStateException("launch_guard_clear");
+                    report.bool("repeated_launch_rejected", rejected(Protocol.LAUNCH, epoch,
+                            d -> {}), "One attempt including failure or Unsupported per worker");
+                }
             }
         } catch (Throwable e) {
             // Categories only, never Throwable.toString/message/stack traces in exported evidence.
@@ -237,7 +263,8 @@ final class Session {
             if (frame != null) frame.close();
             // A fresh session is blocked if an old worker might still hold capabilities.
             previousEpoch = epoch;
-            if (worker == null || dead.getCount() == 0) ACTIVE.set(false);
+            if ((worker == null || dead.getCount() == 0)
+                    && !launchState.getBoolean("uncertain_child", false)) ACTIVE.set(false);
         }
         try { return report.json(); }
         catch (IllegalArgumentException e) {

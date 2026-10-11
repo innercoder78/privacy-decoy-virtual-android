@@ -21,7 +21,7 @@ public final class Report {
     private static String q(String s) { return "\"" + label(s) + "\""; }
     public void add(String name, String expected, String observed, long error,
                     String status, String limit) {
-        if (!status.matches("PASS|FAIL|UNKNOWN") || rows.size() >= 160)
+        if (!status.matches("PASS|FAIL|UNKNOWN|UNSUPPORTED") || rows.size() >= 160)
             throw new IllegalArgumentException("report");
         rows.add("{\"probe\":" + q(name) + ",\"expected\":" + q(expected)
                 + ",\"observed\":" + q(observed) + ",\"errno\":" + error

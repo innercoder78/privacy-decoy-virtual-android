@@ -19,6 +19,8 @@ public final class WorkerService extends Service {
     private int managerPid, sentinelNumber;
     private long controlAddress;
     private boolean initialized, stopping;
+    // Private entry point, never called by the management process or exposed through IPC.
+    private static native long[] launchNative(String installedNativeDirectory);
     private final IBinder.DeathRecipient ownerDeath = this::terminate;
     private void terminate() { android.os.Process.killProcess(android.os.Process.myPid()); }
 
@@ -50,7 +52,7 @@ public final class WorkerService extends Service {
                 throw new SecurityException("caller");
             if (reply == null || flags != 0 || data.dataSize() > Protocol.MAX_CONTROL)
                 throw new IllegalArgumentException("control_size");
-            if (code < Protocol.INIT || code > Protocol.KILL)
+            if (code < Protocol.INIT || code > Protocol.LAUNCH)
                 throw new IllegalArgumentException("operation");
             data.enforceInterface(Protocol.DESCRIPTOR);
             String epoch = data.readString();
@@ -99,6 +101,15 @@ public final class WorkerService extends Service {
                         protocol.run(epoch);
                         String result = runProbes(epoch);
                         reply.writeNoException(); reply.writeString(result);
+                    } else if (code == Protocol.LAUNCH) {
+                        protocol.launch(epoch);
+                        if (!android.os.Process.isIsolated()) throw new SecurityException("isolation");
+                        // Framework-owned installation location; no caller-supplied path.
+                        long[] result = launchNative(getApplicationInfo().nativeLibraryDir);
+                        LaunchResult checked = new LaunchResult(result);
+                        if (!checked.cleanupKnown()) stopping = true;
+                        reply.writeNoException(); reply.writeLongArray(result);
+                        if (stopping) timer.postDelayed(WorkerService.this::terminate, 100);
                     } else if (code == Protocol.KILL) {
                         protocol.stop(epoch); stopping = true;
                         reply.writeNoException();

@@ -4,11 +4,12 @@ package org.pdva.gate0;
 public final class Protocol {
     public static final String DESCRIPTOR = "org.pdva.gate0.substrate.v1";
     public static final int INIT = 1, RUN = 2, FRAME = 3, INPUT = 4, STOP = 5, KILL = 6;
+    public static final int LAUNCH = 7;
     public static final int MAX_CONTROL = 4096, MAX_REPORT = 32768;
     public static final int WIDTH = 64, HEIGHT = 64, STRIDE = WIDTH * 4;
     public static final int BYTES = HEIGHT * STRIDE, MAX_INPUT = 16;
     private String epoch;
-    private boolean ran, initialized;
+    private boolean ran, initialized, launched;
     private int frames, inputs;
     public synchronized void initialize(String value) {
         if (initialized || !validEpoch(value)) throw new IllegalArgumentException("epoch");
@@ -25,6 +26,11 @@ public final class Protocol {
         check(value);
         if (ran) throw new IllegalArgumentException("already_run");
         ran = true;
+    }
+    public synchronized void launch(String value) {
+        check(value);
+        if (!ran || launched) throw new IllegalArgumentException("launch_state");
+        launched = true; // Consumed before native work, including failed launches.
     }
     public synchronized int frame(String value, int width, int height, int stride, int length) {
         check(value);

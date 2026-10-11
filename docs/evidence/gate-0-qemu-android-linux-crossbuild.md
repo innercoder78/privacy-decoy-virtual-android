@@ -3,6 +3,18 @@
 **2026-10-08. Gate 0: Unresolved. Gates A–G: Not reached.**
 ADR-0001 remains Accepted; ADR-0002 remains Proposed. No engine selected.
 
+## Post-merge observation — 2026-10-10
+
+PR #6 merged at `cb6eb6853b79f7035ea96e26068b3771409f3425`. Its final source head
+`379822d7f1b56e8f6d0f06a2476d4f9387f80ae7` completed the
+[Android-targeted QEMU cross-build](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/38095872712)
+successfully. This establishes the scoped Android ARM64 dynamic-PIE cross-build,
+**not an Android runtime launch**. Main's foundation and Android checks also
+succeeded after merge. Earlier failed attempts and pending-at-publication statements
+below are retained as history. The [separate native-launch control](gate-0-isolated-native-launch.md)
+now prepares a smaller PDVA-owned executable probe; QEMU is not integrated into
+the APK. Physical execution remains Unknown and Gate 0 remains Unresolved.
+
 ## Seventh revision: response-file provenance and dynamic-PIE attempt (2026-10-10)
 
 **Head `62ae0f8088a188c22d80d3b83e25e9d6a401beda` again compiled and linked
