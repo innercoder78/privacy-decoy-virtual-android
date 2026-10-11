@@ -1,0 +1,35 @@
+name: PDVA QEMU Android cross-build research
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/qemu-android-research.yml'
+      - '.github/scripts/qemu-android-research.py'
+permissions:
+  contents: read
+concurrency:
+  group: qemu-research-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  cross-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact research source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          clean: false
+      - name: Validate source and run bounded research
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          python3 .github/scripts/validate-foundation.py
+          python3 .github/scripts/test-repository-validation.py
+          python3 .github/scripts/validate-harness.py
+          # No apt, sudo, cache, target execution or artifact uploads.
+          ulimit -c 0
+          ulimit -v 6291456
+          ulimit -f 4194304
+          timeout --signal=TERM --kill-after=15s 40m python3 .github/scripts/qemu-android-research.py
