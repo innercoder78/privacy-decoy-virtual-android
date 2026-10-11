@@ -62,6 +62,62 @@ Compile/target API is 37. This floor is not a product device-support claim.
 ARM64 has the generated-code fixture; x86-64 intentionally reports Unsupported
 for that fixture, encoded as UNKNOWN with an explicit limitation.
 
+## Native wait controls
+
+These seven synthetic controls test `launch_wait.h` with injected wait, kill,
+clock and pause operations. They do not execute Android code or perform real
+process creation, signals or sleeping. Use a conventional native host compiler
+with its standard C runtime, default startup and `<assert.h>` diagnostics.
+The test rejects `NDEBUG`; assertions must never be compiled out. Build without
+optimization or LTO so the deterministic controls remain useful for runtime
+inspection. Each scenario prints its name only after its assertions complete.
+The assertions check exact wait/kill/pause counts and result/error fields.
+Ubuntu CI requires exactly seven named results from a successful real run.
+A separate five-second negative control invokes `--fail-assert` on that same
+binary and requires SIGABRT plus the injected assertion diagnostic. Timeout,
+ordinary nonzero exit and successful exit do not satisfy that negative control.
+The real run is outside expected-failure handling and must succeed independently.
+
+On Linux, the required Ubuntu foundation CI job runs:
+
+```sh
+mkdir -p android/build/host-controls
+cc --version
+cc -std=c11 -O0 -Wall -Wextra -Werror android/gate0-harness/src/test/cpp/launch_wait_test.c -o android/build/host-controls/launch-wait-test
+timeout 5s android/build/host-controls/launch-wait-test
+```
+
+For Windows, the proposed equivalent requires an already reviewed Visual Studio
+C toolchain and Windows SDK/UCRT supporting C11. In an x64 Native Tools developer
+PowerShell, from the repository root, use a **new** output directory:
+
+```powershell
+$waitOutput = Join-Path (Get-Location) ('android/build/host-controls-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $waitOutput -ErrorAction Stop | Out-Null
+cl /nologo /TC /std:c11 /Od /W4 /WX /MD android/gate0-harness/src/test/cpp/launch_wait_test.c "/Fo$waitOutput/launch-wait-test.obj" "/Fe$waitOutput/launch-wait-test.exe"
+if ($LASTEXITCODE -ne 0) { throw 'Native wait control compilation failed' }
+$waitProcess = Start-Process -FilePath "$waitOutput/launch-wait-test.exe" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$waitOutput/stdout.txt" -RedirectStandardError "$waitOutput/stderr.txt"
+if (-not $waitProcess.WaitForExit(5000)) {
+    $waitProcess.Kill()
+    throw 'Native wait controls exceeded five seconds'
+}
+Get-Content "$waitOutput/stdout.txt", "$waitOutput/stderr.txt"
+if ($waitProcess.ExitCode -ne 0) { throw 'Native wait controls failed' }
+```
+
+Windows is **not validated** by the current incident investigation: no trusted
+host C compiler plus Windows development runtime was available. The Android NDK
+is not a substitute Windows SDK. Do not fall back to freestanding compilation,
+manual `/entry:main`, `/nodefaultlib`, handwritten errno values or trap assertions.
+An unavailable toolchain is a missing Windows result, never a pass.
+
+Read the [antivirus incident record](../docs/evidence/gate-0-native-host-antivirus.md)
+before execution. Confirm active protection and resolve any security blocker.
+If protection detects the test, stop, retain the output/log evidence, and report
+the event. Do not restore quarantine, add exclusions or repeatedly alter builds
+to defeat detection. The commands above are a proposed normal-runtime procedure,
+not Malwarebytes approval or proof that the incident is resolved.
+
 ## Future ordinary physical experiment
 
 The harness has not been physically run. All physical outcomes are **Unknown**;

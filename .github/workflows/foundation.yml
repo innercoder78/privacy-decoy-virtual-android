@@ -29,7 +29,35 @@ jobs:
         run: |
           mkdir -p android/build/host-controls
           cc --version
-          cc -std=c11 -Wall -Wextra -Werror android/gate0-harness/src/test/cpp/launch_wait_test.c -o android/build/host-controls/launch-wait-test
-          timeout 5s android/build/host-controls/launch-wait-test
+          cc -std=c11 -O0 -Wall -Wextra -Werror android/gate0-harness/src/test/cpp/launch_wait_test.c -o android/build/host-controls/launch-wait-test
+          # Keep the real test outside any expected-failure handling.
+          timeout 5s android/build/host-controls/launch-wait-test > android/build/host-controls/results.txt
+          cat android/build/host-controls/results.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          expected = [
+              "immediate successful reap", "EINTR retry", "timeout and successful reap",
+              "ECHILD without unsafe kill", "kill failure", "clock failure",
+              "frozen-clock iteration bound",
+          ]
+          actual = Path("android/build/host-controls/results.txt").read_text().splitlines()
+          if actual != ["PASS: " + name for name in expected]:
+              raise SystemExit("Expected exactly seven distinct native scenario results")
+          print("Native positive controls: 7/7")
+          PY
+      - name: Verify native assertion failure is observable
+        run: |
+          ulimit -c 0
+          python3 - <<'PY'
+          import signal
+          import subprocess
+          result = subprocess.run(
+              ["android/build/host-controls/launch-wait-test", "--fail-assert"],
+              capture_output=True, text=True, timeout=5, check=False,
+          )
+          if result.returncode != -signal.SIGABRT or "PDVA injected assertion failure" not in result.stderr:
+              raise SystemExit(f"Expected injected assertion SIGABRT; got {result.returncode}: {result.stderr}")
+          print("Native negative controls: 1/1 (injected assertion caused SIGABRT)")
+          PY
       - name: Check whitespace
         run: git show --format= --check HEAD

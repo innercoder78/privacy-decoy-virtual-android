@@ -206,9 +206,15 @@ Unresolved/UNKNOWN. Clipboard export still requires the existing user button.
 Native host controls exercise the shared wait strategy with fake wait/clock/kill
 operations: immediate exit, EINTR, deadline/reap, ECHILD without kill, kill failure,
 failed clock and frozen-clock iteration bound. They run no Android code, fork or
-real signals. Locally the existing LLVM tools compile a freestanding Windows COFF
-test (`--target=x86_64-pc-windows-msvc -ffreestanding -O2`) and link it with
-`ld.lld -flavor link /entry:main /subsystem:console /nodefaultlib`. Linux CI uses
+real signals. Historical local runs used a freestanding Windows COFF
+test (`--target=x86_64-pc-windows-msvc -ffreestanding -O2`) linked with
+`ld.lld -flavor link /entry:main /subsystem:console /nodefaultlib`.
+**Correction, 2026-10-11:** Malwarebytes quarantined both recorded Windows
+executables. The prior local exit-zero claim is not accepted as successful
+Windows control execution. That construction is retired; see the
+[incident and replacement record](gate-0-native-host-antivirus.md) and
+[conventional host instructions](../../android/README.md#native-wait-controls).
+Linux CI uses
 the runner's printed `cc` identity and a five-second timeout. JVM tests cover order,
 stale/stopped epochs, replay/concurrency, result bounds and error/timeout/Unknown/
 Unsupported mapping. These controls do not prove actual Android lifecycle policy.
