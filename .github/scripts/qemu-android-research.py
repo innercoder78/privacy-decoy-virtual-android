@@ -66,6 +66,326 @@ WHEELS = {
 }
 GIB = 1024 ** 3
 
+# Pinned LF bytes, including the unchanged option -> tcg_init -> region caller
+# and fatal-error implementation. No downloaded source is trusted by an anchor.
+QEMU_TCG_INPUTS = {
+    'tcg/region.c': '466f430bb52f1be9224d5339cc36ff6bae2769ca1f85e688ca2dfbacdf6cdc81',
+    'util/memfd.c': '0e1e5d0f022727c39cebc651789601334e233b585fef490f84283fde72001c67',
+    'accel/tcg/tcg-all.c': '7ad8dcc2528e459abaf98787670d3674c570c689de6d9936fdaf761abcd43627',
+    'tcg/tcg.c': '1dbcc86c7937f6b9251556cda93c53d112741d43da1e3c6f25ba8ba8f2540050',
+    'util/error.c': '3aab61792ab9663febaa3020d25bb09c2ea02d662abd0155e9420d537ddd98b4',
+    'include/qapi/error.h': 'f2ef26ea43bb62243fb5217dded8fcae1ec56c8237aa97923d355307a7c0bcf3',
+}
+TCG_ANDROID_GUARD = '''#if defined(__ANDROID__)
+/* PDVA research only: reject unreviewed targets and allocator backends. */
+#if !defined(__BIONIC__) || !defined(__aarch64__) || __ANDROID_API__ != 30 || \\
+    !defined(CONFIG_LINUX) || !defined(CONFIG_POSIX) || !defined(CONFIG_MEMFD) || \\
+    defined(CONFIG_TCG_INTERPRETER) || defined(CONFIG_USER_ONLY) || \\
+    defined(USE_STATIC_CODE_GEN_BUFFER) || defined(CONFIG_DARWIN) || defined(_WIN32)
+#error PDVA strict TCG requires Android Bionic AArch64 API 30 POSIX memfd
+#endif
+#endif
+
+'''
+TCG_STRICT_DISPATCH = '''#if defined(__ANDROID__)
+    /* Explicit split-wx=on is mandatory, including in debug builds. */
+    if (splitwx != 1) {
+        error_setg(errp, "PDVA Android TCG requires explicit split-wx=on");
+        return -1;
+    }
+    return alloc_code_gen_buffer_splitwx(size, errp);
+#else
+'''
+TCG_MEMFD_STRICT = '''#if defined(__ANDROID__)
+    /* No retry without seals and no pathname-backed fallback. */
+    int mfd = qemu_memfd_create(name, size, false, 0, seals, errp);
+    if (mfd == -1) {
+        return NULL;
+    }
+#else
+'''
+
+
+def replace_once(text, old, new):
+    if text.count(old) != 1:
+        raise RuntimeError('Strict TCG patch anchor mismatch')
+    return text.replace(old, new, 1)
+
+
+def render_android_tcg_patch(sources, target):
+    if target != 'aarch64-linux-android30' or set(sources) != set(QEMU_TCG_INPUTS):
+        raise RuntimeError('Unexpected strict TCG target or source set')
+    for name, expected in QEMU_TCG_INPUTS.items():
+        if hashlib.sha256(sources[name]).hexdigest() != expected:
+            raise RuntimeError(f'Strict TCG input identity mismatch: {name}')
+    region = sources['tcg/region.c'].decode()
+    memfd = sources['util/memfd.c'].decode()
+    region = replace_once(region, '#ifdef USE_STATIC_CODE_GEN_BUFFER\n',
+                          TCG_ANDROID_GUARD + '#ifdef USE_STATIC_CODE_GEN_BUFFER\n')
+    region = replace_once(region, 'static int alloc_code_gen_buffer_anon(',
+                          '#if !defined(__ANDROID__)\nstatic int alloc_code_gen_buffer_anon(')
+    region = replace_once(region, '\n#ifndef CONFIG_TCG_INTERPRETER\n#ifdef CONFIG_POSIX',
+                          '\n#endif /* !__ANDROID__ */\n\n#ifndef CONFIG_TCG_INTERPRETER\n#ifdef CONFIG_POSIX')
+    region = replace_once(region, '    ERRP_GUARD();\n', TCG_STRICT_DISPATCH + '    ERRP_GUARD();\n')
+    region = replace_once(region,
+        '    return alloc_code_gen_buffer_anon(size, prot, flags, errp);\n}',
+        '    return alloc_code_gen_buffer_anon(size, prot, flags, errp);\n#endif /* __ANDROID__ */\n}')
+    # Refuse a broken alias/protection invariant before the downstream RWX arm.
+    region = replace_once(region, '    assert(have_prot >= 0);\n', '''#if defined(__ANDROID__)
+    if (have_prot != (PROT_READ | PROT_WRITE) || tcg_splitwx_diff == 0) {
+        error_report("PDVA Android TCG split mapping invariant failed");
+        exit(1);
+    }
+#endif
+    assert(have_prot >= 0);
+''')
+    region = replace_once(region,
+        '#ifndef CONFIG_TCG_INTERPRETER\n    if (tcg_splitwx_diff == 0) {',
+        '#if !defined(CONFIG_TCG_INTERPRETER) && !defined(__ANDROID__)\n    if (tcg_splitwx_diff == 0) {')
+    region = replace_once(region,
+        '            if (need_prot == (PROT_READ | PROT_WRITE | PROT_EXEC)) {',
+        '#if !defined(__ANDROID__)\n            if (need_prot == (PROT_READ | PROT_WRITE | PROT_EXEC)) {')
+    region = replace_once(region,
+        '            } else if (need_prot == (PROT_READ | PROT_WRITE)) {',
+        '            } else\n#endif\n            if (need_prot == (PROT_READ | PROT_WRITE)) {')
+    memfd = replace_once(memfd,
+        '    int mfd = qemu_memfd_create(name, size, false, 0, seals, NULL);',
+        TCG_MEMFD_STRICT + '    int mfd = qemu_memfd_create(name, size, false, 0, seals, NULL);')
+    memfd = replace_once(memfd,
+        '    ptr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, mfd, 0);',
+        '#endif /* __ANDROID__ */\n\n    ptr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, mfd, 0);')
+    return {'tcg/region.c': region.encode(), 'util/memfd.c': memfd.encode()}
+
+
+def apply_android_tcg_patch(qemu, emit):
+    sources = {}
+    for name in QEMU_TCG_INPUTS:
+        path = qemu / name
+        if (not stat.S_ISREG(path.lstat().st_mode) or path.is_symlink()
+                or any(p.is_symlink() for p in path.parents)):
+            raise RuntimeError('Unsafe strict TCG source')
+        sources[name] = path.read_bytes()
+    patched = render_android_tcg_patch(sources, 'aarch64-linux-android30')
+    for name, data in patched.items():
+        diff = ''.join(difflib.unified_diff(sources[name].decode().splitlines(True),
+                       data.decode().splitlines(True), fromfile='a/' + name, tofile='b/' + name))
+        (qemu / name).write_bytes(data)
+        verify(qemu / name, hashlib.sha256(data).hexdigest())
+        emit(f'STRICT TCG PATCH {name} before={QEMU_TCG_INPUTS[name]} '
+             f'after={digest(qemu / name)} diff-sha256={hashlib.sha256(diff.encode()).hexdigest()}\n{diff}')
+    return patched
+
+
+def tcg_control_source(patched):
+    """Extract actual patched functions; model syscalls, never execute JIT code.
+
+    The generated translation unit retains upstream notices. Android defines
+    select branches on the Linux host; this is NOT Android kernel evidence.
+    """
+    region, memfd = (patched[name].decode() for name in ('tcg/region.c', 'util/memfd.c'))
+
+    def function(text, name):
+        matches = re.findall(r'^(?:static )?(?:int|void \*)' + re.escape(name)
+                             + r'\([^;]*?\n\{.*?^\}\n', text, re.M | re.S)
+        if len(matches) != 1:
+            raise RuntimeError('Ambiguous strict TCG control function: ' + name)
+        return matches[0]
+
+    # A leading space is included for int-returning names, matching C spelling.
+    functions = function(memfd, ' qemu_memfd_create') + function(memfd, 'qemu_memfd_alloc')
+    functions += function(region, ' alloc_code_gen_buffer_splitwx_memfd')
+    functions += function(region, ' alloc_code_gen_buffer_splitwx')
+    dispatch = region[region.index('static int alloc_code_gen_buffer_splitwx(size_t'):]
+    functions += function(dispatch, ' alloc_code_gen_buffer')
+    notices = ''.join(text[:text.index('*/') + 2] + '\n' for text in (region, memfd))
+    return notices + TCG_CONTROL_PRELUDE + TCG_ANDROID_GUARD + functions + TCG_CONTROL_MAIN
+
+
+TCG_CONTROL_PRELUDE = r'''
+#define _GNU_SOURCE
+#include <errno.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <linux/memfd.h>
+#include <fcntl.h>
+#ifdef NDEBUG
+#error PDVA controls must not disable checks
+#endif
+#ifndef __ANDROID__
+#define __ANDROID__ 1
+#define __BIONIC__ 1
+#define __aarch64__ 1
+#define __ANDROID_API__ 30
+#endif
+#define CONFIG_LINUX 1
+#define CONFIG_POSIX 1
+#define CONFIG_MEMFD 1
+#define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "FAIL: %s\n", m); exit(91); } } while (0)
+typedef struct Error { int code; } Error;
+static Error recorded;
+static int fault, creates, resizes, maps, closes, unmaps, forbidden, seal_calls;
+static unsigned char backing[32768];
+static ptrdiff_t tcg_splitwx_diff;
+static struct { void *start_aligned; size_t total_size; } region;
+int ctz64(uint64_t x) { return __builtin_ctzll(x); }
+int host_prot_read_exec(void) { return PROT_READ | PROT_EXEC; }
+void error_setg_errno(Error **errp, int code, const char *fmt, ...) {
+    (void)fmt; recorded.code = code; if (errp) { *errp = &recorded; }
+}
+void error_setg(Error **errp, const char *fmt, ...) { error_setg_errno(errp, EINVAL, fmt); }
+int fake_create(const char *name, unsigned flags) {
+    CHECK(strcmp(name, "tcg-jit") == 0, "memfd name");
+    CHECK(flags == MFD_CLOEXEC || flags == (MFD_CLOEXEC | MFD_ALLOW_SEALING), "memfd flags");
+    creates++; errno = EACCES; return fault == 1 ? -1 : 42;
+}
+int fake_resize(int fd, size_t size) {
+    CHECK(fd == 42 && (size == 4096 || size == 16384), "resize arguments");
+    resizes++; errno = ENOSPC; return fault == 2 ? -1 : 0;
+}
+int fake_seal(int fd, int command, unsigned seals) {
+    CHECK(fd == 42 && command == F_ADD_SEALS && seals == F_SEAL_GROW, "seal arguments");
+    seal_calls++; errno = EPERM; return fault == 5 ? -1 : 0;
+}
+int fake_close(int fd) { CHECK(fd == 42, "close FD"); closes++; return 0; }
+void *fake_map(void *addr, size_t size, int prot, int flags, int fd, size_t offset) {
+    CHECK(addr == NULL && size <= 16384 && fd == 42 && offset == 0, "map arguments");
+    CHECK(flags == MAP_SHARED, "shared aliases");
+    CHECK(prot == (maps ? (PROT_READ | PROT_EXEC) : (PROT_READ | PROT_WRITE)), "split protections");
+    maps++; errno = EACCES;
+    if ((fault == 3 && maps == 1) || (fault == 4 && maps == 2)) { return MAP_FAILED; }
+    return backing + (maps == 1 ? 0 : 16384);
+}
+int fake_unmap(void *p, size_t size) {
+    CHECK(p == backing && size <= 16384, "unmap RW alias"); unmaps++; return 0;
+}
+/* These are traps for source mutants, not fallback implementations. */
+int fake_temp(void) { forbidden++; return 42; }
+int fake_rwx(void) { forbidden++; return PROT_READ | PROT_WRITE | PROT_EXEC; }
+#define memfd_create fake_create
+#define ftruncate fake_resize
+#define fcntl fake_seal
+#define close fake_close
+#define mmap fake_map
+#define munmap fake_unmap
+'''
+TCG_CONTROL_MAIN = r'''
+int main(void) {
+    for (size_t size = 4096; size <= 16384; size *= 4) {
+        for (int mode = -1; mode <= 2; mode++) {
+            for (fault = 0; fault <= 4; fault++) {
+                Error *error = NULL;
+                creates = resizes = maps = closes = unmaps = forbidden = seal_calls = 0;
+                region.start_aligned = NULL; region.total_size = 0; tcg_splitwx_diff = 0;
+                int prot = alloc_code_gen_buffer(size, mode, &error);
+                CHECK(forbidden == 0, "prohibited fallback");
+                if (mode != 1) {
+                    CHECK(prot == -1 && error && creates == 0 && maps == 0, "explicit split-on required");
+                } else {
+                    CHECK(creates == 1 && seal_calls == 0, "single memfd attempt");
+                    CHECK(resizes == (fault == 1 ? 0 : 1), "resize count");
+                    CHECK(maps == (fault == 1 || fault == 2 ? 0 : fault == 3 ? 1 : 2), "mapping count");
+                    CHECK(closes == (fault == 1 ? 0 : 1), "FD cleanup");
+                    CHECK(unmaps == (fault == 4 ? 1 : 0), "RW cleanup");
+                    if (fault) {
+                        CHECK(prot == -1 && error && !region.start_aligned && !tcg_splitwx_diff, "fail closed");
+                    } else {
+                        CHECK(prot == (PROT_READ | PROT_WRITE) && !error, "positive protections");
+                        CHECK(region.start_aligned == backing && region.total_size == size && tcg_splitwx_diff == 16384, "positive aliases");
+                    }
+                }
+            }
+        }
+    }
+    fault = 5; creates = closes = maps = seal_calls = 0;
+    int fd = -1; Error *error = NULL;
+    CHECK(qemu_memfd_alloc("tcg-jit", 4096, F_SEAL_GROW, &fd, &error) == NULL, "seal failure");
+    CHECK(error && fd == -1 && creates == 1 && seal_calls == 1 && closes == 1 && maps == 0, "no unsealed retry");
+    puts("PASS: 40 allocation cases and seal failure; modeled syscalls only");
+    return 0;
+}
+'''
+
+
+def require_tcg_control_result(result, negative=False):
+    if negative:
+        expected_code, expected_out, expected_err = 91, '', 'FAIL: prohibited fallback\n'
+    else:
+        expected_code, expected_out, expected_err = (
+            0, 'PASS: 40 allocation cases and seal failure; modeled syscalls only\n', '')
+    if (result.returncode, result.stdout, result.stderr) != (expected_code, expected_out, expected_err):
+        raise RuntimeError('Unexpected strict TCG control result')
+
+
+TCG_FORBIDDEN_CALLS = {
+    'tcg/region.c': ('alloc_code_gen_buffer_anon', 'qemu_mprotect_rwx'),
+    'util/memfd.c': ('mkstemp', 'g_get_tmp_dir', 'unlink', 'g_strdup_printf'),
+}
+
+
+def require_tcg_branch_absence(name, preprocessed):
+    if any(re.search(r'\b' + symbol + r'\s*\(', preprocessed)
+           for symbol in TCG_FORBIDDEN_CALLS[name]):
+        raise RuntimeError('Prohibited Android TCG fallback branch: ' + name)
+
+
+def run_tcg_host_controls(patched, root, run, emit):
+    # Preprocess complete files with includes removed for branch inspection only.
+    # Full translation-unit compilation still belongs to the Android cross-build.
+    for name in TCG_FORBIDDEN_CALLS:
+        path = root / (Path(name).name + '.branches.c')
+        path.write_text(re.sub(r'^\s*#include[^\n]*', '', patched[name].decode(), flags=re.M))
+        result = subprocess.run([
+            'cc', '-E', '-P', '-x', 'c', '-D__ANDROID__=1', '-D__BIONIC__=1',
+            '-D__aarch64__=1', '-D__ANDROID_API__=30', '-DCONFIG_LINUX=1',
+            '-DCONFIG_POSIX=1', '-DCONFIG_MEMFD=1', str(path),
+        ], capture_output=True, text=True, timeout=15, check=True)
+        require_tcg_branch_absence(name, result.stdout)
+        emit('STRICT TCG Android branch absence checked: ' + name)
+    source = tcg_control_source(patched)
+    # Mutate the actual extracted Android branches, then demand the specific
+    # fallback diagnostic/exit. Compile errors, crashes and timeouts cannot pass.
+    variants = {
+        'positive': source,
+        'temp-negative': replace_once(source, TCG_MEMFD_STRICT,
+            TCG_MEMFD_STRICT.replace('    if (mfd == -1) {',
+                '    if (mfd == -1) { mfd = fake_temp(); }\n    if (mfd == -1) {', 1)),
+        'rwx-negative': replace_once(source,
+            '    return alloc_code_gen_buffer_splitwx(size, errp);',
+            '    int prot = alloc_code_gen_buffer_splitwx(size, errp);\n'
+            '    return prot < 0 ? fake_rwx() : prot;'),
+    }
+    for name, data in variants.items():
+        path, binary = root / (name + '.c'), root / name
+        path.write_text(data)
+        emit(f'STRICT TCG CONTROL {name} source-sha256={digest(path)}')
+        run('cc', '-std=gnu11', '-O0', '-Wall', '-Wextra', '-Werror', path, '-o', binary)
+        result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=5, check=False)
+        require_tcg_control_result(result, negative=name != 'positive')
+        emit(f'STRICT TCG CONTROL {name}: expected exit={result.returncode}; '
+             'host modeled syscalls, NOT Android execution')
+    for name, change in {
+        'no-memfd': '#undef CONFIG_MEMFD\n',
+        'no-posix': '#undef CONFIG_POSIX\n',
+        'wrong-abi': '#undef __aarch64__\n',
+        'wrong-api': '#undef __ANDROID_API__\n#define __ANDROID_API__ 29\n',
+        'interpreter': '#define CONFIG_TCG_INTERPRETER 1\n',
+        'static-buffer': '#define USE_STATIC_CODE_GEN_BUFFER 1\n',
+        'user-only': '#define CONFIG_USER_ONLY 1\n',
+    }.items():
+        path = root / ('guard-' + name + '.c')
+        path.write_text(replace_once(source, TCG_ANDROID_GUARD, change + TCG_ANDROID_GUARD))
+        result = subprocess.run(['cc', '-std=gnu11', '-fsyntax-only', str(path)],
+                                capture_output=True, text=True, timeout=15, check=False)
+        if (result.returncode == 0 or
+                'error: #error PDVA strict TCG requires' not in result.stderr):
+            raise RuntimeError('Missing strict TCG configuration rejection: ' + name)
+        emit('STRICT TCG CONFIG rejected ' + name)
+
 # Local research adaptation of QEMU 4fc49f46..., not an upstream change.
 # Whole-file hashes are from the independently verified, unmodified archive.
 QEMU_PATCH_INPUTS = {
@@ -1173,6 +1493,9 @@ class Research:
             unpack(archive, destination)
             sources[name] = destination / directory
         qemu, glib = sources['qemu'], sources['glib']
+        self.phase('verified Android strict TCG adaptation and host failure controls')
+        tcg_patched = apply_android_tcg_patch(qemu, self.emit)
+        run_tcg_host_controls(tcg_patched, self.root, self.run, self.emit)
         for name, (revision, tree) in GIT_INPUTS.items():
             repository = self.root / (name + '-git')
             self.run('git', 'init', '--quiet', repository)
@@ -1382,6 +1705,8 @@ class Research:
         for path in sorted(build.glob('*config*.mak')) + sorted(build.glob('*config*.h')):
             self.emit(f'CONFIG {path.name} sha256={digest(path)}\n{path.read_text()}')
         self.phase('QEMU Android compile and link')
+        for name, data in tcg_patched.items():
+            verify(qemu / name, hashlib.sha256(data).hexdigest())
         self.run(self.host_ninja, '-d', 'keeprsp', '-v', '-j2', 'qemu-system-aarch64', cwd=build, env=target_env, timeout=1500)
         compile_log = self.logs / f'{self.sequence:03d}.log'
         binary = build / 'qemu-system-aarch64'

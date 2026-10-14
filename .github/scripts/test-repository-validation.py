@@ -111,6 +111,103 @@ class ResearchInputTests(unittest.TestCase):
             self.assertFalse((root / "escaped").exists())
 
 
+class StrictTcgTests(unittest.TestCase):
+    def setUp(self):
+        # Admission/atomicity fixtures only. CI allocator execution extracts the
+        # real functions from the independently pinned archive, never these.
+        self.sources = {name: b'unchanged caller fixture\n' for name in research.QEMU_TCG_INPUTS}
+        self.sources['tcg/region.c'] = b'''#ifdef USE_STATIC_CODE_GEN_BUFFER
+static int alloc_code_gen_buffer_anon(
+#ifndef CONFIG_TCG_INTERPRETER
+#ifdef CONFIG_POSIX
+    ERRP_GUARD();
+    return alloc_code_gen_buffer_anon(size, prot, flags, errp);
+}
+    assert(have_prot >= 0);
+#ifndef CONFIG_TCG_INTERPRETER
+    if (tcg_splitwx_diff == 0) {
+            if (need_prot == (PROT_READ | PROT_WRITE | PROT_EXEC)) {
+            } else if (need_prot == (PROT_READ | PROT_WRITE)) {
+'''
+        self.sources['util/memfd.c'] = b'''    int mfd = qemu_memfd_create(name, size, false, 0, seals, NULL);
+    ptr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, mfd, 0);
+'''
+        pins = {name: research.hashlib.sha256(data).hexdigest() for name, data in self.sources.items()}
+        patcher = mock.patch.dict(research.QEMU_TCG_INPUTS, pins, clear=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def render(self, sources=None, target='aarch64-linux-android30'):
+        return research.render_android_tcg_patch(self.sources if sources is None else sources, target)
+
+    def test_modified_allocator_or_caller_identity_rejected(self):
+        for name in self.sources:
+            with self.subTest(name=name), self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                self.render(self.sources | {name: self.sources[name] + b'\n'})
+
+    def test_source_set_target_and_reapplication_rejected(self):
+        for sources in ({}, self.sources | {'extra.c': b''}):
+            with self.assertRaisesRegex(RuntimeError, 'target or source set'):
+                self.render(sources)
+        for target in ('aarch64-linux-gnu', 'x86_64-linux-android30', 'aarch64-linux-android29'):
+            with self.assertRaisesRegex(RuntimeError, 'target or source set'):
+                self.render(target=target)
+        with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+            self.render(self.sources | self.render())
+
+    def test_ambiguous_anchors_rejected_even_with_fixture_pin(self):
+        for data in (b'missing', self.sources['tcg/region.c'] * 2):
+            with mock.patch.dict(research.QEMU_TCG_INPUTS, {
+                'tcg/region.c': research.hashlib.sha256(data).hexdigest()
+            }), self.assertRaisesRegex(RuntimeError, 'anchor mismatch'):
+                self.render(self.sources | {'tcg/region.c': data})
+
+    def test_all_identities_verified_before_any_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, data in self.sources.items():
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+            (root / 'include/qapi/error.h').write_bytes(b'changed caller semantics')
+            with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                research.apply_android_tcg_patch(root, lambda text: None)
+            for name in ('tcg/region.c', 'util/memfd.c'):
+                self.assertEqual(self.sources[name], (root / name).read_bytes())
+
+    def test_nonregular_input_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'tcg/region.c').mkdir(parents=True)
+            with self.assertRaisesRegex(RuntimeError, 'Unsafe strict TCG source'):
+                research.apply_android_tcg_patch(root, lambda text: None)
+
+    def test_negative_control_requires_specific_failure(self):
+        expected = subprocess.CompletedProcess([], 91, '', 'FAIL: prohibited fallback\n')
+        research.require_tcg_control_result(expected, negative=True)
+        for code, out, err in ((0, '', ''), (91, '', 'other failure\n'),
+                               (-6, '', 'FAIL: prohibited fallback\n'),
+                               (124, '', ''), (91, 'unexpected', expected.stderr)):
+            with self.subTest(code=code, out=out, err=err), self.assertRaisesRegex(RuntimeError, 'control result'):
+                research.require_tcg_control_result(subprocess.CompletedProcess([], code, out, err), negative=True)
+
+    def test_preprocessed_fallback_calls_rejected(self):
+        for name, symbols in research.TCG_FORBIDDEN_CALLS.items():
+            research.require_tcg_branch_absence(name, 'return -1;')
+            for symbol in symbols:
+                with self.subTest(symbol=symbol), self.assertRaisesRegex(RuntimeError, 'Prohibited Android TCG'):
+                    research.require_tcg_branch_absence(name, symbol + ' \n (argument);')
+
+    def test_positive_control_cannot_accept_negative_or_missing_cases(self):
+        expected = subprocess.CompletedProcess([], 0,
+            'PASS: 40 allocation cases and seal failure; modeled syscalls only\n', '')
+        research.require_tcg_control_result(expected)
+        for code, out, err in ((91, '', 'FAIL: prohibited fallback\n'), (0, '', ''),
+                               (0, expected.stdout, 'warning'), (1, expected.stdout, '')):
+            with self.assertRaisesRegex(RuntimeError, 'control result'):
+                research.require_tcg_control_result(subprocess.CompletedProcess([], code, out, err))
+
+
 class AndroidPatchTests(unittest.TestCase):
     def setUp(self):
         # Synthetic patch fixtures, never substituted into the research build.
