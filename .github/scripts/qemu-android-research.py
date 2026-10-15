@@ -66,6 +66,171 @@ WHEELS = {
 }
 GIB = 1024 ** 3
 
+# Read-only investigation of the boot caller chain, not a kernel FD adapter.
+QEMU_BOOT_INPUTS = {
+    'hw/arm/boot.c': '3ee33e386c78e816410d7f897d616a1f2c44203e7a609671184a95153412311f',
+    'hw/core/loader.c': '5adca2184d46e03eed1122fa9c6e920fe8ffc340be7507021ed5afe53b1c47f0',
+    'hw/arm/virt.c': 'd6073388bed5bfc2b20f9d8928d0715d524db835a0f5a7f533eb690dda4068a4',
+    'util/osdep.c': '405164f1b5336636414f085086e010d01518a9a1472302ffe9c37c8bc838192d',
+    'monitor/fds.c': '50aa5ddf578e2e629cf5951d9937718fdfa187e28b21efab974fe2513fecbcff',
+    'system/vl.c': 'a5fb2a78e45ec8edb256188eed44e8f06f7dba99c1dd029dd8a0d74cfab74266',
+    'system/device_tree.c': 'fcfc8835626a75192c5f1335973469db7bd09c856231cac0bc465a4b94b130ed',
+    'hw/nvram/fw_cfg.c': 'd22718b1c56d4697130febe5d39e0f8b5748e94e21f4126ab8e70f8274dbf720',
+    'include/hw/core/loader.h': '36c224b40a6d84cadaedb95f5d8ba78d0ba77275cc4011e04d15ed215a2682b1',
+}
+
+
+def boot_path_control_source(sources):
+    """Extract unchanged upstream leaf functions after verifying every caller pin.
+
+    This witnesses unsafe assumptions about the existing pathname loader. It
+    neither authenticates input nor implements descriptor-only direct boot.
+    """
+    if set(sources) != set(QEMU_BOOT_INPUTS):
+        raise RuntimeError('Unexpected boot investigation source set')
+    for name, expected in QEMU_BOOT_INPUTS.items():
+        if hashlib.sha256(sources[name]).hexdigest() != expected:
+            raise RuntimeError('Boot investigation identity mismatch: ' + name)
+    boot = sources['hw/arm/boot.c'].decode()
+    loader = sources['hw/core/loader.c'].decode()
+
+    def extract(text, signature):
+        matches = re.findall('^' + re.escape(signature) + r'\([^;]*?\n\{.*?^\}\n',
+                             text, re.M | re.S)
+        if len(matches) != 1:
+            raise RuntimeError('Ambiguous boot control extraction')
+        return matches[0]
+
+    # Preserve upstream notices, including the GPL notice on ARM boot code.
+    notices = ''.join(s[:s.index('*/') + 2] + '\n' for s in (boot, loader))
+    constants = '\n'.join(line for line in boot.splitlines() if any(
+        line.startswith('#define ' + name + ' ') for name in (
+            'KERNEL64_LOAD_ADDR', 'ARM64_TEXT_OFFSET_OFFSET',
+            'ARM64_MAGIC_OFFSET', 'BOOTLOADER_MAX_SIZE')))
+    constants += '\n' + next(line for line in sources['include/hw/core/loader.h'].decode().splitlines()
+                              if line.startswith('#define LOAD_IMAGE_MAX_DECOMPRESSED_BYTES '))
+    return (notices + BOOT_PATH_PRELUDE + constants + '\n' +
+            extract(loader, 'ssize_t load_image_gzipped_buffer') +
+            extract(boot, 'static uint64_t load_aarch64_image') + BOOT_PATH_MAIN)
+
+
+BOOT_PATH_PRELUDE = r'''
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#define KiB 1024ULL
+#define MiB (1024ULL * KiB)
+#define GiB (1024ULL * MiB)
+typedef uint64_t hwaddr;
+typedef size_t gsize;
+typedef struct AddressSpace { int unused; } AddressSpace;
+#define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "FAIL: %s\n", m); exit(92); } } while (0)
+static int scenario, reads, publishes, allocations, deny_paths;
+static size_t published_size;
+static uint8_t published_byte;
+static hwaddr published_addr;
+static const char *resource = "/dev/fdset/7";
+static void put64(uint8_t *p, uint64_t v) {
+    for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(v >> (i * 8)); }
+}
+static uint64_t le64_to_cpu(uint64_t v) {
+    uint8_t b[8]; uint64_t out = 0; memcpy(b, &v, 8);
+    for (int i = 0; i < 8; i++) { out |= (uint64_t)b[i] << (i * 8); }
+    return out;
+}
+static void *g_malloc(size_t n) {
+    CHECK(n <= 64, "unexpected decompression/allocation");
+    void *p = malloc(n ? n : 1); CHECK(p != NULL, "allocation"); allocations++; return p;
+}
+static void g_free(void *p) { if (p) { allocations--; free(p); } }
+static void *g_realloc(void *p, size_t n) { (void)p; (void)n; exit(94); }
+static ssize_t gunzip(void *d, size_t n, uint8_t *s, size_t l) {
+    (void)d; (void)n; (void)s; (void)l; exit(94);
+}
+/* Boundary observer, not GLib implementation or real filesystem evidence. */
+static bool g_file_get_contents(const char *name, char **data, gsize *len, void *err) {
+    (void)err; CHECK(strcmp(name, resource) == 0, "pathname identity");
+    if (deny_paths) { fputs("DENIED: GLib pathname read\n", stderr); exit(93); }
+    reads++;
+    if (scenario == 1 || (scenario == 2 && reads == 2)) { return false; }
+    *len = scenario == 4 ? 1 : 64;
+    uint8_t *b = g_malloc(*len); memset(b, 0, *len);
+    if (*len == 64) {
+        put64(b + 8, scenario == 6 ? UINT64_MAX - 4096 : 0x80000);
+        put64(b + 16, scenario == 5 ? UINT64_MAX : 64);
+        memcpy(b + 56, "ARM\x64", 4);
+    }
+    b[0] = scenario == 3 && reads == 2 ? 0x22 : 0x11;
+    *data = (char *)b; return true;
+}
+/* zboot is outside this raw-only witness; no compression result is modeled. */
+static ssize_t unpack_efi_zboot_image(uint8_t **b, ssize_t *n) {
+    CHECK(*n == 1 || *n == 64, "raw fixture length");
+    CHECK((*b)[0] == 0x11 || (*b)[0] == 0x22, "raw fixture format"); return 0;
+}
+static void rom_add_blob_fixed_as(const char *name, void *b, size_t n,
+                                 hwaddr addr, AddressSpace *as) {
+    (void)as; CHECK(strcmp(name, resource) == 0, "blob label");
+    publishes++; published_size = n; published_byte = *(uint8_t *)b; published_addr = addr;
+}
+'''
+BOOT_PATH_MAIN = r'''
+int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "--deny-paths") == 0) { deny_paths = 1; }
+    else { CHECK(argc == 1, "arguments"); }
+    for (scenario = 0; scenario < 7; scenario++) {
+        hwaddr entry = 0, base = 0x40000000;
+        reads = publishes = allocations = 0;
+        uint64_t result = load_aarch64_image(resource, base, &entry, NULL);
+        CHECK(reads == 2, "two pathname reads");
+        CHECK(allocations == 0, "buffer cleanup");
+        if (scenario == 1 || scenario == 2) {
+            CHECK(result == UINT64_MAX && publishes == 0 && entry == 0, "failed read publication");
+        } else {
+            CHECK(publishes == 1, "blob publication");
+            CHECK(published_size == (scenario == 4 ? 1 : 64), "blob length");
+            CHECK(published_byte == (scenario == 3 ? 0x22 : 0x11), "second read wins");
+            CHECK(result == (scenario == 5 ? UINT64_MAX : scenario == 4 ? 1 : 64), "reported size");
+            CHECK(entry == published_addr, "entry publication");
+            CHECK(scenario == 6 ? entry < base : entry == base + 0x80000, "load address");
+        }
+    }
+    puts("PASS: 7 upstream raw-path witnesses; modeled IO, no FD adapter");
+    return 0;
+}
+'''
+
+
+def require_boot_path_result(result, denied=False):
+    expected = ((93, '', 'DENIED: GLib pathname read\n') if denied else
+                (0, 'PASS: 7 upstream raw-path witnesses; modeled IO, no FD adapter\n', ''))
+    if (result.returncode, result.stdout, result.stderr) != expected:
+        raise RuntimeError('Unexpected boot pathname control result')
+
+
+def run_boot_path_controls(qemu, root, run, emit):
+    sources = {}
+    for name in QEMU_BOOT_INPUTS:
+        path = qemu / name
+        if (not stat.S_ISREG(path.lstat().st_mode) or path.is_symlink()
+                or any(p.is_symlink() for p in path.parents)):
+            raise RuntimeError('Unsafe boot investigation source')
+        sources[name] = path.read_bytes()
+    source = boot_path_control_source(sources)
+    path, binary = root / 'boot-path-control.c', root / 'boot-path-control'
+    path.write_text(source)
+    emit('BOOT PATH CONTROL source-sha256=' + digest(path))
+    run('cc', '-std=c11', '-O0', '-Wall', '-Wextra', '-Werror', path, '-o', binary)
+    for denied in (False, True):
+        result = subprocess.run([str(binary)] + (['--deny-paths'] if denied else []),
+                                capture_output=True, text=True, timeout=5, check=False)
+        require_boot_path_result(result, denied)
+        emit(f'BOOT PATH CONTROL denied={denied}: expected exit={result.returncode}; '
+             'upstream pathname witness, NOT capability-safe loading')
+
 # Pinned LF bytes, including the unchanged option -> tcg_init -> region caller
 # and fatal-error implementation. No downloaded source is trusted by an anchor.
 QEMU_TCG_INPUTS = {
@@ -1493,6 +1658,8 @@ class Research:
             unpack(archive, destination)
             sources[name] = destination / directory
         qemu, glib = sources['qemu'], sources['glib']
+        self.phase('verified upstream boot pathname witnesses; no loader patch')
+        run_boot_path_controls(qemu, self.root, self.run, self.emit)
         self.phase('verified Android strict TCG adaptation and host failure controls')
         tcg_patched = apply_android_tcg_patch(qemu, self.emit)
         run_tcg_host_controls(tcg_patched, self.root, self.run, self.emit)

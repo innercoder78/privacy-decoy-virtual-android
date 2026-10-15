@@ -111,6 +111,47 @@ class ResearchInputTests(unittest.TestCase):
             self.assertFalse((root / "escaped").exists())
 
 
+class BootPathWitnessTests(unittest.TestCase):
+    def test_missing_and_extra_sources_rejected(self):
+        for sources in ({}, {name: b'' for name in research.QEMU_BOOT_INPUTS} | {'extra': b''}):
+            with self.assertRaisesRegex(RuntimeError, 'source set'):
+                research.boot_path_control_source(sources)
+
+    def test_every_caller_identity_checked_before_extraction(self):
+        sources = {name: b'identity fixture only' for name in research.QEMU_BOOT_INPUTS}
+        pins = {name: research.hashlib.sha256(data).hexdigest() for name, data in sources.items()}
+        with mock.patch.dict(research.QEMU_BOOT_INPUTS, pins, clear=True):
+            for name in sources:
+                with self.subTest(name=name), self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                    research.boot_path_control_source(sources | {name: b'changed'})
+
+    def test_denial_requires_exact_observation(self):
+        research.require_boot_path_result(subprocess.CompletedProcess(
+            [], 93, '', 'DENIED: GLib pathname read\n'), denied=True)
+        for code, out, err in ((0, '', ''), (92, '', 'DENIED: GLib pathname read\n'),
+                               (93, '', 'other failure'), (-6, '', ''), (124, '', ''),
+                               (93, 'unexpected', 'DENIED: GLib pathname read\n')):
+            with self.assertRaisesRegex(RuntimeError, 'control result'):
+                research.require_boot_path_result(subprocess.CompletedProcess([], code, out, err), True)
+
+    def test_witness_requires_all_cases_and_clean_exit(self):
+        output = 'PASS: 7 upstream raw-path witnesses; modeled IO, no FD adapter\n'
+        research.require_boot_path_result(subprocess.CompletedProcess([], 0, output, ''))
+        for code, out, err in ((0, '', ''), (1, output, ''), (0, output, 'warning'),
+                               (93, '', 'DENIED: GLib pathname read\n')):
+            with self.assertRaisesRegex(RuntimeError, 'control result'):
+                research.require_boot_path_result(subprocess.CompletedProcess([], code, out, err))
+
+    def test_nonregular_source_refused_before_compile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'hw/arm/boot.c').mkdir(parents=True)
+            run = mock.Mock()
+            with self.assertRaisesRegex(RuntimeError, 'Unsafe boot investigation source'):
+                research.run_boot_path_controls(root, root, run, lambda text: None)
+            run.assert_not_called()
+
+
 class StrictTcgTests(unittest.TestCase):
     def setUp(self):
         # Admission/atomicity fixtures only. CI allocator execution extracts the
