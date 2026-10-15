@@ -26,6 +26,7 @@ def load(name):
 foundation = load("validate-foundation")
 harness = load("validate-harness")
 research = load("qemu-android-research")
+kernel_fd = load("kernel-fd-research")
 
 class RepositoryTests(unittest.TestCase):
     def check_tree(self, extra=None, mode="100644", stage="0"):
@@ -60,6 +61,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(0, self.check_tree({"android/build.gradle": b"// fixture\n"}))
     def test_research_exact_paths_only(self):
         for name in (".github/scripts/qemu-android-research.py",
+                     ".github/scripts/kernel-fd-research.py",
                      ".github/workflows/qemu-android-research.yml"):
             with self.subTest(name=name):
                 self.assertEqual(0, self.check_tree({name: b"# fixture\n"}))
@@ -109,6 +111,62 @@ class ResearchInputTests(unittest.TestCase):
             with self.assertRaises(tarfile.FilterError):
                 research.unpack(archive, root / "extracted")
             self.assertFalse((root / "escaped").exists())
+
+
+class KernelFdTests(unittest.TestCase):
+    def test_standalone_artifact_has_reader_and_no_path_import(self):
+        report = {'dynamic_imports': ['close', 'fcntl', 'free', 'fstat', 'malloc', 'memcmp', 'pread']}
+        symbols = '123 T pdva_snapshot_take\n456 T pdva_snapshot_release\n'
+        kernel_fd.validate_artifact(report, symbols)
+        for bad in (report | {'dynamic_imports': report['dynamic_imports'] + ['open']},
+                    report | {'dynamic_imports': ['close']}):
+            with self.assertRaisesRegex(RuntimeError, 'artifact symbols'):
+                kernel_fd.validate_artifact(bad, symbols)
+        with self.assertRaisesRegex(RuntimeError, 'artifact symbols'):
+            kernel_fd.validate_artifact(report, '')
+
+    def test_checksum_source_identity(self):
+        with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+            kernel_fd.render(b'not reviewed GLib')
+
+    def test_checksum_source_nonregular(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(RuntimeError, 'Unsafe checksum'):
+                kernel_fd.read_checksum(Path(directory))
+
+    def test_control_results_are_exact(self):
+        kernel_fd.require_result(subprocess.CompletedProcess([], 0, 'PASS: FD snapshot case\n', ''))
+        kernel_fd.require_result(subprocess.CompletedProcess([], 93, '', 'DENIED: adapter pathname/fallback\n'),
+                                 code=93, stdout='', stderr='DENIED: adapter pathname/fallback\n')
+        for code, out, err in [(0, '', ''), (-11, '', ''), (124, '', ''),
+                               (1, '', 'compiler error'), (90, '', 'unrelated'),
+                               (93, 'extra', 'DENIED: adapter pathname/fallback\n')]:
+            with self.subTest(code=code), self.assertRaisesRegex(RuntimeError, 'control result'):
+                kernel_fd.require_result(subprocess.CompletedProcess([], code, out, err),
+                                         code=93, stdout='', stderr='DENIED: adapter pathname/fallback\n')
+
+    def test_negative_result_classifier(self):
+        for error in ('expected result', 'partial publication'):
+            kernel_fd.require_result(subprocess.CompletedProcess([], 90, '', f'FAIL: {error}\n'),
+                                     code=90, stdout='', stderr=f'FAIL: {error}\n')
+            with self.assertRaisesRegex(RuntimeError, 'control result'):
+                kernel_fd.require_result(subprocess.CompletedProcess([], -6, '', f'FAIL: {error}\n'),
+                                         code=90, stdout='', stderr=f'FAIL: {error}\n')
+
+    def test_controller_matrix(self):
+        cases = list(kernel_fd.cases())
+        self.assertEqual(len(cases), len({name for name, *_ in cases}))
+        for name in ('valid', 'digest-mismatch', 'changed-before-read', 'invalid-FD',
+                     'write-only-FD', 'read-write-FD', 'pipe-FD', 'short-EINTR',
+                     'truncate-during-read', 'RAM-end-overflow', 'declared-image-outside-RAM',
+                     'ELF', 'uImage', 'gzip', 'zboot', 'legacy'):
+            self.assertIn(name, {name for name, *_ in cases})
+        # Python generates expected hashes from actual fixtures; malformed images
+        # must get through hashing and fail specifically at the header parser.
+        for name, data, options, result in cases:
+            if result == 8:
+                self.assertNotIn('digest', options, name)
+                self.assertEqual(len(data), 4096)
 
 
 class BootPathWitnessTests(unittest.TestCase):
