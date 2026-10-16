@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [Bounded Linux worker lifetime controls](gate-0-linux-worker-lifetime.md) | Source-controlled real-process A/B/D subset, exact pidfd/reap/FD evidence and independent assertion mutations. Local oracle checks passed; Linux execution pending/unobserved. Grandchild case deferred; no Android containment claim. |
 | [Non-cooperative worker containment](gate-0-worker-containment.md) | Pinned Android 17/Linux authority and descendant-lifetime audit; system cgroup cleanup distinguished from ordinary-app control, cooperative shutdown and FD revocation. Linux process controls specified but NOT RUN; complete containment remains unestablished. [Source ledger](gate-0-worker-containment-sources.md). |
 | [QEMU startup resource ordering](gate-0-startup-resource-order.md) | Actual first-pass/config-reader extraction with file-call observers and ordering mutants; source audit identifies access before post-parse/board guards. Exclusive guard and trusted mode selection remain unimplemented. |
 | [Gate 0 platform authority](gate-0-platform-authority.md) | Independently retrieved current and Android 17 AOSP/source documentation; candidate access findings and explicit Unknowns. Gate 0: Unresolved. |
