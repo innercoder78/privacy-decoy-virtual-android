@@ -6,6 +6,7 @@ runner temporary directory, never in the checkout. Every failed stage is fatal.
 No target program is run, installed into Android, uploaded or published.
 """
 import hashlib
+import importlib.util
 import json
 import difflib
 import os
@@ -65,6 +66,11 @@ WHEELS = {
     'qemu_qmp-0.0.6-py3-none-any.whl': '5d7c5af0e9de427696e3bf72e333965c3a697929f77f6b7ddc30c989fc7b539b',
 }
 GIB = 1024 ** 3
+
+_fd_spec = importlib.util.spec_from_file_location(
+    'kernel_fd_research', Path(__file__).with_name('kernel-fd-research.py'))
+kernel_fd = importlib.util.module_from_spec(_fd_spec)
+_fd_spec.loader.exec_module(kernel_fd)
 
 # Read-only investigation of the boot caller chain, not a kernel FD adapter.
 QEMU_BOOT_INPUTS = {
@@ -1660,6 +1666,12 @@ class Research:
         qemu, glib = sources['qemu'], sources['glib']
         self.phase('verified upstream boot pathname witnesses; no loader patch')
         run_boot_path_controls(qemu, self.root, self.run, self.emit)
+        self.phase('standalone bounded kernel FD snapshot controls; no QEMU wiring')
+        checksum = kernel_fd.read_checksum(glib / 'glib/gchecksum.c')
+        kernel_fd.run_controls(checksum, self.root, self.run, self.emit)
+        fd_source = self.root / 'kernel-fd-adapter.c'
+        fd_source.write_text(kernel_fd.render(checksum), encoding='utf-8', newline='\n')
+        self.emit('KERNEL FD standalone source-sha256=' + digest(fd_source))
         self.phase('verified Android strict TCG adaptation and host failure controls')
         tcg_patched = apply_android_tcg_patch(qemu, self.emit)
         run_tcg_host_controls(tcg_patched, self.root, self.run, self.emit)
@@ -1753,6 +1765,21 @@ class Research:
                  probe, '-o', self.root / 'shm-control')
         self.inspect(self.root / 'shm-control', toolbin)
         self.emit('LINKED Android shared-memory control; NOT EXECUTED; runtime authority Unknown')
+        self.phase('standalone kernel FD Android ARM64 compile and ELF inspection')
+        # A fixed link-only main keeps the real primitive in the artifact. No
+        # observer macros, pathname driver, test faults or QEMU caller patch.
+        fd_main = self.root / 'kernel-fd-main.c'
+        fd_main.write_text('int main(void) { return 0; }\n')
+        fd_binary = self.root / 'kernel-fd-adapter'
+        self.run(cc, '-std=c11', '-O0', '-Wall', '-Wextra', '-Werror',
+                 '-fstack-protector-strong', '-fPIE', '-pie',
+                 '-Wl,-z,relro,-z,now,-z,max-page-size=16384',
+                 fd_source, fd_main, '-o', fd_binary)
+        self.inspect(fd_binary, toolbin)
+        kernel_fd.validate_artifact(inspect_android_elf(fd_binary.read_bytes(), 'dynamic'),
+            self.run(toolbin / 'llvm-nm', '--defined-only', fd_binary))
+        self.emit('KERNEL FD Android artifact-sha256=' + digest(fd_binary) +
+                  '; standalone compile/link only; NOT EXECUTED or wired into QEMU')
         self.phase('host Meson preparation')
         self.run(sys.executable, '-m', 'venv', '--system-site-packages', self.root / 'host-tools')
         host_python = self.root / 'host-tools/bin/python'
