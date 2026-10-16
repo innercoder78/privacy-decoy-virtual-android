@@ -77,6 +77,11 @@ _plan_spec = importlib.util.spec_from_file_location(
 boot_plan = importlib.util.module_from_spec(_plan_spec)
 _plan_spec.loader.exec_module(boot_plan)
 
+_startup_spec = importlib.util.spec_from_file_location(
+    'startup_order_research', Path(__file__).with_name('startup-order-research.py'))
+startup_order = importlib.util.module_from_spec(_startup_spec)
+_startup_spec.loader.exec_module(startup_order)
+
 # Read-only investigation of the boot caller chain, not a kernel FD adapter.
 QEMU_BOOT_INPUTS = {
     'hw/arm/boot.c': '3ee33e386c78e816410d7f897d616a1f2c44203e7a609671184a95153412311f',
@@ -1671,6 +1676,8 @@ class Research:
         qemu, glib = sources['qemu'], sources['glib']
         self.phase('verified upstream boot pathname witnesses; no loader patch')
         run_boot_path_controls(qemu, self.root, self.run, self.emit)
+        self.phase('extracted first-pass configuration ordering; no resource guard')
+        startup_order.run_controls(qemu, self.root, self.run, self.emit)
         self.phase('standalone bounded kernel FD snapshot controls; no QEMU wiring')
         checksum = kernel_fd.read_checksum(glib / 'glib/gchecksum.c')
         kernel_fd.run_controls(checksum, self.root, self.run, self.emit)

@@ -6,6 +6,7 @@ on:
       - '.github/scripts/qemu-android-research.py'
       - '.github/scripts/kernel-fd-research.py'
       - '.github/scripts/arm64-boot-plan-research.py'
+      - '.github/scripts/startup-order-research.py'
 permissions:
   contents: read
 concurrency:

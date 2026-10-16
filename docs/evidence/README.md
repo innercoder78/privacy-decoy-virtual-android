@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [QEMU startup resource ordering](gate-0-startup-resource-order.md) | Actual first-pass/config-reader extraction with file-call observers and ordering mutants; source audit identifies access before post-parse/board guards. Exclusive guard and trusted mode selection remain unimplemented. |
 | [Gate 0 platform authority](gate-0-platform-authority.md) | Independently retrieved current and Android 17 AOSP/source documentation; candidate access findings and explicit Unknowns. Gate 0: Unresolved. |
 | [User-space VMM source research](gate-0-userspace-vmm-sources.md) | Immutable QEMU/Android packaging and isolation evidence, alternative ranking inputs, licenses/limits and exact-base repository preflight. |
 | [Candidate architecture hypotheses](gate-0-userspace-vmm-candidate.md) | Isolated worker, capabilities, Persona/guest management, network/graphics and store-neutral signed image; no engine selected. |
