@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [Non-cooperative worker containment](gate-0-worker-containment.md) | Pinned Android 17/Linux authority and descendant-lifetime audit; system cgroup cleanup distinguished from ordinary-app control, cooperative shutdown and FD revocation. Linux process controls specified but NOT RUN; complete containment remains unestablished. [Source ledger](gate-0-worker-containment-sources.md). |
 | [QEMU startup resource ordering](gate-0-startup-resource-order.md) | Actual first-pass/config-reader extraction with file-call observers and ordering mutants; source audit identifies access before post-parse/board guards. Exclusive guard and trusted mode selection remain unimplemented. |
 | [Gate 0 platform authority](gate-0-platform-authority.md) | Independently retrieved current and Android 17 AOSP/source documentation; candidate access findings and explicit Unknowns. Gate 0: Unresolved. |
 | [User-space VMM source research](gate-0-userspace-vmm-sources.md) | Immutable QEMU/Android packaging and isolation evidence, alternative ranking inputs, licenses/limits and exact-base repository preflight. |
