@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Regression tests for narrow source admission and zero-permission manifests."""
 import contextlib
+import hashlib
 import importlib.util
 import io
 import os
@@ -27,6 +28,7 @@ foundation = load("validate-foundation")
 harness = load("validate-harness")
 research = load("qemu-android-research")
 kernel_fd = load("kernel-fd-research")
+boot_plan = load("arm64-boot-plan-research")
 
 class RepositoryTests(unittest.TestCase):
     def check_tree(self, extra=None, mode="100644", stage="0"):
@@ -61,6 +63,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(0, self.check_tree({"android/build.gradle": b"// fixture\n"}))
     def test_research_exact_paths_only(self):
         for name in (".github/scripts/qemu-android-research.py",
+                     ".github/scripts/arm64-boot-plan-research.py",
                      ".github/scripts/kernel-fd-research.py",
                      ".github/workflows/qemu-android-research.yml"):
             with self.subTest(name=name):
@@ -111,6 +114,105 @@ class ResearchInputTests(unittest.TestCase):
             with self.assertRaises(tarfile.FilterError):
                 research.unpack(archive, root / "extracted")
             self.assertFalse((root / "escaped").exists())
+
+
+class BootPlanTests(unittest.TestCase):
+    def sources(self):
+        return {
+            'hw/arm/meson.build': b"arm_common_ss.add(when: 'CONFIG_ARM_VIRT', if_true: files('virt.c'))\n",
+            'hw/arm/boot.c': b'#define BOOTLOADER_MAX_SIZE         (4 * KiB)\n',
+            'hw/arm/virt.c': b'/* fixture */\n',
+            'system/device_tree.c': b'#define FDT_MAX_SIZE  0x100000\n',
+            'hw/core/machine.c': b'/* machine fixture */\n',
+            'system/vl.c': b'/* lifecycle fixture */\n',
+            'include/hw/arm/boot.h': b'/* lifetime fixture */\n',
+        }
+
+    def render_fixture(self, sources=None):
+        inputs = self.sources()
+        pins = {name: hashlib.sha256(data).hexdigest() for name, data in inputs.items()}
+        with mock.patch.object(boot_plan, 'INPUTS', pins), mock.patch.object(
+                boot_plan.fd, 'checksum_source', return_value='/* checksum fixture */\n'):
+            return boot_plan.render(inputs if sources is None else sources, b'fixture')
+
+    def test_input_and_adapter_drift_rejected(self):
+        inputs = self.sources()
+        for name in inputs:
+            with self.subTest(name=name), self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                self.render_fixture(inputs | {name: inputs[name] + b'changed'})
+        with self.assertRaisesRegex(RuntimeError, 'source set'):
+            self.render_fixture({})
+        with mock.patch.object(boot_plan.fd, 'ADAPTER', 'changed'):
+            with self.assertRaisesRegex(RuntimeError, 'Unreviewed PR12'):
+                self.render_fixture()
+
+    def test_scope_and_precise_mutations(self):
+        patched = self.render_fixture()
+        self.assertEqual(set(patched), {boot_plan.SOURCE, 'hw/arm/meson.build'})
+        for mutation in (None, 'policy', 'partial', 'fallback'):
+            observed = boot_plan.observed_source(patched[boot_plan.SOURCE], mutation)
+            self.assertNotIn('#include "qemu/osdep.h"', observed)
+            self.assertIn('pdva_boot_reserve(', observed)
+        with self.assertRaisesRegex(RuntimeError, 'Ambiguous'):
+            boot_plan.observed_source(patched[boot_plan.SOURCE].replace(
+                b'config->resources != 0', b'config->resources == 123'), 'policy')
+
+    def test_apply_validates_before_any_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = self.sources()
+            for name, data in inputs.items():
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_bytes(data)
+            pins = {name: hashlib.sha256(data).hexdigest() for name, data in inputs.items()}
+            (root / 'hw/arm/virt.c').write_bytes(b'wrong')
+            with mock.patch.object(boot_plan, 'INPUTS', pins):
+                with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                    boot_plan.apply(root, b'fixture', lambda _: None)
+            self.assertFalse((root / boot_plan.SOURCE).exists())
+            self.assertEqual((root / 'hw/arm/meson.build').read_bytes(), inputs['hw/arm/meson.build'])
+
+    def test_existing_destination_and_repeat_application_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = self.sources()
+            for name, data in inputs.items():
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_bytes(data)
+            pins = {name: hashlib.sha256(data).hexdigest() for name, data in inputs.items()}
+            with mock.patch.object(boot_plan, 'INPUTS', pins), mock.patch.object(
+                    boot_plan.fd, 'checksum_source', return_value='/* fixture */\n'):
+                (root / boot_plan.SOURCE).write_bytes(b'preserve')
+                with self.assertRaisesRegex(RuntimeError, 'already exists'):
+                    boot_plan.apply(root, b'fixture', lambda _: None)
+                self.assertEqual((root / boot_plan.SOURCE).read_bytes(), b'preserve')
+                (root / boot_plan.SOURCE).unlink()
+                boot_plan.apply(root, b'fixture', lambda _: None)
+                with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+                    boot_plan.apply(root, b'fixture', lambda _: None)
+
+    def test_nonregular_source_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(RuntimeError, 'Unsafe boot-plan source'):
+                boot_plan.safe_read(Path(directory))
+
+    def test_cases_and_exact_negative_classification(self):
+        cases = list(boot_plan.cases())
+        self.assertEqual(len(cases), len({name for name, *_ in cases}))
+        names = {name for name, *_ in cases}
+        for name in ('plan-4', 'plan-8', 'plan-31', 'plan-32', 'plan-65',
+                     'declared-extent-overlap', 'exact-reservation-RAM-fit', 'ELF'):
+            self.assertIn(name, names)
+        for code, error in ((90, 'FAIL: plan expected result\n'),
+                            (90, 'FAIL: partial plan publication\n'),
+                            (93, 'DENIED: adapter pathname/fallback\n')):
+            expected = dict(code=code, stdout='', stderr=error)
+            boot_plan.fd.require_result(subprocess.CompletedProcess([], code, '', error), **expected)
+            for wrong, out, err in ((0, '', error), (-11, '', error), (124, '', ''),
+                                    (1, '', 'compiler failed'), (code, 'extra', error),
+                                    (code, '', ''), (code, '', 'other error')):
+                with self.assertRaisesRegex(RuntimeError, 'control result'):
+                    boot_plan.fd.require_result(subprocess.CompletedProcess([], wrong, out, err), **expected)
 
 
 class KernelFdTests(unittest.TestCase):

@@ -72,6 +72,11 @@ _fd_spec = importlib.util.spec_from_file_location(
 kernel_fd = importlib.util.module_from_spec(_fd_spec)
 _fd_spec.loader.exec_module(kernel_fd)
 
+_plan_spec = importlib.util.spec_from_file_location(
+    'arm64_boot_plan_research', Path(__file__).with_name('arm64-boot-plan-research.py'))
+boot_plan = importlib.util.module_from_spec(_plan_spec)
+_plan_spec.loader.exec_module(boot_plan)
+
 # Read-only investigation of the boot caller chain, not a kernel FD adapter.
 QEMU_BOOT_INPUTS = {
     'hw/arm/boot.c': '3ee33e386c78e816410d7f897d616a1f2c44203e7a609671184a95153412311f',
@@ -1672,6 +1677,9 @@ class Research:
         fd_source = self.root / 'kernel-fd-adapter.c'
         fd_source.write_text(kernel_fd.render(checksum), encoding='utf-8', newline='\n')
         self.emit('KERNEL FD standalone source-sha256=' + digest(fd_source))
+        self.phase('typed ARM64 boot reservations; no machine dispatch or ROM publication')
+        plan_patched = boot_plan.apply(qemu, checksum, self.emit)
+        boot_plan.run_controls(qemu, plan_patched, self.root, self.run, self.emit)
         self.phase('verified Android strict TCG adaptation and host failure controls')
         tcg_patched = apply_android_tcg_patch(qemu, self.emit)
         run_tcg_host_controls(tcg_patched, self.root, self.run, self.emit)
@@ -1901,8 +1909,14 @@ class Research:
         self.phase('QEMU Android compile and link')
         for name, data in tcg_patched.items():
             verify(qemu / name, hashlib.sha256(data).hexdigest())
+        for name, data in plan_patched.items():
+            verify(qemu / name, hashlib.sha256(data).hexdigest())
         self.run(self.host_ninja, '-d', 'keeprsp', '-v', '-j2', 'qemu-system-aarch64', cwd=build, env=target_env, timeout=1500)
         compile_log = self.logs / f'{self.sequence:03d}.log'
+        # The source set must actually compile the new unit. No runtime caller
+        # exists; linker elimination of unused functions is not boot integration.
+        if 'pdva-boot-plan.c' not in compile_log.read_text():
+            raise RuntimeError('Research boot-plan translation unit was not compiled')
         binary = build / 'qemu-system-aarch64'
         self.emit(f'BUILT QEMU size={binary.stat().st_size} sha256={digest(binary)}')
         self.phase('actual QEMU link provenance before ELF acceptance')
