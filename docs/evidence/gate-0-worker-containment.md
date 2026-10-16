@@ -250,6 +250,12 @@ The documented ADB adjustment commands are test privileges, not app authority.
 
 ## Bounded Linux negative-control specification — NOT RUN
 
+Continuation: the [bounded Linux implementation](gate-0-linux-worker-lifetime.md)
+now provides executable direct-child, TERM-refusal and retained-FD controls with
+independent result validation. Its observed-results section distinguishes local
+modeled checks from pending/unobserved Linux execution. The ten-case specification
+below and this PR #15 record do not acquire retroactive execution results.
+
 This Windows host has no installed WSL distribution (confirmed outside the
 sandbox after an initial access denial); Docker and a host C compiler were not
 found on PATH. Windows/NDK compilation would not establish Linux fork/wait

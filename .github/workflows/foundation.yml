@@ -61,3 +61,7 @@ jobs:
           PY
       - name: Check whitespace
         run: git show --format= --check HEAD
+      - name: Exercise real Linux worker lifetime and independent negative controls
+        run: |
+          ulimit -c 0
+          timeout --signal=TERM --kill-after=15s 150s python3 .github/scripts/worker-lifetime-research.py
