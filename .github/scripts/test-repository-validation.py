@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import io
 import os
+import re
 import shutil
 import subprocess
 import struct
@@ -29,6 +30,52 @@ harness = load("validate-harness")
 research = load("qemu-android-research")
 kernel_fd = load("kernel-fd-research")
 boot_plan = load("arm64-boot-plan-research")
+startup = load("startup-order-research")
+
+
+class StartupOrderTests(unittest.TestCase):
+    def test_drift_and_source_set_fail_closed(self):
+        sources = {name: b'unreviewed' for name in startup.INPUTS}
+        with self.assertRaisesRegex(RuntimeError, 'identity mismatch'):
+            startup.render(sources)
+        for values in ({}, {**sources, 'extra': b''}):
+            with self.assertRaisesRegex(RuntimeError, 'source set'):
+                startup.render(values)
+
+    def test_each_input_identity_is_checked(self):
+        sources = {name: name.encode() for name in startup.INPUTS}
+        pins = {n: hashlib.sha256(v).hexdigest() for n, v in sources.items()}
+        with mock.patch.object(startup, 'INPUTS', pins):
+            for name in sources:
+                with self.subTest(name=name), self.assertRaisesRegex(
+                        RuntimeError, 'identity mismatch: ' + re.escape(name)):
+                    startup.render({**sources, name: sources[name] + b'changed'})
+
+    def test_ambiguous_function_fails(self):
+        source = 'int f(void)\n{\n    return 0;\n}\n'
+        self.assertEqual(source, startup.extract(source, 'int f'))
+        for text in ('', source * 2):
+            with self.assertRaises(RuntimeError):
+                startup.extract(text, 'int f')
+
+    def test_outcomes_are_exact(self):
+        expected = (93, '', 'DENIED: config open before late marker\n')
+        startup.require_result(subprocess.CompletedProcess([], *expected), *expected)
+        for values in ((0, '', expected[2]), (-11, '', expected[2]),
+                       (93, '', ''), (93, 'extra', expected[2]),
+                       (93, '', expected[2] + 'extra'), (124, '', expected[2])):
+            with self.subTest(values=values), self.assertRaises(RuntimeError):
+                startup.require_result(subprocess.CompletedProcess([], *values), *expected)
+
+    def test_matrix_distinguishes_parse_and_open_failures(self):
+        cases = startup.cases()
+        self.assertEqual(len(cases), 13)
+        self.assertEqual(len({c[0] for c in cases}), 13)
+        by_name = {c[0]: c for c in cases}
+        self.assertEqual(by_name['unknown-option'][4:], (1, '', 'invalid option\n'))
+        self.assertEqual(by_name['machine-invalid-later'][4], 93)
+        self.assertEqual(by_name['disabled'][1], 0)
+        self.assertEqual(by_name['option-as-argument'][4], 93)
 
 class RepositoryTests(unittest.TestCase):
     def check_tree(self, extra=None, mode="100644", stage="0"):
