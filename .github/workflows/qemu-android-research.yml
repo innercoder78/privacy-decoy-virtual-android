@@ -5,6 +5,7 @@ on:
       - '.github/workflows/qemu-android-research.yml'
       - '.github/scripts/qemu-android-research.py'
       - '.github/scripts/kernel-fd-research.py'
+      - '.github/scripts/arm64-boot-plan-research.py'
 permissions:
   contents: read
 concurrency:
