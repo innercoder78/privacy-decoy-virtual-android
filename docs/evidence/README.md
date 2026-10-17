@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [Additional seccomp process-creation research](gate-0-seccomp-process-control.md) | Disposable x86_64 Linux TSYNC/thread/inheritance and terminal-installation-failure controls; pinned QEMU/Bionic ABI review. Local syntax/oracle validation only; new Linux execution pending/unobserved. PR #17 post-merge lifetime receipts verified. No production filter or Android authority claim. |
 | [Fixed surviving-grandchild experiment](gate-0-surviving-grandchild.md) | Case C with kernel-published registration, pidfds, subreaper adoption, post-parent-reap challenge and exact cleanup oracle. New Linux results pending/unobserved; PR #16 baseline hosted receipts independently verified. No Android containment claim. |
 | [Bounded Linux worker lifetime controls](gate-0-linux-worker-lifetime.md) | Original PR #16 A/B/D implementation and publication record. Post-merge Linux receipts and the subsequently implemented grandchild case are recorded in the continuation above; no Android containment claim. |
 | [Non-cooperative worker containment](gate-0-worker-containment.md) | Pinned Android 17/Linux authority and descendant-lifetime audit; system cgroup cleanup distinguished from ordinary-app control, cooperative shutdown and FD revocation. Linux process controls specified but NOT RUN; complete containment remains unestablished. [Source ledger](gate-0-worker-containment-sources.md). |

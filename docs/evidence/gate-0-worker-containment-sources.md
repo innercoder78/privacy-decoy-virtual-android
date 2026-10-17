@@ -119,3 +119,76 @@ Manual pages explain Linux semantics; pinned Linux sources above anchor the
 key findings. Neither is an Android runtime observation. Official Android docs
 and AOSP implementation are recorded separately because API promises, source
 behavior and installed OEM behavior need not be identical.
+
+## Seccomp continuation references (2026-10-17)
+
+The [seccomp process-control review](gate-0-seccomp-process-control.md) independently
+rehashed the 40 retained files above. The following additional decoded/raw source
+files extend the reference set. No upstream implementation is imported, compiled
+or executed. Bionic files retain BSD-style notices; glibc/GLib retain LGPL-family
+file terms; QEMU retains its per-file GPL/LGPL/other notices. Linux syscall tables
+and UAPI files retain their SPDX terms (including applicable syscall-note exceptions).
+These references grant no product adoption or redistribution approval.
+
+Bionic uses the **same Android 17 reference commit**
+`06356e41c5ed7b12220b24c05ba4fdb873b126a7` as above. An attempted
+`libc/arch-arm64/bionic/__clone.S` URL returned 404; it supplies no source evidence.
+The actual assembly path is `__bionic_clone.S`, verified from the pinned tree.
+
+| Exact source path | SHA-256 |
+|---|---|
+| [libc/bionic/pthread_create.cpp](https://android.googlesource.com/platform/bionic/+/06356e41c5ed7b12220b24c05ba4fdb873b126a7/libc/bionic/pthread_create.cpp) | `1bbcc146ff4b24732df036422c1d17c694cbc8c466d55052414cc0ed49c2beeb` |
+| [libc/bionic/clone.cpp](https://android.googlesource.com/platform/bionic/+/06356e41c5ed7b12220b24c05ba4fdb873b126a7/libc/bionic/clone.cpp) | `53704fa1f326b88b9e208067df6a875893a7d43257bb7d608452144fd0d81ecb` |
+| [libc/arch-arm64/bionic/__bionic_clone.S](https://android.googlesource.com/platform/bionic/+/06356e41c5ed7b12220b24c05ba4fdb873b126a7/libc/arch-arm64/bionic/__bionic_clone.S) | `a8b3862bdbb539841c9ada95b74d34880be030442cb189e3e18f4cfe7a51a8ed` |
+
+Linux ABI references at the existing v6.12 commit
+`adc218676eef25575469234709c2d87185ca223a`:
+
+| Exact source path | SHA-256 |
+|---|---|
+| [arch/x86/entry/syscalls/syscall_64.tbl](https://github.com/torvalds/linux/blob/adc218676eef25575469234709c2d87185ca223a/arch/x86/entry/syscalls/syscall_64.tbl) | `980ce3115028c71c5618e7864d262017bde8103bcfe7b413147a14fd312c92ac` |
+| [include/uapi/asm-generic/unistd.h](https://github.com/torvalds/linux/blob/adc218676eef25575469234709c2d87185ca223a/include/uapi/asm-generic/unistd.h) | `aec51e459e2b113bcf8e16c99be09d5384fe3f4fa4a16100dfe0e71dbc0e172a` |
+| [arch/arm64/include/asm/unistd.h](https://github.com/torvalds/linux/blob/adc218676eef25575469234709c2d87185ca223a/arch/arm64/include/asm/unistd.h) | `a6a15366cd333284fbd82ddc4fc01ce58efd06b4640d30da347eaeb985c8008f` |
+
+glibc tag `glibc-2.39` resolves through annotated tag object
+`9609a435f3f9a07c1cf607ad5821b12f735abd69` to commit
+`ef321e23c20eebc6d6fb4044425c00e6df27b05f`. It is a fallback-source reference,
+not the exact Ubuntu runner libc build. GLib is at PDVA's existing recipe pin
+`e05063ccc6c8f222465a1080927f4c14349f3de6`.
+
+| Exact source path | SHA-256 |
+|---|---|
+| [glibc sysdeps/unix/sysv/linux/clone-internal.c](https://github.com/bminor/glibc/blob/ef321e23c20eebc6d6fb4044425c00e6df27b05f/sysdeps/unix/sysv/linux/clone-internal.c) | `4f0775bc386892e382893e9148f64c68d5947106ada4e7baef482db8c616d0b6` |
+| [glibc nptl/pthread_create.c](https://github.com/bminor/glibc/blob/ef321e23c20eebc6d6fb4044425c00e6df27b05f/nptl/pthread_create.c) | `36fd1e6da5cee9ce31c58c8689f751542fd49f6c8214557b80925f049df8c050` |
+| [GLib glib/gthread-posix.c](https://github.com/GNOME/glib/blob/e05063ccc6c8f222465a1080927f4c14349f3de6/glib/gthread-posix.c) | `d7e9654c26bfade3079c39c112e832fe7bd9932b99d7886f75a49081f0fa0b0e` |
+| [GLib glib/gthreadpool.c](https://github.com/GNOME/glib/blob/e05063ccc6c8f222465a1080927f4c14349f3de6/glib/gthreadpool.c) | `6a48875831af755ded48b1018a4798ba3c18c3684276d549eff5844526113ea0` |
+
+QEMU reference commit `4fc49f46dc95d4a27de2509e7fceb2931e91faeb`, tree
+`0e6dfe70f3ae7b3ffc985c183e9df1b7ae3df4de`. Hashes are over exact LF Git blobs;
+retained worktree files were independently compared after CRLF normalization.
+This preserves the existing source/archive pin and imports no QEMU sandbox code.
+
+| Exact source path | SHA-256 |
+|---|---|
+| [util/qemu-thread-posix.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/util/qemu-thread-posix.c) | `ec784f93b3c7ef9bc5215b1987166510ec2f87ee09b5de43c17e8c32b5be7f9c` |
+| [util/rcu.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/util/rcu.c) | `3e4c5e57c126e26f67d8bd9f9e033f0cc059ed3d0a685da38a84c14f61371d51` |
+| [util/thread-context.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/util/thread-context.c) | `0540e5d83a0ded3595552a92a40e58978f6abdc9b0c090d591d081c833188c40` |
+| [accel/tcg/tcg-accel-ops-rr.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/accel/tcg/tcg-accel-ops-rr.c) | `6265dd582ec86bd9073a0c8366846f31dd0a9a36b96bd1d3f30845a7f8df03ab` |
+| [accel/tcg/tcg-accel-ops-mttcg.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/accel/tcg/tcg-accel-ops-mttcg.c) | `2810da98449127088e22441e08d253fc84d254e0f23086c5791aecf5574671bc` |
+| [system/main.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/system/main.c) | `5209f230ab4a0d0794d3a2669b2a6d8154349283d8560eb8670044877122c242` |
+| [system/vl.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/system/vl.c) | `a5fb2a78e45ec8edb256188eed44e8f06f7dba99c1dd029dd8a0d74cfab74266` |
+| [system/runstate.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/system/runstate.c) | `cc0ceeffd2dd2b8c61eed5d9bf14c25d211c2259df3de537ebf8f2927c1ae7ab` |
+| [system/async-teardown.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/system/async-teardown.c) | `86f926eb46ee7aa8533061a65c1c598bc38c1795f034ae56651af267d09c2c46` |
+| [system/qemu-seccomp.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/system/qemu-seccomp.c) | `fa45c2fceb986158ed98d6c412efab6714604b58a2591782bcc3c8758f7aad46` |
+| [util/thread-pool.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/util/thread-pool.c) | `cd7848272ace041fa9e991369b216657d7b7ba076f22b9029a204f60c42a8c75` |
+| [util/oslib-posix.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/util/oslib-posix.c) | `ad7bc820a4ab61fa0b00502a0a04540228a7cc60da5cb8908fcbc2af2419b869` |
+| [iothread.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/iothread.c) | `7c19678153aae69f373f278ddbb1dc0158d2c050b34843792acf5302e72a7e0b` |
+| [io/task.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/io/task.c) | `9bfb237a80cd540dd90316c41a170f9a32b9ebbcf76b76429c063fbf3f1167f4` |
+| [net/tap.c](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/net/tap.c) | `ea07bd8b232a7a5a094f359913d9ffa7e1894ef50b19f117a673b4e984e0b28a` |
+
+Additional mutable documentation read on 2026-10-17:
+[kernel seccomp BPF](https://docs.kernel.org/userspace-api/seccomp_filter.html),
+[seccomp syscall](https://man7.org/linux/man-pages/man2/seccomp.2.html), and
+[clone/clone3 syscall](https://man7.org/linux/man-pages/man2/clone.2.html).
+Source semantics, public contracts, new unrun Linux controls and installed Android
+authority remain distinct evidence classes.
