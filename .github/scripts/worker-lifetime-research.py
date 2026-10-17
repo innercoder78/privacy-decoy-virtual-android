@@ -12,10 +12,16 @@ import tempfile
 
 
 SOURCE = Path(__file__).with_name("worker-lifetime.c")
-CASES = {"exit": ("exit42", 0), "term": ("SIGKILL", 1), "fd": ("exit0", 1)}
+CASES = {"exit": ("exit42", 0), "term": ("SIGKILL", 1), "fd": ("exit0", 1),
+         "grandchild": ("exit42", 1)}
 
 
 def expected(case):
+    if case == "grandchild":
+        return ("EVIDENCE:grandchild status=exit42 registered=1 identity=pidfd "
+                "parent-reaped=1 post-reap-challenge=1 alive=1 adopted=1 "
+                "termination=SIGKILL grand-reaped=1 echild=1 parent-eof=1 "
+                "grand-eof=1 cleanup=verified\n")
     status, observed = CASES[case]
     return (f"EVIDENCE:{case} status={status} observed={observed} "
             "identity=pidfd reaped=1 echild=1 eof=1\n")
@@ -48,6 +54,12 @@ def check_oracle():
             if mutant:
                 invalid.extend([(0, out, err), (42, out, ""),
                                 (42, out, f"REJECTED:{case}:cleanup-UNPROVEN\n")])
+            if case == "grandchild":
+                # Independently remove/corrupt EVERY required receipt, including
+                # registration, live identity, post-reap challenge and cleanup.
+                for field in out.strip().split()[1:]:
+                    invalid.extend([(code, out.replace(field, ""), err),
+                                    (code, out.replace(field, field + "-wrong"), err)])
             for result in invalid:
                 try:
                     accept(case, mutant, *result)
@@ -82,12 +94,14 @@ def run():
         subprocess.run([compiler, "-std=c11", "-O0", "-Wall", "-Wextra", "-Werror",
                         str(SOURCE), "-o", str(binary)], check=True, timeout=30,
                        stdin=subprocess.DEVNULL, close_fds=True)
+        print(f"Build flags=-std=c11 -O0 -Wall -Wextra -Werror "
+              f"binary SHA256={hashlib.sha256(binary.read_bytes()).hexdigest()}", flush=True)
         for case in CASES:
             for mutant in (False, True):
                 case_dir = root / f"{case}-{mutant}"
                 case_dir.mkdir(mode=0o700)
                 # No shell, network, imported binary, inherited private environment,
-                # or caller-specified operation. Each C controller owns one child.
+                # or caller-specified operation. At most two fixed descendants.
                 result = subprocess.run(
                     [str(binary), case, "mutant" if mutant else "positive"],
                     cwd=case_dir, env={"LANG": "C"}, stdin=subprocess.DEVNULL,
@@ -110,7 +124,7 @@ def run():
                 print(result.stdout, end="")
                 print(result.stderr, end="")
                 print(f"PASS: {case} {'mutation rejected (42)' if mutant else 'positive (0)'}", flush=True)
-    print("PASS: Linux lifetime controls=3 mutations=3 all-owned-children-reaped")
+    print("PASS: Linux lifetime controls=4 mutations=4 all-owned-children-reaped")
 
 
 if __name__ == "__main__":

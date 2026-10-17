@@ -1,5 +1,10 @@
 # Gate 0: bounded Linux worker lifetime implementation
 
+Continuation: [case C's surviving-grandchild implementation](gate-0-surviving-grandchild.md)
+records the independently verified PR #16 post-merge A/B/D receipts and extends
+the fixture. The original publication observations and deferrals below are
+historical; the new case's Linux execution remains pending/unobserved.
+
 Review: **2026-10-16, America/Fortaleza**. Real Linux execution **NOT RUN locally**;
 hosted results **pending/unobserved at publication**. This is executable research,
 not a containment result. Gate 0 remains **Unresolved**, Gates A–G **Not reached**,
