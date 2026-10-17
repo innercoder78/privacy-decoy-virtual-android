@@ -192,3 +192,40 @@ Additional mutable documentation read on 2026-10-17:
 [clone/clone3 syscall](https://man7.org/linux/man-pages/man2/clone.2.html).
 Source semantics, public contracts, new unrun Linux controls and installed Android
 authority remain distinct evidence classes.
+
+## Android lifetime authority continuation (2026-10-17)
+
+Companion: [Android lifetime authority](gate-0-android-lifetime-authority.md).
+Observation: these additional files were retrieved by the same immutable Android 17
+reference commits above. Hashes are over base64-decoded Gitiles bytes. The 31
+retained original AOSP references were independently rehashed with no mismatch.
+References are not a deployed build manifest or adopted dependencies. The reviewed
+Java, AIDL and C++ files carry AOSP Apache-2.0 notices. The flag declaration and
+directory README have no file-level license notice in the retrieved bytes;
+they are reference-only metadata/documentation, with adoption rights not decided.
+No upstream implementation is copied into tracked files, linked,
+compiled or executed. Existing provenance/TCB/adoption obligations remain unchanged.
+
+| Exact source path | SHA-256 |
+|---|---|
+| [core/java/android/app/ActivityThread.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/ActivityThread.java) | `2d7bd7d9a9978258776a98ffe60589585a215688da303da7c71be7af961dc210` |
+| [core/java/android/app/ContextImpl.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/ContextImpl.java) | `5c57081e34b69cf9f8882a47fb67c8a58b36ea2c687b756a4ee3f119872515e9` |
+| [core/java/android/app/IActivityManager.aidl](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/IActivityManager.aidl) | `70c9e645e21a0c782763db8785e021dd3713dd926afc6abe380a1bbe00390d86` |
+| [core/java/android/app/IApplicationThread.aidl](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/IApplicationThread.aidl) | `1214209d05febde75a93e66b337793cda4f30651bdab76621fea159211eb850f` |
+| [core/java/android/app/LoadedApk.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/LoadedApk.java) | `f359793a61838ae04c3875ce224be572db51138cb2903f12ea3186580d96dec5` |
+| [core/java/android/content/Context.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/content/Context.java) | `a27cd9ce56a980932b3b03400c9394f97b04ef940b2a97db08109bae91a758b4` |
+| [core/java/android/os/IBinder.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/os/IBinder.java) | `20862f061bed4913746727ea6f0f5b2d11c86645d5f4df0a2e3a22a14c9ed7f5` |
+| [core/jni/android_util_Process.cpp](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/jni/android_util_Process.cpp) | `3f141d0dac48ad75a7b3c0d88ce75bc3b18e1f2723ba8594bb74e23416df9168` |
+| [libprocessgroup/processgroup_platform.cpp](https://android.googlesource.com/platform/system/core/+/545d2487e38192a2ce25040897ced877cf6b4f53/libprocessgroup/processgroup_platform.cpp) | `f291425adf58062feff4b010505f23e0170a3f2dd4150b2280fa21c85e76e28a` |
+| [services/core/java/com/android/server/am/AnrHelper.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/AnrHelper.java) | `3f30bba2f9ef699091b45a0c04dcf116e0e58c32dfeecca79e89891e2b8f882f` |
+| [services/core/java/com/android/server/am/flags.aconfig](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/flags.aconfig) | `e215d20ab9a2f0c959af071192a5b56ec6fa9cad41ca86ab0a8202291ef78728` |
+| [services/core/java/com/android/server/am/ProcessErrorStateRecord.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/ProcessErrorStateRecord.java) | `5fd388d44700a62ee1b75923392110dfb074b942d820dc6e6d3c78200e0e5add` |
+| [services/core/java/com/android/server/am/ProcessServiceRecord.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/ProcessServiceRecord.java) | `9fbc14be2a5ab7937c598644e3a68dca68c0415eeabeececa21385b61a0bbffe` |
+| [services/core/java/com/android/server/am/psc/OomAdjuster.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/OomAdjuster.java) | `3e64883feb5dff1c259005cb509cd76fc68148960b1416079cf5f70d9bdfa337` |
+| [services/core/java/com/android/server/am/psc/OomAdjusterImpl.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/OomAdjusterImpl.java) | `3e160836e33f383e93aa2f09e270868ee9ed934607a9dcd688e88501af1d9676` |
+| [services/core/java/com/android/server/am/psc/ProcessRecordInternal.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/ProcessRecordInternal.java) | `626704bc1693a0022dba5f76193c917d558c77efe81f00cb778515ea8030a008` |
+| [services/core/java/com/android/server/am/psc/ProcessServiceRecordInternal.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/ProcessServiceRecordInternal.java) | `94f79b802c9d02f46228b9d44d9b5de9e1b36e7394e0439db739672da177729a` |
+| [services/core/java/com/android/server/am/psc/ProcessStateController.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/ProcessStateController.java) | `51d5b0a0da21cada2a1925c675700f820102f02a5d7d4ae094a57df103f83925` |
+| [services/core/java/com/android/server/am/psc/README.md](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/README.md) | `46d3e355190e0eb1ea529ded038e6bc10f9448e7945b22ab7db896fb42f92c6a` |
+| [services/core/java/com/android/server/am/psc/SyncBatchSession.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/SyncBatchSession.java) | `18769619a19a84f255927284441391aaab49fbdf66eeeba7fb62359fafff107b` |
+| [services/core/java/com/android/server/am/ServiceRecord.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/ServiceRecord.java) | `7c6c2f0879d8c9861dfaac94ad87057f9baa482dc4fa61c999355a27c3d08c66` |
