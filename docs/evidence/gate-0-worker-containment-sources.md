@@ -229,3 +229,33 @@ compiled or executed. Existing provenance/TCB/adoption obligations remain unchan
 | [services/core/java/com/android/server/am/psc/README.md](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/README.md) | `46d3e355190e0eb1ea529ded038e6bc10f9448e7945b22ab7db896fb42f92c6a` |
 | [services/core/java/com/android/server/am/psc/SyncBatchSession.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/SyncBatchSession.java) | `18769619a19a84f255927284441391aaab49fbdf66eeeba7fb62359fafff107b` |
 | [services/core/java/com/android/server/am/ServiceRecord.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/ServiceRecord.java) | `7c6c2f0879d8c9861dfaac94ad87057f9baa482dc4fa61c999355a27c3d08c66` |
+
+## Exceptional lifecycle and observation continuation (2026-10-17)
+
+Companion: [exceptional lifecycle and observation](gate-0-android-lifecycle-exceptions.md).
+Observation: 52 retained AOSP files above were independently rehashed. Thirteen
+immutable files were fetched for this continuation; ActivityManager.java and
+Process.java reproduce the existing Framework hashes, and the eleven additional
+files are below. Hashes cover base64-decoded bytes without newline conversion.
+Framework uses `94b4c163b7dfe5ce3607f7bb8456f9573f7de57d`; init uses system/core
+`545d2487e38192a2ce25040897ced877cf6b4f53`. The framework and init files below
+carry Apache-2.0 notices except the generated public API signature file, which has no file-level
+license notice in its bytes; it is reference-only metadata, with adoption rights
+not decided. The Bionic pidfd header/implementation were retrieved on 2026-10-18
+at the existing `06356e41c5ed7b12220b24c05ba4fdb873b126a7` pin; both carry
+BSD two-clause notices. No upstream implementation, API file or binary is redistributed,
+compiled or executed. These are reference snapshots, not a complete device manifest.
+
+| Exact source path | SHA-256 |
+|---|---|
+| [core/java/android/app/ApplicationExitInfo.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/ApplicationExitInfo.java) | `0bc54065c04f2d04f01f831ba7dcc1062f62d47b670caf3a295464dfa1e6e9ba` |
+| [services/core/java/com/android/server/am/AppExitInfoTracker.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/AppExitInfoTracker.java) | `4cb4c46bd10ad51ecc07adc011e14ab22fa58ded7cf5f6754e8144d4da9f3f29` |
+| [core/api/current.txt](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/api/current.txt) | `116c793ecd67c793fe3d51c0cbfa158dff2e7f2d8defcd1b9fc60d829547e18a` |
+| [core/res/AndroidManifest.xml](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/res/AndroidManifest.xml) | `26d188bfdc84ab67d3e999227d07fa273fb28c8581225cb74ea956ab93e084ec` |
+| [core/java/android/app/IProcessObserver.aidl](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/IProcessObserver.aidl) | `01c1655aed4c2faacae7cb2cbb2ba11d5d352b1b1ac1832a41ff7cf2dc6f87c5` |
+| [core/java/android/app/IUidObserver.aidl](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/core/java/android/app/IUidObserver.aidl) | `aa7533b9f27c837668ab89952f7180f42bb5ddbb1cefcb078a87f1e86b6f0686` |
+| [services/core/java/com/android/server/wm/ActivityTaskManagerService.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/wm/ActivityTaskManagerService.java) | `25ffd4166d7244379b5624c784c29659b5ecdcbdbd1c60d3c7fdab38693388a9` |
+| [services/core/java/com/android/server/am/psc/BatchSession.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/am/psc/BatchSession.java) | `d4bbd5b7322a2cffc25f8b7ea71fa1f5c099df54ac5927d0baee3976f171f931` |
+| [init/first_stage_init.cpp](https://android.googlesource.com/platform/system/core/+/545d2487e38192a2ce25040897ced877cf6b4f53/init/first_stage_init.cpp) | `ddb34b37d470ad8266150865513ed25cbf29e1d404e248022765fbb1d9bc3b31` |
+| [libc/include/sys/pidfd.h](https://android.googlesource.com/platform/bionic/+/06356e41c5ed7b12220b24c05ba4fdb873b126a7/libc/include/sys/pidfd.h) | `527c77bd7bcf7527dfb2194211a142836d0ae313f2a9e010afdb7aff24f93ee2` |
+| [libc/bionic/pidfd.cpp](https://android.googlesource.com/platform/bionic/+/06356e41c5ed7b12220b24c05ba4fdb873b126a7/libc/bionic/pidfd.cpp) | `7e9e5d8d3f45b7d3093017c496fd14c619e5118cea33cc706d4b055363b978d9` |
