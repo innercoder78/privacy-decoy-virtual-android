@@ -21,6 +21,8 @@ ROOT_DIRS = {".github", "android", "docs"}
 HISTORY = "docs/reference/privacy-decoy-history/"
 SOURCE_SHA = "5320b3b44b38df4b8f3361ecbcb530386ff195e9"
 ALLOWED_CODE = {
+    ".github/scripts/revocation-control.c",
+    ".github/scripts/revocation-research.py",
     ".github/scripts/seccomp-process.c",
     ".github/scripts/seccomp-process-research.py",
     ".github/scripts/worker-lifetime.c",
