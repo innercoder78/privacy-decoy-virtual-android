@@ -69,3 +69,8 @@ jobs:
         run: |
           ulimit -c 0
           timeout --signal=TERM --kill-after=15s 100s python3 .github/scripts/seccomp-process-research.py
+      - name: Exercise retained mappings and trusted-owner revocation controls
+        run: |
+          ulimit -c 0
+          git rev-parse HEAD
+          timeout --signal=TERM --kill-after=15s 140s python3 .github/scripts/revocation-research.py
