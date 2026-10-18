@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [Retained capabilities and independent revocation](gate-0-capability-revocation.md) | Actual harness ownership/lifetime inventory; read-only versus immutable data, existing-map and Binder/FD transfer witnesses; trusted mediation requirements and persistent lockout. Source research only, no broker implementation or new runtime test. [Source identities](gate-0-capability-revocation-sources.md). |
 | [Additional seccomp process-creation research](gate-0-seccomp-process-control.md) | Disposable x86_64 Linux TSYNC/thread/inheritance and terminal-installation-failure controls; pinned QEMU/Bionic ABI review. Local syntax/oracle validation only; new Linux execution pending/unobserved. PR #17 post-merge lifetime receipts verified. No production filter or Android authority claim. |
 | [Fixed surviving-grandchild experiment](gate-0-surviving-grandchild.md) | Case C with kernel-published registration, pidfds, subreaper adoption, post-parent-reap challenge and exact cleanup oracle. New Linux results pending/unobserved; PR #16 baseline hosted receipts independently verified. No Android containment claim. |
 | [Bounded Linux worker lifetime controls](gate-0-linux-worker-lifetime.md) | Original PR #16 A/B/D implementation and publication record. Post-merge Linux receipts and the subsequently implemented grandchild case are recorded in the continuation above; no Android containment claim. |
