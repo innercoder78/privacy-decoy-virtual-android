@@ -224,8 +224,14 @@ def state(observer):
     return observer.line()
 
 
-def reply(worker):
-    fields = worker.line().split()
+def reply(worker, *, allow_locked=False):
+    line = worker.line()
+    # Only the post-loss retry can return this non-packet control receipt.
+    # A mutant instead returns a normal REPLY packet; normalize it exactly as
+    # every other reply before applying the unchanged semantic oracle.
+    if allow_locked and line == "LOCKED_UNKNOWN":
+        return line
+    fields = line.split()
     if len(fields) != 3 or fields[0] != "REPLY":
         raise RuntimeError("Missing worker reply")
     return f"{STATUS[int(fields[1])]} {int(fields[2])}"
@@ -318,7 +324,7 @@ def experiment(case, binary, directory):
                 raise RuntimeError("Unknown scenario")
             if case in ("loss", "uncertain"):
                 worker.send("Q")
-                observations.append(worker.line())
+                observations.append(reply(worker, allow_locked=True))
             observations.append(state(observer))
         for child in reversed(group.children):
             if not child.finished:

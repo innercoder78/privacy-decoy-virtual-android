@@ -1,8 +1,9 @@
 # Gate 0: disposable Linux mapping and mediated revocation controls
 
-Review: **2026-10-18, America/Fortaleza**. Linux compilation, execution and real
-negative controls are **pending/unobserved**. Windows validation below is not
-Linux evidence. Gate 0 remains **Unresolved**; Gates A–G **Not reached**;
+Review: **2026-10-18, America/Fortaleza**. Initial-head Linux CI **failed after
+partial execution**; the receipts and correction are recorded below. Corrected-head
+Linux execution remains **pending/unobserved**. Windows validation is not Linux
+evidence. Gate 0 remains **Unresolved**; Gates A–G **Not reached**;
 ADR-0001 **Accepted**; ADR-0002 **Proposed**. No production broker is authorized.
 
 This implements the unrun falsifiers from [PR #21's capability inventory](gate-0-capability-revocation.md).
@@ -91,7 +92,8 @@ host policy could invalidate separation. This is not a secure Android broker.
 
 ## Required observations and independent semantic mutations
 
-Every row below is a **required future runtime receipt**, not a recorded result.
+Every row below specifies a **required runtime receipt**; observed initial-head
+results are separately scoped in the correction record below.
 All positive and mutant processes must exit exactly zero, have verified owned
 reaping/ECHILD, exact protocol completion, stdout/stderr EOF and no residue.
 Crashes, generic nonzero exits, skipped cases and timeouts cannot reject a mutant
@@ -209,7 +211,7 @@ Python syntax, foundation/harness validators and repository regressions are
 recorded separately from Linux results. Existing regressions: 138 tests,
 134 executed passes and four existing Windows skips; skips are not passes.
 
-Final local receipts: foundation validation passed (102 files, 58 Markdown
+Initial-publication local receipts: foundation validation passed (102 files, 58 Markdown
 files, 54 requirements, two ADRs); harness validation passed; Python AST passed;
 802 invalid modeled revocation receipts rejected, with twenty valid modeled
 positive/mutant receipts accepted. Preserved lifetime/seccomp modeled oracles
@@ -217,16 +219,76 @@ rejected 168/143 invalid receipts. All ten C syntax variants passed. Full intend
 diff, UTF-8 text, regular 100644 modes, local Markdown targets, whitespace and
 public-data hygiene were reviewed. These checks do not establish Linux outcomes.
 
-| Final LF source / retained metadata | SHA-256 |
+| Initial-head LF source / retained metadata | SHA-256 |
 |---|---|
 | revocation-control.c | `3a00fc4d055bb93b210ffacc88edd4e93ddf38124bc186ec2fa354a25defea89` |
 | revocation-research.py | `55ead027c7405d15ff2feca80b71b96b8f0b3a2562d1195368b506d61ac3b942` |
 | Unchanged Gradle verification metadata | `4a5cd035a8b79f7a78beba61d7261b72454fd72554d4cdb210f0598898ef697a` |
 | Existing NDK r28c source.properties | `c00aa236fdb205e9be9edd9e2169763e48aca52735efff4e16f34205d49783b5` |
 
-The PR commit identifies the complete source/workflow/evidence tree. New native
-Linux compiler identity, binary hashes, positive/negative runtime receipts and
-cleanup observations remain **pending/unobserved** until exact-head CI review.
+The PR commit identifies the complete source/workflow/evidence tree. The initial
+head's subsequent partial Linux results are recorded next; they do not establish
+success of the complete suite or the corrected head.
+
+## PR #22 failed CI and receipt correction
+
+Revision preflight found main still at `7e68da5d4fe489828bbadc7615265652bc8d38de`
+and only PR #22 open, head `a5a6dd44ddb9b75a3ad705ef838c3db71466485d`, base main
+at that same verified SHA. Its full diff, exact-head jobs/logs, reviews,
+conversation/inline comments and review threads were inspected. Review/comment
+inventories were empty, with no next thread page. GitHub Status reported All
+Systems Operational and no incidents. The worktree was clean before revision.
+
+**Observed failure:** [foundation run 39153782260, job 117752653029](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/39153782260/job/117752653029)
+checked out that exact head. All preceding foundation steps succeeded; the
+revocation step exited 1. It compiled all ten variants under Linux
+`6.17.0-1022-azure`, x86_64, glibc 2.39, Python 3.12.3 and Ubuntu GCC
+13.3.0-6ubuntu2~24.04.1. Logged C/runner hashes match the initial-head table.
+The positive binary hash was
+`e1edf7565b8d8d1b7a2b8013a6f0d004b54f74c3cfe472dc8a980ca92e736915`;
+mutation 9 was
+`76dd7c0a03819d620862e1c6efca6b6ad6cd7dcf4c63d8008e9a6f680d9d60c5`.
+The linked log retains all variant build hashes and exact per-case JSON receipts.
+
+Nine positives (mapping through loss) and eight semantic mutants (mapping
+through missing) have accepted receipts with zero child exits, pidfds, reaping,
+EOF and no residue. The positive loss receipt ends `UNKNOWN_TRANSPORT 0`,
+`LOCKED_UNKNOWN`, `STATE 80 0`. Next is the generic fail-closed diagnostic and
+exit 1: there is **no accepted loss-mutant receipt**, neither uncertain invocation
+was reached, and no final whole-run cleanup/success receipt exists. The log alone
+does not identify the exception or certify the failed invocation's cleanup.
+Do not promote the partial results into a passing suite.
+
+The same-head [Android build run 39153782255](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/39153782255)
+succeeded, including build/protocol and package-authority inspection. This is
+build evidence only, not Android execution or evidence for the corrected head.
+
+**Source diagnosis and correction:** the post-loss retry used `worker.line()`
+directly. Mutation 9 emits `REPLY 7 0`; both loss/uncertain mutation expectations
+correctly require normalized `UNKNOWN_TRANSPORT 0`. That mismatch is reproduced
+by a platform-neutral regression, separately from the log's generic failure.
+The retry now uses the shared reply decoder with explicit permission for the
+exact `LOCKED_UNKNOWN` control marker. Other requests still require a REPLY
+packet. Expected observation lists, ten positives, ten semantic negative
+invocations, native source, CI, zero-exit rules and independent cleanup are
+unchanged. No crash or failure is converted to acceptance.
+
+Three regression tests cover raw retry receipts for both loss scenarios,
+unchanged positive/mutant acceptance and rejection of the old raw-line mismatch,
+malformed/unknown replies, propagated timeout/EOF, wrong status/value, nonzero
+or signaled exits, and absent pidfd/reaping/EOF evidence. These are modeled
+checks, not new Linux runs. Revised-head Linux tests remain **pending/unobserved**;
+no local Linux runtime is available or installed. The same PR is updated, followed
+by one immediate identity/native attachment verification and no CI polling.
+
+Revision local validation: 141 repository tests, 137 executed passes and four
+existing Windows skips; all three new receipt regressions passed. The 802-invalid
+modeled oracle, foundation/harness validators and Python AST checks passed.
+The Windows full-run guard again rejected execution with exact exit 1 before
+any native experiment. Diff/whitespace, links, modes and public-data review passed.
+Corrected runner LF SHA-256:
+`67dfc57e95b19674c26660c7debd08092e240cb3ad7a37c8fbca7b02fc68d356`.
+The C source and its hash are unchanged; no new C binary was built locally.
 
 ## Requirement implications and exclusions
 

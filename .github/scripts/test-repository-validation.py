@@ -31,6 +31,62 @@ research = load("qemu-android-research")
 kernel_fd = load("kernel-fd-research")
 boot_plan = load("arm64-boot-plan-research")
 startup = load("startup-order-research")
+revocation = load("revocation-research")
+
+
+class RevocationReceiptTests(unittest.TestCase):
+    def test_loss_retry_wire_receipts_reach_unchanged_oracles(self):
+        for case in ("loss", "uncertain"):
+            for mutant, wire in ((False, "LOCKED_UNKNOWN"), (True, "REPLY 7 0")):
+                with self.subTest(case=case, mutant=mutant):
+                    worker = mock.Mock()
+                    worker.line.return_value = wire
+                    expected = revocation.MUTANTS[case][1] if mutant else revocation.EXPECTED[case]
+                    observations = list(expected)
+                    observations[-2] = revocation.reply(worker, allow_locked=True)
+                    result = revocation.receipt(case, observations)
+                    (revocation.accept_mutant if mutant else revocation.accept)(case, result)
+                    worker.line.assert_called_once_with()
+                    if mutant:
+                        with self.assertRaises(ValueError):
+                            revocation.accept(case, result)
+                        # Reproduce the former raw-line mismatch, not a Linux run.
+                        observations[-2] = wire
+                        with self.assertRaises(ValueError):
+                            revocation.accept_mutant(case, revocation.receipt(case, observations))
+
+    def test_retry_decoder_does_not_turn_bad_receipts_into_lockout(self):
+        for wire in ("", "LOCKED_UNKNOWN extra", " LOCKED_UNKNOWN", "REPLY 7",
+                     "REPLY 7 0 extra", "REPLY 99 0", "REPLY bad 0", "UNKNOWN_TRANSPORT 0"):
+            with self.subTest(wire=wire):
+                worker = mock.Mock()
+                worker.line.return_value = wire
+                with self.assertRaises((RuntimeError, ValueError, KeyError)):
+                    revocation.reply(worker, allow_locked=True)
+        worker = mock.Mock()
+        worker.line.return_value = "LOCKED_UNKNOWN"
+        with self.assertRaises(RuntimeError):
+            revocation.reply(worker)  # Ordinary requests still require REPLY.
+        worker.line.side_effect = RuntimeError("timeout or unexpected EOF")
+        with self.assertRaisesRegex(RuntimeError, "timeout or unexpected EOF"):
+            revocation.reply(worker, allow_locked=True)
+
+    def test_retry_mutant_still_requires_exact_status_and_cleanup(self):
+        for case in ("loss", "uncertain"):
+            for wire in ("REPLY 1 0", "REPLY 2 0", "REPLY 7 1"):
+                worker = mock.Mock()
+                worker.line.return_value = wire
+                observations = list(revocation.MUTANTS[case][1])
+                observations[-2] = revocation.reply(worker, allow_locked=True)
+                with self.assertRaises(ValueError):
+                    revocation.accept_mutant(case, revocation.receipt(case, observations))
+            result = revocation.receipt(case, list(revocation.MUTANTS[case][1]))
+            for code in (-9, -6, 1, 42, 77, 124):
+                with self.assertRaises(ValueError):
+                    revocation.accept_mutant(case, {**result, "exits": {**result["exits"], "worker": code}})
+            for field in ("reaped", "eof", "pidfds"):
+                with self.assertRaises(ValueError):
+                    revocation.accept_mutant(case, {**result, field: 0})
 
 
 class StartupOrderTests(unittest.TestCase):
