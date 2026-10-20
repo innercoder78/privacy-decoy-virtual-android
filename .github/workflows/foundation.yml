@@ -61,6 +61,8 @@ jobs:
           PY
       - name: Check whitespace
         run: git show --format= --check HEAD
+      - name: Exercise dormant bootstrap with modeled syscalls and real host pthreads
+        run: python3 .github/scripts/android-seccomp-bootstrap.py --model
       - name: Exercise real Linux worker lifetime and independent negative controls
         run: |
           ulimit -c 0
