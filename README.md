@@ -1,56 +1,61 @@
 # Privacy Decoy Virtual Android (PDVA)
 
-PDVA investigates a complete interactive virtual Android phone presented from an
-ordinary Android application. The initial guest target is **Android 17 / API 37**,
-with one controlled guest-image line and an unrooted normal guest. Normal host
-operation must work on supported stock, non-rooted Android without system
-privileges, platform signing, OEM integration, or production ADB.
+**An Android phone inside your Android phone, with privacy and transparency at its heart.**
 
-**Pre-QEMU Gate 0 research. Gate 0: Unresolved.** No VM engine is selected,
-no VM or guest Android runtime is implemented, and no guest image is included. Full interactive Android
-feasibility and the actual enforcing guest/host security boundary are unproven.
-No devices are claimed supported. Documentation does not pass a feasibility gate.
-The [isolated-worker substrate harness](android/README.md) now supplies a minimal
-research APK and source-built native probe, with physical outcomes still Unknown.
+## Why I started this project
 
-The first question is whether an ordinary distributable third-party app can
-obtain a credible, legitimately shippable execution mechanism for the required
-guest. The [Gate 0 evidence](docs/evidence/gate-0-platform-authority.md) records
-scoped negative findings for restricted Android virtualization paths while
-leaving pure user-space emulation and other legitimate mechanisms Unknown.
-The [user-space VMM research](docs/evidence/gate-0-userspace-vmm-sources.md) now
-identifies QEMU/TCG as the lead candidate to test, with an unproved isolated-UID
-containment hypothesis. The [next physical proof](docs/evidence/gate-0-isolated-qemu-proof.md)
-uses a tiny Linux fixture to test that mechanism, not to pass Gate 0 or select an
-engine. [Candidate design hypotheses](docs/evidence/gate-0-userspace-vmm-candidate.md)
-and a [black-box comparison plan](docs/evidence/gate-0-black-box-comparisons.md)
-remain non-normative research.
+There are already a few apps that let you run a virtual Android phone inside your real phone. But there's something that has always bothered me about them.
 
-Google account sign-in, Play Store installation and supported updates inside the
-guest are [compatibility objectives](docs/google-compatibility.md), not established
-capabilities. PDVA does not implement a production host-side `VpnService` or occupy
-the host VPN slot under the current contract. Inheritance of an external host
-VPN's route requires independent [networking evidence](docs/networking.md).
+If I'm going to log in to my social media, email, or other personal accounts inside one of these apps, how can I know what happens to my information?
 
-PDVA is a new product lineage, not Phase III of
-[Privacy Decoy](https://github.com/innercoder78/Privacy-Decoy).
-The predecessor is [historical reference only](docs/reference/privacy-decoy-history/README.md);
-its findings neither prove nor disprove PDVA's full-guest direction.
+An app running a virtual phone could potentially have access to sensitive information, including things I type. I don't feel comfortable trusting an app with my passwords when I can't easily check what it's doing behind the scenes.
 
-## Canonical reading map
+That doesn't mean other virtual Android apps are stealing anyone's information. I simply want something I can inspect and verify rather than having to take someone's word for it.
 
-| Subject | Canonical record |
-|---|---|
-| Product obligations and change authority | [Requirements](docs/requirements.md), [governance](docs/governance.md) |
-| Accepted direction, without engine selection | [ADR-0001](docs/decisions/ADR-0001-full-interactive-virtual-android-direction.md) |
-| Proposed delivery and compatibility, awaiting owner approval | [ADR-0002](docs/decisions/ADR-0002-signed-environment-delivery-and-compatibility.md), [delivery and updates contract](docs/environment-delivery-and-updates.md) |
-| Research progression and STOP outcomes | [Feasibility gates](docs/feasibility-gates.md), [roadmap](docs/roadmap.md) |
-| Evidence and claim discipline | [Acceptance criteria](docs/acceptance-evidence-criteria.md), [evidence index](docs/evidence/README.md) |
-| Conceptual system and enforcing authorities | [Architecture](docs/architecture.md), [security boundaries](docs/security-boundaries.md), [threat model](docs/threat-model.md) |
-| Policy, platform and experience | [Persona/privacy](docs/persona-privacy-policy.md), [platform support](docs/platform-support.md), [UX](docs/ux.md) |
-| Guest distribution and maintenance | [Guest-image lifecycle](docs/guest-image-lifecycle.md), [source/provenance policy](docs/source-provenance-policy.md), [reference catalog](docs/source-reference-catalog.md) |
-| Validation and contributions | [Testing](docs/testing.md), [contributing](.github/CONTRIBUTING.md), [Android scope](android/README.md) |
+**That's why I started Privacy Decoy Virtual Android.**
 
-Run `python .github/scripts/validate-foundation.py` for repository foundation
-checks. This standard-library check does not build Android, run a VM, or prove
-security. Next technical work remains Gate 0 research.
+## What is Privacy Decoy Virtual Android?
+
+The goal is simple: build a complete Android 17 phone that runs inside an ordinary Android app.
+
+I want it to work without rooting your real phone, changing its operating system, or requiring special system privileges.
+
+The virtual phone should be separate from your real phone, with clear controls over what personal information it can access.
+
+The idea is to give people another Android environment while keeping privacy and security a priority.
+
+## Why make the code public?
+
+Because I believe people should be able to see what they're installing, especially when an app might handle sensitive information.
+
+The project's code is available right here on GitHub for anyone to inspect.
+
+And here's something I particularly like about that: **you don't even need to know how to code to start asking questions about it.**
+
+You can ask ChatGPT, Claude, or another AI assistant to examine the source code, explain what different parts do, and look for anything suspicious.
+
+Of course, AI can make mistakes, and publicly available code isn't automatically safe. Proper security testing and making sure the installed app matches the published code are important too.
+
+My intention is for PDVA to be genuinely open source. The code is currently public for inspection, but an open-source license still needs to be chosen.
+
+## Is it ready to use?
+
+**Not yet.**
+
+Privacy Decoy Virtual Android is still in the research and development stage (hopefully it will be done by the end of the year).
+
+There isn't a working virtual Android phone available yet. I'm still investigating whether the full experience and the security protections I want can be achieved on ordinary, non-rooted Android phones.
+
+Until those questions are answered and the necessary testing is completed, PDVA shouldn't be trusted with real accounts or sensitive personal information.
+
+I want this project to earn people's trust through transparency, testing, and evidence—not just promises.
+
+## Want to know more?
+
+If you're interested in the technical details or want to follow the development, you can explore:
+
+- [Development roadmap](docs/roadmap.md)
+- [Project requirements](docs/requirements.md)
+- [Research and testing evidence](docs/evidence/README.md)
+
+**Privacy should be something you can verify, not something you just have to believe in.**
