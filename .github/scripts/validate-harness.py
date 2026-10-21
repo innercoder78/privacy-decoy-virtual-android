@@ -143,6 +143,7 @@ def inventory(apk):
     expected = {"lib/arm64-v8a/libsubstrate.so": (183, False),
                 "lib/x86_64/libsubstrate.so": (62, False),
                 "lib/arm64-v8a/libpdva_launch.so": (183, True)}
+    result = {}
     with zipfile.ZipFile(apk) as archive:
         names = archive.namelist()
         if len(names) != len(set(names)):
@@ -166,9 +167,33 @@ def inventory(apk):
                 raise ValueError("Native payload must use reviewed extraction packaging")
             data = archive.read(name)
             dependencies = elf(data, machine, executable)
+            result[name] = {"sha256": hashlib.sha256(data).hexdigest(),
+                            "role": "dynamic-PIE" if executable else "JNI-shared",
+                            "needed": dependencies}
             print(name, "dynamic-PIE" if executable else "JNI-shared", "SHA256=" + hashlib.sha256(data).hexdigest(),
                   "NEEDED=" + ",".join(dependencies))
     print("APK SHA256=" + hashlib.sha256(Path(apk).read_bytes()).hexdigest())
+    return result
+
+
+def inspect_apk(apk, apkanalyzer, variant):
+    """Shared packaged validation for CLI and the offline journal."""
+    if variant not in {"debug", "release"}:
+        raise ValueError("Unknown build variant")
+    command = [str(apkanalyzer)]
+    if os.name == "nt" and str(apkanalyzer).endswith(".bat"):
+        # SDK launcher leaves its toolsdir JVM option unquoted for paths with spaces.
+        java = Path(os.environ["JAVA_HOME"]) / "bin/java.exe"
+        jar = Path(apkanalyzer).resolve().parents[1] / "lib/apkanalyzer-classpath.jar"
+        command = [str(java), "-Dcom.android.sdklib.toolsdir=" + str(jar.parent.parent),
+                   "-classpath", str(jar), "com.android.tools.apk.analyzer.ApkAnalyzerCli"]
+    output = subprocess.check_output([*command, "manifest", "print", str(apk)],
+                                     text=True, encoding="utf-8", timeout=120)
+    manifest(output, release=variant == "release", packaged=True)
+    # A declared debug input must actually be debug; release already rejects it.
+    if variant == "debug" and ET.fromstring(output).find("application").get(A + "debuggable") != "true":
+        raise ValueError("Declared debug variant is not debuggable")
+    return {"manifest": "passed", "native": inventory(apk)}
 
 def main():
     parser = argparse.ArgumentParser()
@@ -184,16 +209,7 @@ def main():
     if bool(args.apk) != bool(args.apkanalyzer):
         raise ValueError("Supply both APK and apkanalyzer")
     if args.apk:
-        command = [args.apkanalyzer]
-        if os.name == "nt" and args.apkanalyzer.endswith(".bat"):
-            # SDK launcher leaves its toolsdir JVM option unquoted for paths with spaces.
-            java = Path(os.environ["JAVA_HOME"]) / "bin/java.exe"
-            jar = Path(args.apkanalyzer).resolve().parents[1] / "lib/apkanalyzer-classpath.jar"
-            command = [str(java), "-Dcom.android.sdklib.toolsdir=" + str(jar.parent.parent), "-classpath", str(jar), "com.android.tools.apk.analyzer.ApkAnalyzerCli"]
-        output = subprocess.check_output([*command, "manifest", "print", args.apk],
-                                         text=True, encoding="utf-8")
-        manifest(output, release=args.variant == "release", packaged=True)
-        inventory(args.apk)
+        inspect_apk(args.apk, args.apkanalyzer, args.variant)
     print("Harness manifest authority validation passed. No runtime/isolation claim.")
     return 0
 

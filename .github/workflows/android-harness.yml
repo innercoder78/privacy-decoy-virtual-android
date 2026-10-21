@@ -79,3 +79,20 @@ jobs:
           sha256sum "$ANDROID_HOME/ndk/28.2.13676358/source.properties" "$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
           unzip -l android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk
           sha256sum android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk
+      - name: Record offline release artifact correspondence privately
+        shell: bash
+        run: |
+          source_sha="$(git rev-parse HEAD)"
+          apk=android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk
+          apk_sha="$(sha256sum "$apk" | cut -d ' ' -f 1)"
+          native=android/gate0-harness/build/intermediates/stripped_native_libs/release/stripReleaseDebugSymbols/out/lib
+          journal="ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          common=(--journal "$journal" --source "$source_sha" --apk-sha256 "$apk_sha" --variant release)
+          python3 .github/scripts/desktop-readiness.py init "${common[@]}"
+          python3 .github/scripts/desktop-readiness.py prepare "${common[@]}" --operation release-inspection
+          python3 .github/scripts/desktop-readiness.py inspect "${common[@]}" --operation release-inspection \
+            --apk "$apk" --apkanalyzer "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" \
+            --native "lib/arm64-v8a/libsubstrate.so=$native/arm64-v8a/libsubstrate.so" \
+            --native "lib/x86_64/libsubstrate.so=$native/x86_64/libsubstrate.so" \
+            --native "lib/arm64-v8a/libpdva_launch.so=$native/arm64-v8a/libpdva_launch.so"
+          # No journal, APK, signing material or private path upload/log dump.

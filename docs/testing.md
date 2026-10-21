@@ -30,6 +30,11 @@ upload and retain enough safe metadata to reproduce the conclusion.
 
 ## Foundation validation
 
+Desktop-only preparation has a [short procedure and evidence schema](evidence/gate-0-desktop-readiness.md).
+Run `python .github/scripts/test-desktop-readiness.py` for its deterministic
+standard-library interruption, writer-lock, corruption, identity and retry controls.
+Private journals remain under ignored build storage; they are not Android cleanup evidence.
+
 Run `python .github/scripts/validate-foundation.py` at repository root and
 `git diff --check`. The validator checks tracked and non-ignored new files so it
 also works before staging. It verifies roots, local Markdown file targets,

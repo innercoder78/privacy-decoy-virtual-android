@@ -25,6 +25,7 @@ jobs:
           python3 .github/scripts/validate-foundation.py
           python3 .github/scripts/test-repository-validation.py
           python3 .github/scripts/validate-harness.py
+          python3 .github/scripts/test-desktop-readiness.py
       - name: Exercise native wait controls on host only
         run: |
           mkdir -p android/build/host-controls
