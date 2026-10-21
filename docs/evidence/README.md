@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [Desktop artifact readiness and private journal](gate-0-desktop-readiness.md) | Offline APK/native identity checks, durable intent and interruption controls; read-only recovery planning. No phone authorization, cleanup oracle or gate pass. |
 | [Dormant Android seccomp bootstrap](gate-0-android-seccomp-bootstrap.md) | Standalone AArch64 marked-getpid diagnostic, generated constructor discovery and exclusion, compiled filter-byte controls and modeled terminal-failure tests. Outside APK/ordinary operations; no child-process probe or Android runtime proof. Activation and independent observation remain blocked pending separate review. |
 | [Android 17 QEMU U-Boot provenance and verified-boot closure](gate-0-android17-uboot.md) | Target-specific build 15108624, resolved source/toolchain records and matching text-map provenance; actual firmware/DTB/AVB contract, reference signing/unlocked state and rollback-persistence blocker. Stop unchanged release-trust candidate; no adoption, guest boot or phone authorization. [Source/provenance ledger](gate-0-android17-uboot-sources.md). |
 | [Android 17 boot and HAL dependency closure](gate-0-android17-boot-hal.md) | Exact ARM64 key-service defaults, kernel source-version lead, firmware/AVB inputs and real userspace-vsock backend versus unchanged QEMU launch; falsifiable reference/hypothesis matrix. Continue source research; no approved product or phone test. [Source ledger](gate-0-android17-boot-hal-sources.md). |

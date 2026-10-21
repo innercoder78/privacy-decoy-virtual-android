@@ -21,6 +21,8 @@ ROOT_DIRS = {".github", "android", "docs"}
 HISTORY = "docs/reference/privacy-decoy-history/"
 SOURCE_SHA = "5320b3b44b38df4b8f3361ecbcb530386ff195e9"
 ALLOWED_CODE = {
+    ".github/scripts/desktop-readiness.py",
+    ".github/scripts/test-desktop-readiness.py",
     ".github/scripts/android-seccomp-bootstrap.py",
     "android/research/seccomp-bootstrap/bootstrap.c",
     "android/research/seccomp-bootstrap/model-test.c",
