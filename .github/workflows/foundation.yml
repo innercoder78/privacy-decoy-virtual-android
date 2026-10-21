@@ -9,6 +9,23 @@ permissions:
   contents: read
 
 jobs:
+  offline-image-windows:
+    runs-on: windows-2022
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact source for offline image controls
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; existing reviewed pin
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          clean: false
+      - name: Exercise standard-library image controls on Windows
+        shell: pwsh
+        run: |
+          python --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python .github/scripts/test-offline-image-inspect.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   foundation:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -26,6 +43,7 @@ jobs:
           python3 .github/scripts/test-repository-validation.py
           python3 .github/scripts/validate-harness.py
           python3 .github/scripts/test-desktop-readiness.py
+          python3 .github/scripts/test-offline-image-inspect.py
       - name: Exercise native wait controls on host only
         run: |
           mkdir -p android/build/host-controls
