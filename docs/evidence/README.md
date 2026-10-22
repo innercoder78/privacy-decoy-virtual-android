@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [Backend entrypoint and preopened endpoints](gate-0-backend-endpoints.md) | Exact-source blocker for the unchanged isolated-service/preopened-only configuration; real lower-level listener/stream APIs, QEMU FD dispatch, late service pathname connect and guest-only RAM authority. No Android build or runtime claim. [Source ledger](gate-0-backend-endpoints-sources.md). |
 | [Android 17 userspace communication boundary](gate-0-userspace-communication.md) | Guest radio/lights/camera client distinctions, actual Soong dependency graph, shared RAM mapping and Unix routing, backend loss behavior and four confinement alternatives. Insufficient evidence for a qualifying configuration; no integration or Android execution. [Immutable sources](gate-0-userspace-communication-sources.md). |
 | [Desktop artifact readiness and private journal](gate-0-desktop-readiness.md) | Offline APK/native identity checks, durable intent and interruption controls; read-only recovery planning. No phone authorization, cleanup oracle or gate pass. |
 | [Dormant Android seccomp bootstrap](gate-0-android-seccomp-bootstrap.md) | Standalone AArch64 marked-getpid diagnostic, generated constructor discovery and exclusion, compiled filter-byte controls and modeled terminal-failure tests. Outside APK/ordinary operations; no child-process probe or Android runtime proof. Activation and independent observation remain blocked pending separate review. |
