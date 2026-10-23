@@ -31,3 +31,28 @@ artifacts. Contributors must review evidence for sensitive data before upload.
 The bootstrap grants no authority to publish production security claims or
 redistribute proprietary packages. [Provenance review](source-provenance-policy.md)
 precedes adoption, including build and CI dependencies.
+
+## Research preservation
+
+Every research task MUST create or update exactly **one intended public-safe
+evidence PR**, including positive, negative, failed, Unknown, STOP, source-only
+and no-code outcomes. Record a substantive disposition, provenance, actual
+validation, limits and reopening condition, cross-referenced from the
+[evidence index](evidence/README.md). Reuse the intended PR after interruption;
+do not create duplicate or content-free PRs, fabricate evidence or manipulate CI
+to obtain a pass. A PR is not canonical until merged and independently verified
+on main with the applicable checks distinguished from filtered/unrun workflows.
+
+Private-sensitive details MUST remain in separately backed-up owner-controlled
+private evidence; publish only a generic safe disposition. Ignored local storage
+is not proof of independent backup. If private durability cannot be verified,
+record a private recovery gap without exposing the material or its metadata.
+
+On a hard publication or required association failure, STOP, report the precise
+failure and mark the task **UNPRESERVED pending recovery PR or association
+repair**, identifying any PR that already exists. Never create a duplicate to
+repair association or imply that failure erased an existing GitHub record.
+Completed chats may be archived after their durable disposition is verified, or
+knowingly archived with a documented UNPRESERVED gap; keeping old no-PR chats
+open is not a substitute for recovery. This rule governs preservation only and
+does not change architecture approval, research authority or gate criteria.
