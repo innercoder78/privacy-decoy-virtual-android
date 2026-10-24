@@ -17,10 +17,12 @@ nor “a foreground manager gives every worker TOP and its budget” is supporte
 
 **New correspondence blocker:** live Android 17 r1 and `android17-release` resolve
 to the same framework commit, but that commit does **not** implement the current
-website's system-partition, bounded-interval configuration contract. The website
-also disallows app allowlists, while the release Java contains a specific platform
-service exemption. Preserve both observations; do not substitute another branch,
-declare r1 compliant/noncompliant from this limited review, or claim installed
+website's system-partition, bounded-interval configuration contract.
+[Android 17 CDD §8.6 C-0-1](https://source.android.com/docs/compatibility/17/android-17-cdd#86_app_memory_limits)
+prohibits methods, allowlists and policies that bypass runtime app memory limits,
+while the release Java contains a specific platform-service exemption. Preserve
+both observations; do not substitute another branch, declare r1
+compliant/noncompliant from this limited review, or claim installed
 OEM behavior. **STOP the inference from current documented tiers to active r1
 or device limits.** The worker's conditional source classification is established;
 its effective installed numeric limit remains **UNKNOWN**.
@@ -90,14 +92,14 @@ appear below. Linux v6.12 is a semantic reference, not an asserted host kernel.
 | Tier selection | `getConfiguration` chooses greatest eligible minimum, inclusive; no maximum field in XSD or selection code | Website uses inclusive floor/exclusive ceiling, including `maximumAllowedMemTotal` |
 | Numeric values | Release Markdown illustrates 8192/4096/4096/4096 MiB at minimum 14336 MiB and 6144/3072/3072/3072 at minimum 10240 MiB. Java test default is 4096/2048/2048/2048 MiB and explicitly not production-qualified | Current five-tier table below differs; no equality to r1 XML or installed policy established |
 | Enablement | Feature enable flag, system-server context, existing valid matching XML; missing/unmatched configuration disables; invalid/unreadable present XML throws. JNI additionally needs usable cgroup attributes | Website specifies cgroup v2 plus memory controller. Installed flags, controller activation and configuration remain UNKNOWN |
-| Exemptions | UID readiness check excludes values below 10000; configured on-device sandboxed inference package enters `mExemptList`. Ordinary isolated UID is not an exemption | Website rejects app allowlists; [CDD 8.6 C-0-1](https://source.android.com/docs/compatibility/17/android-17-cdd#86_app_memory_limits) prohibits bypass methods/allowlists/policies. This is an OEM obligation, not permission for PDVA to use a source exception |
+| Exemptions | UID readiness check excludes values below 10000; configured on-device sandboxed inference package enters `mExemptList`. Ordinary isolated UID is not an exemption | [Android 17 CDD §8.6 C-0-1](https://source.android.com/docs/compatibility/17/android-17-cdd#86_app_memory_limits) prohibits bypass methods/allowlists/policies. This is an OEM obligation, not permission for PDVA to use a source exception |
 | Cached state | Leaves memory.high unchanged, requests unlimited swap | Website describes freezing and maximal reclaim. Do not infer a fresh visible allowance or guaranteed residency |
 
 The CDD describes limits per individual app process across its allocations; it
 does not give PDVA an allocation reservation, an isolated-worker exemption or a
-sum-of-process-budgets guarantee. The website's general no-allowlist statement
-and its developer ignore/manual commands must be read in their separate
-production versus diagnostic scopes. None was run or proposed as a remedy.
+sum-of-process-budgets guarantee. The CDD's bypass prohibition and the website's
+developer ignore/manual commands must be read in their separate production
+versus diagnostic scopes. None was run or proposed as a remedy.
 
 ## Enforcement trace
 
