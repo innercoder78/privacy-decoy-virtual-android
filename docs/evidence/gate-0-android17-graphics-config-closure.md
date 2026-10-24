@@ -1,6 +1,6 @@
 # Gate 0: Android 17 graphics configuration closure
 
-Review: **2026-10-24, America/Fortaleza; Windows x86_64; source only.**
+Review: **2026-10-24; Windows x86_64; source only.**
 **Gate 0 Unresolved; Gates A–G Not reached. ADR-0001 Accepted; ADR-0002 Proposed.**
 Scope: existing graphics/product/source obligations PDVA-REQ-001–015, 034–045,
 047–048, 054; accompanying Persona clarification of 016–027, 031–032 and 039–043.
