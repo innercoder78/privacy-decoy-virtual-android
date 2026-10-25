@@ -26,6 +26,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python .github/scripts/test-offline-image-inspect.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python .github/scripts/test-frame-copy.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   foundation:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -44,6 +46,7 @@ jobs:
           python3 .github/scripts/validate-harness.py
           python3 .github/scripts/test-desktop-readiness.py
           python3 .github/scripts/test-offline-image-inspect.py
+          python3 .github/scripts/test-frame-copy.py
       - name: Exercise native wait controls on host only
         run: |
           mkdir -p android/build/host-controls
