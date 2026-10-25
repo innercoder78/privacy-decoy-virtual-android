@@ -67,6 +67,13 @@ review can support scoped host-identity protection claims.
 
 ## Foundation validation
 
+The [host display boundary record](evidence/gate-0-host-display-boundary.md)
+separates memory bounds, copy ownership, coherence, pixel authenticity, UI trust
+and cleanup. Run `python .github/scripts/test-frame-copy.py` for four desktop-only
+mapped-buffer ownership/interleaving controls. They do not execute Android or
+validate a production display receiver; future caller/epoch, surface-lifetime and
+trusted-escape obligations are recorded separately there.
+
 Desktop-only preparation has a [short procedure and evidence schema](evidence/gate-0-desktop-readiness.md).
 Run `python .github/scripts/test-desktop-readiness.py` for its deterministic
 standard-library interruption, writer-lock, corruption, identity and retry controls.
