@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [Android 17 sensor-service closure](gate-0-android17-sensor-service-closure.md) | Source-only STOP for unchanged host-only simulator and ambient FIFO arrangement; exact AIDL/sub-HAL, hvc18/19, framing, missing scalar reports, stale caches and host authority traced. An Android peer remains conditional; Persona enforcement and runtime Unknown. |
 | [Host display boundary and frame ownership](gate-0-host-display-boundary.md) | Public app-owned presentation lead; RO mappings and isRegionReadOnly do not certify coherence. Four desktop ownership/interleaving controls, receiver proof obligations and generic comparative lessons. Complete authority/isolation Unknown; no Android runtime or bridge. |
 | [Android 17 graphics configuration closure](gate-0-android17-graphics-config-closure.md) | Textproto precedence, fixed dumb-resource color format and atomic/fence limits; conditional RGBA mismatch, installed pairing Unknown. STOP dependent construction. Same PR clarifies Persona identity protection and future leakage acceptance; no implementation or runtime tests. |
 | [Android 17 software graphics and virtual display](gate-0-android17-software-graphics.md) | Ranchu GuestFrameComposer/Pastel selection and minigbm 2D fallback; unchanged QEMU recipe lacks GPU selection/pixman. STOP that build pairing; complete format/fence/kernel/build match UNKNOWN. CPU scanout ownership requirements only; no adapter, guest build or runtime test. |
