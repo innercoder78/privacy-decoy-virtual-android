@@ -1,0 +1,270 @@
+# Gate 0: Android 17 radio, modem and SIM service closure
+
+## Objective and disposition
+
+Can the selected ARM64 phone maintain coherent synthetic Android telephony using a bounded modem peer under ordinary stock-nonrooted Android-app authority, without genuine host identifiers or external cellular privileges? **SCOPED STOP for qualification of the unchanged pairing.** There are actual software state machines and synthetic responses, but parser, lifetime, authority and build correspondence do not close that claim. This does not prove every software-only virtual radio impossible.
+
+Source-only research dated 2026-10-26 against PDVA main `f716505e9bac5aecc47d7886a9c4a3c47e9b3295` (merge of PR #41). No implementation or adoption is authorized. Gate 0 remains **Unresolved**; Gates A–G remain **Not reached**. ADR-0001 remains **Accepted**; ADR-0002 remains **Proposed**. A material architecture, security-boundary or product-scope change requires a proposed ADR and Tony's explicit approval before implementation.
+
+| Question | Outcome | Evidence and limit |
+|---|---|---|
+| A. Is the unchanged pairing internally source-complete? | UNKNOWN | Matching guest commands and peer handlers exist for a substantial synthetic subset. Complete API behavior, generated release configuration and transitive build closure are not established. Bounded continuity is a SCOPED STOP: EOF and parser/queue defects below contradict that requirement. |
+| B. Can it maintain synthetic state without a real cellular provider? | SOURCE-SUPPORTED / CONDITIONAL | Local profile, power, registration, signal, calls and SMS state are implemented without a physical modem. Startup needs configuration, files and listener FDs; sustained coherent Android behavior remains CONDITIONAL, not observed. |
+| C. Does the peer require prohibited authority? | SOURCE-SUPPORTED / SCOPED STOP / UNKNOWN | No raw cellular device or host telephony API is required by inspected simulator functions. The unchanged reference transport/launcher is a SCOPED STOP under existing authority constraints. An ordinary-app packaged peer is UNKNOWN. |
+| D. Which functions exist? | SOURCE-SUPPORTED / UNSUPPORTED | Implemented synthetic state, fixed fixtures, successful no-ops and unsupported APIs are distinguished below. Operational external cellular service is UNSUPPORTED by this evidence. |
+| E. Can Persona master remain outside VM and peer? | CONDITIONAL | An owner could supply only derived synthetic state. No inspected source implements that owner, authenticated session, epoch or enforcement boundary. |
+| F. Is the path build-correspondent, bounded and app-qualified? | SCOPED STOP | Concrete unbounded/error paths plus missing app packaging, exact binaries, isolation and revocation evidence prevent qualification. Individual missing build facts remain UNKNOWN. |
+| G. Smallest next independent proof? | CONDITIONAL | Independently reproduce the exact-source EOF counterexample below, before proposing any replacement or runtime experiment. It cannot establish Android compatibility or advance a gate. |
+
+## Baseline and prior evidence
+
+Live preflight found canonical main at the baseline above, zero open PRs, and successful push foundation run [40370046250](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40370046250). Both exact-main execution logs were inspected: foundation job 121738020080 and Windows job 121738020684 succeeded. Foundation reported 141 repository, 27 readiness, 45 offline-image and four frame controls, plus its native/lifetime/seccomp/revocation controls; Windows reported 45 offline-image and four frame controls. These are existing repository controls, not radio tests. [GitHub Status](https://www.githubstatus.com/) reported All Systems Operational during preflight (page update 2026-10-26T17:19:02.419Z). With no open PR, open-head/base/diff/check/review/comment/thread inspection had an empty set.
+
+Local branches, the single worktree, stashes, tracked changes, ignored assets, workflows, native/dependency inventory and tracked modes were inspected before branching. There were no tracked modifications or stashes; 135 tracked files had mode 100644. Existing branches and ignored assets were preserved. An ignored local checkpoint was maintained; it is not a verified independent backup.
+
+The governing requirements, architecture, gates, acceptance criteria, Persona policy, security boundaries, threat model, networking, testing, roadmap, governance, provenance policy and both ADRs were read. This record extends rather than repeats:
+
+- [Userspace communication](gate-0-userspace-communication.md) and its [sources](gate-0-userspace-communication-sources.md), plus [backend endpoints](gate-0-backend-endpoints.md) and its [sources](gate-0-backend-endpoints-sources.md): transport and endpoint authority remain unresolved.
+- [Android boot/HAL](gate-0-android17-boot-hal.md) and its [sources](gate-0-android17-boot-hal-sources.md), and [complete Android](gate-0-complete-android.md) and its [sources](gate-0-complete-android-sources.md): selected ARM64 product, kernel, QEMU and release correspondence limits remain in force.
+- [Sensor closure](gate-0-android17-sensor-service-closure.md), [audio closure](gate-0-android17-audio-service-closure.md) and [input compatibility](gate-0-android17-input-compatibility.md): installed service and connected transport are insufficient compatibility evidence.
+- [QEMU integration](gate-0-qemu-worker-integration.md), [containment](gate-0-worker-containment.md), [revocation](gate-0-capability-revocation.md) and [Android lifetime authority](gate-0-android-lifetime-authority.md): no independent ordinary-app cleanup/admission proof is supplied here.
+
+New findings are actual modem handlers/transitions; successful no-ops and pretend delivery; one-slot versus multiple-listener distinctions; guest EOF behavior; peer command accumulation and ambient local control; and the simulator's Android-device build variant. The earlier general channel-reset description must not be read as graceful EOF recovery: this audit finds EOF returns success to the guest reader loop.
+
+## Selected implementation and dependency path
+
+Receipt aliases below identify immutable files: C=Cuttlefish, G=Goldfish, F=framework telephony, P=phone service, B=framework base, I=hardware interfaces, S=SELinux policy. Paths/symbols identify source evidence, not verified binary behavior.
+
+```text
+Guest PhoneGlobals -> PhoneFactory -> framework RIL + RadioConfig
+  -> generated NDK AIDL Radio* services in guest vendor daemon
+  -> Goldfish AtChannel / AtResponse / Parser (ON_CUTTLEFISH)
+  -> guest AF_VSOCK stream to CID_HOST, boot-configured modem port
+  -> guest kernel / virtual transport / hostile VM and backend
+  -> launcher-created listener FD -> modem_simulator / ChannelMonitor
+  -> ModemService subclasses + ThreadLooper + JSON/XML synthetic state
+  -> future derived Persona state provider: responsibility hypothesis only
+```
+
+`C:shared/telephony/device_vendor.mk` selects telephony unless `TARGET_NO_TELEPHONY` is true, defaults `TARGET_USES_CF_RILD` to true and includes `com.google.cf.rild`. Its vendor, non-updatable APEX builds `android.hardware.radio-service.cuttlefish` using `android.hardware.radio.ranchu.defaults` and `-DON_CUTTLEFISH`. It overrides `libril`, `libreference-ril` and `rild`; the selected daemon is not legacy reference-ril. (`C:apex/com.google.cf.rild/Android.bp`; `G:hals/radio/Android.bp`.)
+
+`G:main.cpp` registers config `default`, IMS media `default`, and data/messaging/modem/network/SIM/voice/IMS/SAP `slot1`, with a Binder pool of two. Build/VINTF specify AIDL V5 for config/data/messaging/modem/network/SIM/voice, V4 for IMS and IMS media, and linked SAP V1 (manifest omits its version). No selected HIDL radio path exists. `C:com.google.cf.rild.rc` starts `vendor.ril-daemon` from the APEX as guest user `radio`, groups `radio inet misc audio log readproc wakelock`, capabilities `BLOCK_SUSPEND NET_ADMIN NET_RAW`. File contexts and Goldfish manifest/init/feature declarations are receipted. These are guest-local privileges, not host-app permissions. GSM, IMS, single-registration, carrier-lock and satellite feature declarations do not establish operational service; this main does not register a satellite HAL.
+
+`C:flags_defaults.h`, `flags.cc` and `bootconfig_args.cpp` default modem simulation enabled, one simulator and SIM type 1. Ports derive from base 9600, simulator count and instance index; enabled nonempty ports become `androidboot.modem_simulator_ports`. `G:main.cpp` reads a single integer `ro.boot.modem_simulator_ports` and connects AF_VSOCK/SOCK_STREAM to host CID 2. The alternate `vendor.qemu.vport.modem` file channel is outside `ON_CUTTLEFISH`, not selected. A comma-separated multi-port property does not prove multi-SIM compatibility.
+
+`C:host/commands/run_cvd/launch/modem.cpp` creates a VsockServer per port (with optional userspace-vsock Unix form), passes listener descriptors via `-server_fds`, and starts `ModemSimulatorBinary()` with `-sim_type`. It allows up to three simulator listeners; this is not three guest slots. `G:RadioConfig.cpp` reports one live modem, rejects other counts, and treats slot mapping as successful no-op. USIM/RUIM/ISIM apps and SIM logical channels are not independent physical slots. Existing QEMU/kernel-vhost versus userspace-backend authority blockers apply unchanged; the Unix option does not resolve them.
+
+### Framework dependence and initialization
+
+`P:PhoneGlobals.java` invokes `PhoneFactory.makeDefaultPhones`; `F:PhoneFactory.java` constructs RIL per active modem, RadioConfig, UiccController, SubscriptionManagerService and phone/IMS/data-switching machinery. `F:RIL.java` resolves declared AIDL instances via `ServiceManager.waitForDeclaredService`, links death recipients and clears pending requests with radio-unavailable behavior on proxy reset. A declared-but-absent service can stall resolution; these files establish neither full boot success nor universal boot failure.
+
+HAL registration precedes proof of a working modem. `G:RadioModem.cpp` sends `rilConnected` when indication functions are set, reports stack status true and implements `enableModem` as success without enforcing its requested state. These are not peer-health oracles. `F:UiccController.java` reacts to radio available/unavailable and ICC status, requests card state and disposes unavailable card objects. `F:SubscriptionManagerService.java` reconciles ICCID/slot records, creates local subscription IDs and marks unavailable subscriptions inactive; historical records can remain. SIM removal does not imply database wipe.
+
+The first queued guest conversation lazily opens the channel. `G:main.cpp` initialization issues: `ATE0Q0V1`, `AT+CMEE=1`, `AT+CREG=2`, `AT+CGREG=2`, `AT+CEREG=2`, `AT+CCWA=1`, `AT+CMOD=0`, `AT+CMUT=0`, `AT+CSSN=0,1`, `AT+COLP=0`, `AT+CSCS="HEX"`, `AT+CUSD=1`, `AT+CGEREP=1,0`, `AT+CMGF=0`, then `AT+CFUN?`. Commands require OK; the final query also supplies power state. Matching peer registrations span network, call, misc, supplementary, data and SMS services. Several merely accept configuration with canned OK. A false initialization result reaches LOG_ALWAYS_FATAL_IF and can terminate the daemon; connection alone is insufficient. A missing/nonpositive port makes main return 1 before service startup.
+
+## Command, event and state contract
+
+| Area and source pair | Actual inspected behavior | Limit or failure semantics |
+|---|---|---|
+| Framing: G AtChannel/AtResponse/Parser; C ChannelMonitor/CommandParser | Guest serializes commands with CR, retries interrupted/partial writes, parses typed `+`, `%`, `^` reports and OK/ERROR; multiline COPS/CLCC/CGDCONT waits for OK terminator. SMS uses prompt and Ctrl-Z PDU terminator. Peer normalizes newlines, splits and dispatches. | No authenticated envelope, epoch or AT transaction serial. AIDL serials are local response bookkeeping. Unknown prefixed reports can fail parsing; filtered replies can be ignored until timeout. |
+| Power: G RadioModem; C NetworkService | CFUN updates simulated power; off deregisters, on with ready SIM schedules home registration, otherwise emergency state. Registration can be delayed one second. | `enableModem` is a no-op; stack status is fixed true. Failed conversation in `setRadioPower` returns false without delivering framework response. Three-second AT wait is not guaranteed Binder completion. |
+| SIM presence: G RadioSim; C SimService | XML profile yields card/app state; missing/malformed profile/root yields absent. CPIN state/retries and locks are modeled. Guest card-power state changes reported applications. | `setSimCardPower` changes local HAL state with no-op success toward peer. Complete independent insertion/removal/cache invalidation was not established; CFUN-triggered indications are insufficient. |
+| Identifiers: G RadioModem/RadioSim; C MiscService/SimService | CGSN supplies fixed synthetic equipment identity/version; CIMI/CCID read profile IMSI/ICCID. IMEI parsing separates equipment identity and software version. | Deprecated device-identity/MEID path unsupported/empty. CIMI/CCID do not gate on current SIM status: absent state can retain identifiers. No genuine host lookup found in these functions. |
+| SIM security/channels: G RadioSim; C SimService | PIN/PUK verification/change, retries, SC/FD facilities, XML-backed CRSM/CSIM and CCHO/CCHC/CGLA with three channels. | Limited profile operations and fixed CTS authentication fixtures, not physical-SIM cryptography or carrier credentials. Channels do not establish multi-SIM. No profile contents/credential samples reproduced. |
+| Registration/operator/signal: G RadioNetwork; C NetworkService | CREG/CGREG/CEREG, COPS, CTEC and custom 22-field CSQ implement synthetic registration, operator, technology and signal; operator XML and persisted preferences seed state. GSM/WCDMA/LTE/NR capabilities and remote injection exist. | Custom paired protocol, not generic two-field CSQ. Fixtures do not prove carrier access. Delayed callbacks lack epochs. Roaming reports are synthetic, not real entitlement. |
+| Data: G RadioData; C DataService | Guest configures `buried_eth0`, submits CGDCONT APN/protocol and obtains CGCONTRDP; guest socket/ioctl sets address/netmask/flags. Local map/callbacks expose data-call state. | Missing-interface, bad-protocol/APN and no-response errors exist. Guest NET_ADMIN required; many parameters ignored. Peer activates contexts on definition; CGACT canned OK. CGDATA can return CONNECT but this guest setup does not use it. Guest deactivation does not delete peer contexts. No end-to-end traffic proof. |
+| Calls: G RadioVoice; C CallService | ATD, CLCC, ATA, ATH, CHLD, CMUT operate synthetic state with number/FDN/emergency checks, timers and events. Local calls can auto-answer; local simulator peers exchange remote events. | No carrier dialing or voice media established. Some supplementary/DTMF methods canned success. Simulated completion is not external completion. |
+| SMS: G RadioMessaging; C SmsService/PduParser | CMGS prompt/PDU, CMS errors, storage/deletion, SMSC/broadcast; delayed self-loop or local peer can emit CMT and synthetic status reports. | Other destinations explicitly pretend send success, increment reference and return OK. Remote failure can still reach success. No delivery/verification proof. SMS phase flags are per modem, not per client. |
+| IMS/media/SAP: G RadioIms/ImsMedia/Sap/makeRadioResponseInfo | IMS includes stubs; media open creates session and reports success while ignoring endpoint configuration. SAP includes failure/unsupported replies. NOP helper returns error NONE; deprecated helper REQUEST_NOT_SUPPORTED. | Session callback is not RTP, IMS registration or certification. Feature declarations cannot promote these to operational support. |
+| Persistence/time: C NvramConfig/CfDeviceConfig/SimService/MiscService | Per-instance JSON, instance-or-default XML, saved modem/SIM state. Missing/corrupt NVRAM falls back to defaults. Host clock/local time and Linux timezone file inform time reports. | Default fallback is not Persona authorization. Ambient time/timezone is a host metadata dependency despite no telephony query. Provider must explicitly control persistence and synthetic state. |
+
+### Bounds, disconnects and ordering
+
+`G:AtChannel.cpp/.h` has an uncapped requester deque. Default conversation wait is three seconds **after** writing, not an end-to-end deadline. Connect, blocking write and reader join have no demonstrated bound; zero-byte write does not advance the send loop. Failed conversation resets the channel and later reopening joins the reader, but a blocked reader is not proved to terminate.
+
+In `receiveResponses`, both read branches handle positive and negative results, but zero falls through to `return true`. `readingLoop` therefore continues at EOF instead of reaching reset after the loop. With an incomplete response, the vector is enlarged before each read; zero leaves that enlarged size. Repeated EOF can spin and grow the buffer. Errors other than EINTR and parse failures follow different paths. This is a source-derived counterexample, **NOT RUN**, not an observed exploit or graceful-reconnect claim.
+
+Guest reads start at 128 bytes; incomplete vectors grow by at least 1024 without a cap. Peer `ChannelMonitor::ReadCommand` allocates 4096 bytes but appends `buffer.data()` without `bytes_read`. A full read has no guaranteed NUL terminator, creating an out-of-bounds string-read hazard; embedded NUL truncates input. Its incomplete-command string has no total cap. Thus `kMaxCommandLength` is not a safe command maximum. Throwing `stoi` and integer narrowing do not establish comprehensive malformed-input handling.
+
+Peer clients, callbacks, SMS storage and PDP contexts lack a demonstrated total budget. A comment about valid context IDs is not capacity enforcement. ThreadLooper orders timed callbacks, but neither it nor response dispatch carries a Persona epoch. Peer multiline elements are sent individually, not as one atomic transaction; unsolicited output targets the first accepted RIL client. Guest reports broadcast to conversation/service sinks. Late matching responses can satisfy another conversation because AT has no transaction ID. Ordering and per-method timeout do not close stale-state admission.
+
+## Host operations and authority
+
+The peer is `modem_simulator`, not a physical modem daemon. Entry loads `CuttlefishConfig::Get()` and default instance, configures logs, duplicates inherited listeners, initializes NVRAM and starts threads. Missing configuration is not an app-safe startup contract. Files, instance identity and descriptor ownership must agree before AT service.
+
+| Operation | Authority classification | Reference and PDVA consequence |
+|---|---|---|
+| State parsing, timers and PDU transformation | Ordinary installed-app mechanism in principle; exact package UNKNOWN | No carrier privilege intrinsically needed; native build, budgets and hostile-input containment unqualified. |
+| Restricted host telephony/raw modem/real SIM/subscriber database | Privileged/system/platform-signed or carrier/OEM authority depending on operation | Not required by inspected simulator paths. No blanket app grant, host deputy or Real fallback. A host API grant would not itself authorize forwarding. |
+| Radio UID, NET_ADMIN/NET_RAW, radio Binder registration | Guest-local | Guest init/APEX policy and generated interfaces grant no host authority. |
+| Reference vsock listener/virtual transport | Specialized kernel/device authority; unchanged ordinary-app mechanism UNSUPPORTED | Prior endpoint/kernel-vhost blockers apply. Port/name and optional Unix form are not authentication. |
+| Monitor and remote simulator sockets | Local AF_UNIX mechanism; installed/isolated-app SELinux reachability UNKNOWN | Abstract name derives from simulator and instance ID. Mode 0666 is not abstract-socket authentication. Remotes are local Unix endpoints, not carrier/Internet services. |
+| Config/profile/NVRAM/log paths and inherited FDs | Ordinary private-file/FD mechanisms possible; exact reference mapping UNKNOWN | Reference launcher supplies ambient paths/FDs; app-owned bounded capability and revocation contract absent. |
+| Separate process and native shared libraries | Android packaging possible in principle; exact execution/SELinux/toolchain UNKNOWN | Platform device variant is not an installed-app build. Whole-tree cleanup remains unresolved. |
+| run_cvd setup, stop and kill fallback | Linux shell/development tooling, not ordinary installed-app API | No import as app solution, root grant or specialized host SELinux proposed. |
+| Real external calling/SMS/registration | Carrier/OEM/platform authority and real service | UNSUPPORTED by synthetic handlers and outside authorization. |
+| Persona admission, independent revocation/restart lockout | Required trusted-owner mechanism; UNKNOWN implementation | STOP/ack, Binder death or guest disconnect does not prove every surviving FD/process gone. |
+
+`C:main.cpp` accepts four-byte monitor messages using blocking `ReadExact`: STOP saves/acknowledges before exit; REM plus modem selector attaches a remote client. No PDVA authentication, epoch or deadline is established. Launcher kill fallback is not an Android independent cleanup oracle. `ModemService::ConnectToRemoteCvd` opens a dynamically chosen **local abstract Unix** endpoint; call/SMS destination can influence selection. These and inherited vsock/Unix listeners are the inspected peer network destinations. Data response addresses are configuration, not evidence the peer opens external IP connections.
+
+REMOTE client designation is not authorization: dispatcher handlers are not generally restricted by client type (unsupported-response behavior differs). Guest-originated remote vocabulary and connection-inducing commands require an allowlist/ownership contract. No arbitrary syscall deputy was established, but that does not authenticate controls. `S:app.te` and `isolated_app_all.te` reinforce domain restrictions independent of Unix API availability; Linux results cannot certify isolated-app access.
+
+## Persona, subscriptions and networking
+
+The [Persona policy](../persona-privacy-policy.md) remains normative. **Real** needs explicit narrow owner authorization and genuinely supported data for that method. **Decoy** requires consistent synthetic guest state. **Empty** and **Deny** preserve method-specific absence/refusal, not universal blanks or successful AT replies. No automatic Real fallback. Reference fixtures/persistence do not implement these modes.
+
+| State | Distinction and gap |
+|---|---|
+| IMEI/MEID/software version | Different equipment identity methods; CGSN fixture does not establish MEID or genuine hardware identity. |
+| IMSI/ICCID/subscription ID | Subscriber identity, card/profile identity and local framework database key have different lifetimes. Never one fake token for all. |
+| Slot/SIM/apps/channels | One slot; apps/channels are not slots. Absence needs appropriate subscriber method/cache invalidation across layers. |
+| SIM carrier/MCC-MNC/country versus serving network/country | May differ for explicitly declared roaming. Undeclared mismatch is inconsistent state, not realistic camouflage. |
+| Roaming/emergency/signal/service | Signal does not imply registered data/voice. Off, absent/locked SIM, emergency-only and delayed registration must be coherent. Simulated emergency status authorizes no real emergency call. |
+| Phone number | Metadata is not a reachable line. Missing metadata is method-specific; no delivery, verification or certification follows. |
+| Subscriptions/callbacks | Historical records outlive active membership. Old slot/subId/Persona callbacks cannot enter a new epoch; reference lacks that epoch. |
+| Permissions/roles | Guest framework permission, carrier-role, target-SDK and method-specific checks still apply. Guest grant is not host grant. B TelephonyManager/SubscriptionManager have distinct null/empty/error contracts, not a universal replacement rule. |
+
+A future trusted owner could retain the Persona master outside VM/backend/peer and release only minimum derived synthetic snapshots/transitions. This is **CONDITIONAL**, not implemented mediation. Master database, secrets and genuine host identity must not enter the peer. Owner loss requires revoked admission and lockout until independently established cleanup; reloading NVRAM/defaults must not reauthorize.
+
+Synthetic registration, carrier identity, guest `buried_eth0`, VM transport, host routing, active external host VPN, public IP geography and real calls/SMS are separate layers. Data-call success proves no packet traversal. Synthetic country proves no IP geography. VPN route and loss/change enforcement remain unproved. PDVA must not occupy the host VPN slot or introduce VpnService without Tony's explicit approval. No real phone-service forwarding is proposed.
+
+## Failure and negative controls
+
+Every row is **NOT RUN**. Oracles specify later independent review/testing requirements, not passing tests. Runtime needs separate authorization; self-confirming mocks are not Android compatibility evidence.
+
+| Condition | Source-grounded issue | Required negative oracle |
+|---|---|---|
+| Required port missing | G main needs boot configuration/listener. | APEX/Binder registration cannot imply readiness; finite opening failure. |
+| HAL before peer | Lazy connect/init independent of registration. | Reject rilConnected/stack-true as readiness; bounded unavailable state. |
+| Wrong endpoint | Port/name is routing only. | Valid-looking replies from wrong owner/instance rejected. |
+| Peer exits during init | EOF loop and incomplete initialization. | No spin/growth/orphan reader or indefinite framework request. |
+| Disconnect after registration | EOF returns true; stale state possible. | Invalidate registration, terminate reader boundedly, independently account resources. |
+| Reconnect crosses epoch/instance | No wire epoch/authentication. | Reject old replies/events; cleanup/admission before reconnect. |
+| Oversized/malformed response | Uncapped incomplete vector/parser failure. | Total byte/time limits including conversion errors. |
+| Unknown command/event | CME error; REMOTE may suppress; unknown prefix can break parser. | Deterministic refusal/bounded drop, never implicit readiness. |
+| Partial command/response | Delimiter-dependent accumulation. | Finite bytes/time, including full 4096-byte read and embedded NUL. |
+| Missing timeout | Connect/write/join/ReadExact outside wait. | Whole-operation and cleanup deadline. |
+| Excess queued commands | Uncapped requester/scheduler. | Admission quota and overload refusal. |
+| Unbounded state/memory | Clients/SMS/contexts/buffers lack budget. | Independent process/resource cap, including distinct contexts and partial input. |
+| SIM absent, identifiers populated | CIMI/CCID ignore SIM state. | Method-specific absence/refusal and stale-cache checks. |
+| Carrier/SIM/network country mismatch | Independent fixtures. | Explicit home/serving/roaming meaning; no genuine metadata leak. |
+| Subscription changes, stale callbacks | Reconciliation plus unversioned timers. | Reject old slot/subId/Persona events, including retained history. |
+| Signal without compatible service | Independently mutable reports. | Signal cannot promote emergency/unavailable to operational service. |
+| Host identifiers/SIM credentials forwarded | No PDVA release policy in peer. | Owner-side data-flow review rejects genuine/master inputs and unrestricted APIs. |
+| Guest command obtains unauthorized operation | Remote vocabulary/local connections unadmitted. | Command allowlist and destination ownership; REMOTE label grants nothing. |
+| Successful SMS/call without delivery | Pretend success/auto-answer. | Explicit synthetic semantics; no external-delivery/verification inference. |
+| Worker stops, peer/FD survives | Cooperative STOP/fallback insufficient. | Independent surviving-resource challenge; restart prohibited on uncertainty. |
+| Owner/Persona state lost | Default/JSON reload can resume. | Durable lockout, no automatic reauthorization; new authenticated admission. |
+
+## Supply chain, build and licenses
+
+`C:host/commands/modem_simulator/Android.bp` defines `modem_simulator` with `cuttlefish_host` and `modem_simulator_base`. Root `C:Android.bp` defines `cuttlefish_host` with **host_supported: true, device_supported: true, vendor_available: true**. Calling it Linux-host-only would be incorrect. A platform/vendor device variant does not prove NDK-only dependencies, app packaging, isolated UID execution or authority.
+
+Direct shared dependencies: `libbase`, `libcuttlefish_fs`, `libcuttlefish_utils`, `libjsoncpp`, `libprotobuf-cpp-full`. Static dependencies: `libcuttlefish_host_config`, `libcuttlefish_guest_config_proto`, `libgflags`, `libtinyxml2`. Exceptions and inherited compiler defaults apply. Config/fs/utils add configuration, environment/result, logging, compression and dependency-injection dependencies. `run_cvd` has a broader graph, not a minimal app peer. Exact defining/generation closure of `libcuttlefish_guest_config_proto` was not resolved; guessed missing paths are excluded from receipts.
+
+Guest uses C++20, generated versioned NDK AIDL and platform base, Binder NDK, crypto, cutils, log and utils libraries. `I:radio/aidl/Android.bp` and guest target establish interface dependencies, not generated output/linked ABI correspondence. Prior selected kernel virtio/vsock and QEMU assumptions remain; no replacement selected.
+
+Missing: full transitive revision/license manifest, Soong product output/generated properties/VINTF/configuration, exact ARM64 ELF/dependencies, compiler/sysroot/runtime correspondence, supported app library surface, load paths, minimum host API, ABI/page-size compatibility, budgets and independent revocation/update behavior. No native peer build/link/binary correspondence produced. Source variant does not identify a prebuilt's contents.
+
+Cuttlefish root declares Apache-2.0 and MIT license kinds; Goldfish root declares Apache-2.0 and BSD. Both root package declarations note unidentified license-text files; inspected source headers carry Apache-2.0 notices. A missing guessed root NOTICE URL does not remove obligations. Third-party/generated/distributed artifacts require their own exact license/NOTICE review. Receipts are not a complete redistribution bill of materials or legal clearance. No dependency adopted, license stripped or binary imported. Custom protocol/stubs/framework coupling require ongoing compatibility maintenance.
+
+## Smallest next falsifiable proof
+
+Independently reproduce **one exact-source EOF counterexample** at recorded G AtChannel.cpp/.h hashes: follow incomplete typed response then EOF through `receiveResponses`, reader loop and reset continuation. Determine whether zero read terminates, whether vector stays enlarged and whether reset is reached. Disagreement must identify the bounding/terminating branch or a different release-correspondent artifact. This bounded source-only proof needs no simulator/network execution and tests the current SCOPED STOP, not Android compatibility. Even a corrected EOF result leaves other bounds/build/authority/Persona gaps. Subsequent implementation/build/runtime needs separate review and authorization.
+
+## Validation and observations
+
+Only public source text and existing repository/CI evidence examined. No phone, USB, ADB, host telephony query, SIM interaction, call, SMS, modem/network-service execution, guest boot, QEMU/emulator, APK installation or VPN change. No production code, permissions, architecture, dependency or workflow changed. No identity samples, genuine identifiers, location records, credentials, private research paths or proprietary artifacts included. Public profiles are hashed/linked without reproducing contents.
+
+Local validation: foundation and harness validators passed; repository suite ran 141 tests with four platform-dependent skips; readiness 27, offline-image 45 and frame-copy four tests passed. All 74 downloaded source hashes were recomputed and matched the ledger. Changed-document links, full diff, whitespace, modes and public privacy were checked. These existing offline controls are not radio tests. Foundation workflow applies; Android and QEMU workflows are path-filtered out for these two Markdown files. Linux native/process controls were not rerun locally for this documentation-only change. New PR hosted checks remain **pending/unobserved** until independent review; baseline success does not predict them. All radio/Android experiments remain **NOT RUN**.
+
+## Immutable source receipts
+
+SHA-256 covers decoded Gitiles `?format=TEXT` file bytes, not base64 or HTML. Reproduce by fetching immutable linked file with that query, decoding without newline conversion and hashing. C/G/B/I/S reuse established Android 17 pins; F/P newly resolved `android-17.0.0_r1` commit metadata extend the framework trace, not generated release/prebuilt correspondence.
+
+| Alias | Repository | Immutable commit |
+|---|---|---|
+| C | device/google/cuttlefish | `283645aacf6cdb56cc31a9362f54d412dbc132a1` |
+| G | device/generic/goldfish | `296e55aa0244e8929e393e00e34471fef2a5d662` |
+| B | platform/frameworks/base | `94b4c163b7dfe5ce3607f7bb8456f9573f7de57d` |
+| F | platform/frameworks/opt/telephony | `aef289516bea6118d88cd45c63742cd4abe2c596` |
+| P | platform/packages/services/Telephony | `4a3830d926a5a84a6f5f7aab8d27e245e7880a68` |
+| I | platform/hardware/interfaces | `0162af698935100a590b7359581ac8b1b80693e5` |
+| S | platform/system/sepolicy | `e066568e98d86db31a9346d30977f3632fa7073c` |
+
+| Immutable source | SHA-256 |
+|---|---|
+| [C: shared/telephony/device_vendor.mk](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/shared/telephony/device_vendor.mk) | `8e5f7480bdf713649614dce3335b76d1b47f5fc9cec138a5fa7c4ac475fe7b43` |
+| [C: apex/com.google.cf.rild/Android.bp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/apex/com.google.cf.rild/Android.bp) | `1d9e868739afff9b3d82ef6d447bafbf3be1fa8a191ff3695ccd89622acd5c4d` |
+| [C: host/commands/run_cvd/launch/modem.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/run_cvd/launch/modem.cpp) | `a786ea3697c43399b0e835d9d9e9b9fb2cb48d929c74cc1be02497f7353ec113` |
+| [C: host/commands/modem_simulator/Android.bp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/Android.bp) | `e498b217c51f63728de289d44827cd12788595667660401a719c0202f9bfd7a6` |
+| [C: host/commands/modem_simulator/main.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/main.cpp) | `7307cfad095c227cc7300485fa7ec1bd81723901adfd369b2ad294213a1ba0db` |
+| [C: host/commands/modem_simulator/modem_simulator.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/modem_simulator.cpp) | `3863a8d15ee7c094cd7c411039e808d6a1a34f09194e2235a32efd6aba5297fc` |
+| [C: host/commands/modem_simulator/channel_monitor.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/channel_monitor.cpp) | `46a2a7d825860ab87658597ce53e68e7b56002fee270e557a11fb098619e1031` |
+| [C: host/commands/modem_simulator/modem_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/modem_service.cpp) | `98c91de50ee25edfa428317a76b10be9c395ba4a611a27fe11fc1f70a2e3229f` |
+| [C: host/commands/modem_simulator/command_parser.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/command_parser.cpp) | `8f0c212744eaaed8a8f22d23d55baff06e5dd0e7ac31522450ffe7926487294e` |
+| [G: hals/radio/main.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/main.cpp) | `6f1a94ab47996fa119fc5561a8075b21c4e4f2d5201752645f5c143714355a38` |
+| [G: hals/radio/Android.bp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/Android.bp) | `ddbcef89fdab47bb41e89ed9a0e827f06660f3ee0e0c13fd0d145cb31e5d955f` |
+| [G: hals/radio/AtChannel.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/AtChannel.cpp) | `df0b156952b4f41a9f97a3b74de7113726700cd550f57718b360bd38fa5f4a33` |
+| [G: hals/radio/AtChannel.h](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/AtChannel.h) | `4f164375ef824930f0b2712836e4c51bf02bf25cf7eb92bb8e116987f272615b` |
+| [G: hals/radio/AtResponse.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/AtResponse.cpp) | `899b8ff8124fe0aaf22360e7fca4b606f679cd7b815c6f99feea8d6b6bc94282` |
+| [G: hals/radio/Parser.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/Parser.cpp) | `e516eae77d42e49ccc168624009fde873afa751598d67038402f3379354b43b3` |
+| [G: hals/radio/atCmds.h](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/atCmds.h) | `9bd569a72deff554acf4eb1a0877e6397e8b7bb04b456fab951ccc9f6cffbc70` |
+| [G: hals/radio/RadioConfig.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioConfig.cpp) | `851365c6f19c09a9a5d1d4fc7c4b66ac26af57ae68060df970addf2287b91bec` |
+| [G: hals/radio/RadioData.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioData.cpp) | `5f20f8db4cd26cddf559c0971bc14b92fc09042437fc4d75c705b6509b8ad46c` |
+| [G: hals/radio/RadioSim.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioSim.cpp) | `eb285697b3182d6767834b9f7c14b1d91ff0634d21c7227a7dc3a504bd17f0b3` |
+| [G: hals/radio/RadioModem.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioModem.cpp) | `0aca89af262c4f0f94d3f18fa64375c889f9254be7058f51806642ad73721b2d` |
+| [G: hals/radio/RadioNetwork.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioNetwork.cpp) | `c600e96d61498721afad7d00e58f1227f27b5858a1b61f6e866605f92bbe7593` |
+| [G: hals/radio/RadioMessaging.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioMessaging.cpp) | `c0fc22e90f8db1c95db08d36bc973a68b01ca53c2caf7ec84a6e9cd0f5323164` |
+| [G: hals/radio/RadioVoice.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioVoice.cpp) | `7382e115c9c0aefb4b40201912189c4bb7d818db04440bb81e1c7e34600df0fe` |
+| [G: hals/radio/RadioIms.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioIms.cpp) | `d97d73abcd03407503a05ee664c0d443816cc7734f96b4dd4326f924f57f9e17` |
+| [G: hals/radio/Sap.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/Sap.cpp) | `a42990bce8b868fd36b297e75bcfc6b55daa041d4f2d08f5e4cab282c845aa34` |
+| [G: hals/radio/android.hardware.radio.ranchu.rc](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/android.hardware.radio.ranchu.rc) | `cabafbdb1bca549a835c5d248ef62a6c6d39719320ace4f60b523a9658259f4a` |
+| [G: hals/radio/android.hardware.radio.ranchu.xml](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/android.hardware.radio.ranchu.xml) | `20437a1c87975752149c5e30539286c436a6e2ec0d8d1eeb0ddb531ab8ce64c7` |
+| [G: hals/radio/manifest.radio.xml](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/manifest.radio.xml) | `6586b1bf19d4d7bbd6e822f95e1bc17e6b42de5b814fb0f76cb6a9228edbb2a9` |
+| [G: hals/radio/init.system_ext.radio.rc](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/init.system_ext.radio.rc) | `72f5cb03e720a3c659d086808db1a9a655e02198be8c557d91f5a3989b192185` |
+| [C: host/commands/modem_simulator/call_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/call_service.cpp) | `f28c7acd53f1ed0075230aa62d8f477d06053a8bbe2aa49aae8d9724e719c02b` |
+| [C: host/commands/modem_simulator/data_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/data_service.cpp) | `2f6dae74f5460417b370be76dda3baf1e908715e21a6698860429e15c397bd99` |
+| [C: host/commands/modem_simulator/network_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/network_service.cpp) | `a8c79b64781e19e4fe6b58689187a4e06048e0acf22900a7a4b796c71d02697a` |
+| [C: host/commands/modem_simulator/sim_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/sim_service.cpp) | `daa580259f1a6e92de6558b8086ad9d287ab0d022176eadb3ade31ab9d001741` |
+| [C: host/commands/modem_simulator/sms_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/sms_service.cpp) | `b6b944f04319504ea9f0f008315cb250d3ac1215dbee425a5908e55f2e4a4f9b` |
+| [C: host/commands/modem_simulator/misc_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/misc_service.cpp) | `d789e54c261c923471fd91d324a868f2a2e2733883f1aadf2a885e6e5707ca33` |
+| [C: host/commands/modem_simulator/sup_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/sup_service.cpp) | `a753877c22e2a5fb22151ba453d546709735e8d80db6aa0e9aa73c1726f7a6bd` |
+| [C: host/commands/modem_simulator/stk_service.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/stk_service.cpp) | `fd9ead0d4e2eb289150b8f75c3e858db181ff133742bd2a313c80208309774ab` |
+| [C: host/commands/modem_simulator/thread_looper.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/thread_looper.cpp) | `4d35f1e3272c089812a077068ad572839348ca7ce700bb0e92bce2f84b656d15` |
+| [C: host/commands/modem_simulator/thread_looper.h](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/thread_looper.h) | `66fb25c39f9f27dbab8a04fcc01cb879b976b9f7e413158ef04e3f713d5bdde1` |
+| [C: host/commands/modem_simulator/nvram_config.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/nvram_config.cpp) | `96d8f46d3ed223d268ad88bc7497c900d844d3b6954e1bb567c62da21d0d9f4d` |
+| [C: host/commands/modem_simulator/cf_device_config.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/cf_device_config.cpp) | `f6dc66f523ae13b1191bfb335e1a449d22963bfd2fa999bc162f6dbb70918ef1` |
+| [C: host/commands/modem_simulator/pdu_parser.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/pdu_parser.cpp) | `a5bdadca1c716c6aa21d87c6c912d756a1947151b182d205963a7cb8ea1c93f7` |
+| [C: apex/com.google.cf.rild/com.google.cf.rild.rc](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/apex/com.google.cf.rild/com.google.cf.rild.rc) | `1b73a3ee555b50403441630a1ed0b59e3e6523dc40d6051f35c5df4749e7c4d0` |
+| [C: apex/com.google.cf.rild/file_contexts](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/apex/com.google.cf.rild/file_contexts) | `81743d61c4cd3d7d8c964e3fc9c909894ceaa8cd0d1ee5d51421294dfdc6bea6` |
+| [C: Android.bp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/Android.bp) | `2580299ebf86ef24dbf06e497dae23ae91d8db61262fd9aea07721dee234143b` |
+| [C: host/commands/modem_simulator/channel_monitor.h](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/channel_monitor.h) | `d435c58c63d23516177cc8aa0c1d63a6846662448b28eaa1a8b0d749c87536de` |
+| [C: host/commands/modem_simulator/modem_service.h](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/modem_service.h) | `cb3907b7dda8ecb12a9d1385b3ac340f22654344b49ee82b1c69af2a5140bc17` |
+| [C: host/commands/modem_simulator/network_service.h](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/network_service.h) | `0677061a7b121fc42e83436a57ad7fb374132330e4abd7073a359629df9fed3a` |
+| [C: host/commands/modem_simulator/files/iccprofile_for_sim0.xml](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/files/iccprofile_for_sim0.xml) | `462cc26ddaa9d6c470a2d9415771c80e323b526b1863f099accb298955b14db3` |
+| [C: host/commands/modem_simulator/files/numeric_operator.xml](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/modem_simulator/files/numeric_operator.xml) | `88acf0911ac7fa29036d2b8b680f3dc884631128b36aded6fa7e90c2b1b29c02` |
+| [C: host/commands/assemble_cvd/flags_defaults.h](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/assemble_cvd/flags_defaults.h) | `c2f95f666070036d10c9160d11fcc080a864c4df3da60d98747bdadfcb5f310a` |
+| [C: host/commands/assemble_cvd/flags.cc](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/assemble_cvd/flags.cc) | `52ba2555c01639b68dfc348fce73124e4b7afa35d82a93e0b1a58c6c59254de9` |
+| [C: host/commands/assemble_cvd/bootconfig_args.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/assemble_cvd/bootconfig_args.cpp) | `64a5a2be99fa76080a16c45ba38831c264472ff3d882aa4bb9d79eb687d62117` |
+| [G: hals/radio/ImsMedia.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/ImsMedia.cpp) | `054b531107eb6d2de0382b5b8f7dcf8ed7f31de4dc4a49a57c245b46b6fd752f` |
+| [G: hals/radio/makeRadioResponseInfo.cpp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/makeRadioResponseInfo.cpp) | `af0a555b3857b577d5055f12888e7cf1fe8997aa4de350745ad9ba1b568d8072` |
+| [G: hals/radio/RadioSim.h](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/RadioSim.h) | `ce728c36c19a0b895050b9af5bc0066a0bbe1240851081034c13c3d9f081a356` |
+| [G: Android.bp](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/Android.bp) | `d887e70bf8a117a364de2750dbf37ccf3ff4140e552137067d3508cef15e6134` |
+| [B: telephony/java/android/telephony/TelephonyManager.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/telephony/java/android/telephony/TelephonyManager.java) | `3c981b5d64b9682cf95b4e20e3eb8383575c54efbf7cd4916031399e9bc89eca` |
+| [B: telephony/java/android/telephony/SubscriptionManager.java](https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/telephony/java/android/telephony/SubscriptionManager.java) | `190a6f4a3409bf54b008f3d1df31305c85ac59ea85f454a27d291b2172a1f163` |
+| [F: src/java/com/android/internal/telephony/PhoneFactory.java](https://android.googlesource.com/platform/frameworks/opt/telephony/+/aef289516bea6118d88cd45c63742cd4abe2c596/src/java/com/android/internal/telephony/PhoneFactory.java) | `782a20c744289c98cd301c2cfd191651714cbc446471c109616937f298f52597` |
+| [F: src/java/com/android/internal/telephony/RIL.java](https://android.googlesource.com/platform/frameworks/opt/telephony/+/aef289516bea6118d88cd45c63742cd4abe2c596/src/java/com/android/internal/telephony/RIL.java) | `5d897d9bd41c260327e4ccffb7a5675b51c45949ca3d7b43414b455adf457529` |
+| [F: src/java/com/android/internal/telephony/uicc/UiccController.java](https://android.googlesource.com/platform/frameworks/opt/telephony/+/aef289516bea6118d88cd45c63742cd4abe2c596/src/java/com/android/internal/telephony/uicc/UiccController.java) | `e25c55c9dbea2006458f7e2c2a8e783fb348185d394c2208cc347409ebf4ba0f` |
+| [F: src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java](https://android.googlesource.com/platform/frameworks/opt/telephony/+/aef289516bea6118d88cd45c63742cd4abe2c596/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java) | `9403c77312f874fa74a189f51dbedc68e865d1731391ab0598c6ea2b6f188aea` |
+| [P: src/com/android/phone/PhoneGlobals.java](https://android.googlesource.com/platform/packages/services/Telephony/+/4a3830d926a5a84a6f5f7aab8d27e245e7880a68/src/com/android/phone/PhoneGlobals.java) | `eb17ef1e0b387f4cd42c41ce180e6202e73a2645ae39f6db539bb96f3f922dcb` |
+| [G: hals/radio/makeRadioResponseInfo.h](https://android.googlesource.com/device/generic/goldfish/+/296e55aa0244e8929e393e00e34471fef2a5d662/hals/radio/makeRadioResponseInfo.h) | `86442c949c2079408a863317a6b1adc99f99905df31aa7b4ab21332e1a7e3645` |
+| [C: host/libs/config/Android.bp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/libs/config/Android.bp) | `c3b4fe279ed122ddf773a2d72c6411278510c1310030746a839050c546217238` |
+| [C: common/libs/fs/Android.bp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/common/libs/fs/Android.bp) | `d250e9ed056858f4ed484c0f215bc47e0aa66b10d766c8d7c8dbfc0d945e4266` |
+| [C: host/libs/config/known_paths.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/libs/config/known_paths.cpp) | `095650a575ee37f334921ed11c0669c04e2803d84cf5b1896ded4c296a328f33` |
+| [C: host/commands/run_cvd/Android.bp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/host/commands/run_cvd/Android.bp) | `81c95739a60abbebfaaf7b3c1076d557d9dee52f69ab7f46ddfc84356998a264` |
+| [C: common/libs/utils/Android.bp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/common/libs/utils/Android.bp) | `677aab3bf007e2130e6d923c88f91131705d8430f4fc2839b081561ef9103aec` |
+| [C: common/libs/fs/shared_fd.cpp](https://android.googlesource.com/device/google/cuttlefish/+/283645aacf6cdb56cc31a9362f54d412dbc132a1/common/libs/fs/shared_fd.cpp) | `7b14de57239c6d7383e96b6420acdeec841a04d6862fa3208da164932e633d1e` |
+| [I: radio/aidl/Android.bp](https://android.googlesource.com/platform/hardware/interfaces/+/0162af698935100a590b7359581ac8b1b80693e5/radio/aidl/Android.bp) | `9d152b6ca18be438a1a5b793e5874fbb8a100b83b086671b96b3d9531db54a35` |
+| [S: private/app.te](https://android.googlesource.com/platform/system/sepolicy/+/e066568e98d86db31a9346d30977f3632fa7073c/private/app.te) | `6a18ae176e35cf19ab022cc75887a5c77aae55f00e8a1ebddd7ebd75aea64525` |
+| [S: private/isolated_app_all.te](https://android.googlesource.com/platform/system/sepolicy/+/e066568e98d86db31a9346d30977f3632fa7073c/private/isolated_app_all.te) | `e65adb199d7fc26cd716f4e376f6068edcd3c350647f121e8d5937fa9bca4ad9` |

@@ -6,6 +6,7 @@ requirements. Use the terminology and record fields in
 
 | Record | Role and scope |
 |---|---|
+| [Android 17 radio/modem/SIM closure](gate-0-android17-radio-service-closure.md) | Source-only scoped STOP for bounded ordinary-app qualification; selected AIDL/AT pairing, synthetic state, EOF/parser defects, local control authority and build/license gaps. Persona enforcement conditional; no peer build or runtime test. |
 | [Android 17 audio-service closure](gate-0-android17-audio-service-closure.md) | Source-only scoped STOP for unchanged AC97/none output; selected AIDL/ALSA path, separate virtio-sound socket peer, stub/loss false positives and model-prebuilt gaps. Software audio and ordinary host playback conditional; capture authorization and hostile-worker enforcement Unknown. No build, bridge or recording. |
 | [Android 17 input compatibility](gate-0-android17-input-compatibility.md) | Source-only STOP for unchanged mouse-only selection and constrained build; conditional virtio multitouch recognition, BTN_TOUCH/slot/loss and keyboard navigation gaps, display/IME and trusted-manager contracts Unknown. No bridge or runtime test. |
 | [Android 17 sensor-service closure](gate-0-android17-sensor-service-closure.md) | Source-only STOP for unchanged host-only simulator and ambient FIFO arrangement; exact AIDL/sub-HAL, hvc18/19, framing, missing scalar reports, stale caches and host authority traced. An Android peer remains conditional; Persona enforcement and runtime Unknown. |
