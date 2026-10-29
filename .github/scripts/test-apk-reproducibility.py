@@ -164,6 +164,35 @@ class ComparisonTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 repro.compare(*args)
 
+    def test_byte_ranges_include_appended_bytes_and_bound_reporting(self):
+        result = repro.byte_differences(b"abcd", b"xbcd!")
+        self.assertEqual(result["ranges"], [[0, 1], [4, 5]])
+        self.assertEqual(result["different_bytes"], 2)
+        self.assertTrue(result["ranges_complete"])
+        result = repro.byte_differences(b"ab" * 5000, b"ac" * 5000)
+        self.assertEqual(result["range_count"], 5000)
+        self.assertEqual(result["different_bytes"], 5000)
+        self.assertFalse(result["ranges_complete"])
+
+    def test_diagnostic_elf_section_hashes_detect_note_only_change(self):
+        import struct
+        raw = bytearray(512)
+        raw[:6] = b"\x7fELF\x02\x01"
+        struct.pack_into("<Q", raw, 40, 64)
+        struct.pack_into("<HHH", raw, 58, 64, 3, 1)
+        names = b"\0.shstrtab\0.note.gnu.build-id\0"
+        raw[256:256 + len(names)] = names
+        struct.pack_into("<IIQQQQIIQQ", raw, 128, 1, 3, 0, 0, 256, len(names), 0, 0, 1, 0)
+        struct.pack_into("<IIQQQQIIQQ", raw, 192, 11, 7, 0, 0, 320, 20, 0, 0, 4, 0)
+        before = repro.elf_sections(raw)
+        raw[325] = 1
+        after = repro.elf_sections(raw)
+        self.assertEqual(before[0], after[0])
+        self.assertNotEqual(before[1]["sha256"], after[1]["sha256"])
+        self.assertEqual(before[1]["name"], ".note.gnu.build-id")
+        with self.assertRaises(ValueError):
+            repro.elf_sections(raw[:100])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

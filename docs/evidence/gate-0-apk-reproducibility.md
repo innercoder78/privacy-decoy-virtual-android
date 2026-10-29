@@ -9,9 +9,11 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-At initial experiment publication to the research branch, the hosted pair is
-**NOT RUN**; local fixture success is not an independent APK build result.
-The final disposition must be recorded before publishing the single evidence PR.
+The first actual hosted pair **failed signed-byte equality**: both JNI shared
+libraries differ despite equal declared inputs and the same verified signer.
+Local fixture success is not an independent APK build result. The diagnostic
+continuation retains that negative and adds byte-range/ELF-section reporting;
+it does not alter build inputs or the equality acceptance criterion.
 
 The procedure is original PDVA standard-library code in
 [apk-reproducibility.py](../../.github/scripts/apk-reproducibility.py), with
@@ -150,7 +152,7 @@ passes signed-byte equality. The result is recomputed from the two actual files
 before acceptance, rejecting partial/substituted result objects. Same path twice,
 different source/tools/dependencies/configuration or missing input records fail.
 
-Twelve local deterministic test methods cover an explicitly unsigned fixture
+Fourteen local deterministic test methods cover an explicitly unsigned fixture
 positive; mutations to all seven fixture entries (manifest, resources, policy,
 DEX and three native paths); each missing entry and an extra entry; timestamp,
 compression and order changes; different/missing source and build inputs;
@@ -159,16 +161,52 @@ truncated/duplicate files; a fake signing-region mutation; malformed/partial/
 substituted results; same-file substitution and a nonzero child build command.
 Fixtures are not signed, installable, safe or independently compiled APKs.
 Their passing assertions demonstrate comparator behavior only.
+Two diagnostic controls check exact half-open differing-byte ranges, explicit
+4096-range reporting limits, and ELF section labeling/hash differences. A fixture
+initially omitted the leading dot in its expected section name; that fixture
+assertion was corrected. No APK expectation or equality rule was changed.
 
 ## Results and limits
 
-Hosted pair: **NOT RUN at initial branch commit**. Whole signed-byte equality,
-per-entry actual APK equality and signature correspondence remain **Unknown**
-until the actual run is recorded. No synthetic fixture or historical APK is a
-substitute. Local comparison controls: 12 passed; source/foundation checks passed.
+First experiment: orchestration commit `42bc7e5435629952f48d6635d6713ba113f12b12`,
+[run 40907833663](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40907833663),
+job `123567353042`, Ubuntu image `20261025.353.1`. Both fresh release builds
+completed; both existing offline inspections and apksigner verification passed.
+The comparison correctly exited 1 on the differing APKs. All preceding Android
+build/JVM/lint/static/compiled-policy/receipt steps and 12 comparison controls
+passed. This is an observed negative experiment, not infrastructure failure.
+
+| First pair | Whole signed APK SHA-256 (both 81,312 bytes) |
+|---|---|
+| A | `e865a49b4759fd6e00b8e5115c0b3e2471e8852e4ed2b7fb4e21aa97e6b8bac8` |
+| B | `17eaf77645e24a2520b18068146ba08b27f22e7cba4f4631deb6806413845021` |
+
+Nine entries in the same order, identical timestamps and methods. All entry
+contents match except `lib/arm64-v8a/libsubstrate.so` (20,200 bytes) and
+`lib/x86_64/libsubstrate.so` (13,936 bytes). ARM64 compressed size is 8,534 versus
+8,533, shifting later local-header offsets. Native CRCs differ; raw local records,
+signing block and central directory differ, while EOCD matches. This is **not
+solely a signing-key or ZIP-timestamp difference**. Manifest/resource entries
+have identical contents despite shifted offsets. No all-entry content equality
+claim is supported.
+
+Both signatures verify using v2; v1, v3, v3.1 and v4 report false. The common
+public certificate SHA-256 is
+`2f9045aeeb87303a7b371fa691bf26045c1406f1817bebb55e058e39c8cb6dbb`.
+The independently populated Maven inventory is 323 files in each, aggregate
+SHA-256 `d8e8ff7857784e9872a777dc7017b423e5232e4d0ae9bf894684f8f14d869d4a`.
+That count describes this resolved cache, not a change to the historical
+322-artifact adoption ledger or verification metadata.
+
+The diagnostic continuation's hosted outcome is pending at this intermediate
+branch commit. It must be recorded before PR publication. Existing artifacts
+are neither downloaded nor substituted. Local repository regressions: 149 total,
+145 passed and four existing Windows skips (host C, two symlink cases and POSIX
+executable modes). Desktop receipt: 28 passed; image: 45 passed; frame: four
+passed. Foundation/manifest/whitespace passed. Local Python is 3.12.14.
 Full local Gradle/native/APK/device execution is NOT RUN because Windows native
-host qualification remains unresolved. Additional regression outcomes and the
-hosted result will be recorded before evidence PR publication.
+host qualification remains unresolved. Hosted native/static/build results do
+not clear that incident.
 
 Even matching builds would establish only reproducible packaging in the stated
 controlled environment and bounded source/dependency-to-output correspondence.

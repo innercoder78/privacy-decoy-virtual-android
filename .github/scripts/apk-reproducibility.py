@@ -7,6 +7,7 @@ SDK tools. This is correspondence evidence, not a supply-chain attestation.
 import hashlib
 import importlib.util
 import io
+import itertools
 import json
 import os
 from pathlib import Path
@@ -106,6 +107,51 @@ def apk_snapshot(path):
                         "central_directory": digest(raw[offset:end]), "eocd": digest(raw[end:])}}
 
 
+def byte_differences(left, right):
+    """Half-open offsets; never remove or normalize differing bytes."""
+    ranges, start, count, total_ranges = [], None, 0, 0
+    for offset, (a, b) in enumerate(itertools.zip_longest(left, right, fillvalue=None)):
+        if a != b:
+            count += 1
+            if start is None:
+                start = offset
+        elif start is not None:
+            total_ranges += 1
+            if len(ranges) < 4096:
+                ranges.append([start, offset])
+            start = None
+    if start is not None:
+        total_ranges += 1
+        if len(ranges) < 4096:
+            ranges.append([start, max(len(left), len(right))])
+    return {"different_bytes": count, "ranges": ranges, "range_count": total_ranges,
+            "ranges_complete": total_ranges == len(ranges), "sizes": [len(left), len(right)]}
+
+
+def elf_sections(raw):
+    """Diagnostic labels only; existing validator owns ELF admission."""
+    need(raw[:6] == b"\x7fELF\x02\x01" and len(raw) >= 64, "Unsupported diagnostic ELF")
+    offset = struct.unpack_from("<Q", raw, 40)[0]
+    size, count, names_index = struct.unpack_from("<HHH", raw, 58)
+    need(size == 64 and 0 < count <= 4096 and names_index < count and
+         offset + size * count <= len(raw), "Unsupported diagnostic ELF sections")
+    rows = [struct.unpack_from("<IIQQQQIIQQ", raw, offset + size * i) for i in range(count)]
+    names = rows[names_index]
+    need(names[4] + names[5] <= len(raw), "Invalid diagnostic ELF names")
+    strings = raw[names[4]:names[4] + names[5]]
+    result = []
+    for row in rows:
+        if row[1] in (0, 8):  # NULL / NOBITS have no section payload to compare.
+            continue
+        need(row[0] < len(strings) and row[4] + row[5] <= len(raw), "Invalid diagnostic ELF section")
+        end = strings.find(b"\0", row[0])
+        need(end >= 0, "Unterminated diagnostic section name")
+        name = strings[row[0]:end].decode("ascii")
+        result.append({"name": name, "offset": row[4], "size": row[5],
+                       "sha256": digest(raw[row[4]:row[4] + row[5]])})
+    return result
+
+
 def compare(a, b, inputs_a, inputs_b, sign_a, sign_b):
     need(Path(a).resolve() != Path(b).resolve(), "Same artifact supplied twice")
     for inputs in (inputs_a, inputs_b):
@@ -132,12 +178,24 @@ def compare(a, b, inputs_a, inputs_b, sign_a, sign_b):
     rrows = {x["name"]: x for x in right["entries"]}
     changed = [name for name in sorted(lrows.keys() | rrows.keys()) if lrows.get(name) != rrows.get(name)]
     content = [name for name in changed if lrows.get(name, {}).get("sha256") != rrows.get(name, {}).get("sha256")]
+    details = {}
+    with zipfile.ZipFile(a) as az, zipfile.ZipFile(b) as bz:
+        for name in content:
+            if name not in lrows or name not in rrows:
+                details[name] = {"presence": [name in lrows, name in rrows]}
+                continue
+            x, y = az.read(name), bz.read(name)
+            details[name] = byte_differences(x, y)
+            if x[:6] == y[:6] == b"\x7fELF\x02\x01":
+                details[name]["elf_sections_a"] = elf_sections(x)
+                details[name]["elf_sections_b"] = elf_sections(y)
     same_signer = sign_a == sign_b
     return {"version": 1, "scope": "controlled-research-builds-only", "inputs": inputs_a,
             "a": left, "b": right, "signing_a": sign_a, "signing_b": sign_b,
             "signed_bytes_equal": left == right and same_signer,
             "entry_content_equal": not content, "entry_order_equal": list(lrows) == list(rrows),
             "changed_entries": changed, "changed_content": content,
+            "content_differences": details,
             "changed_regions": [k for k in left["regions"] if left["regions"][k] != right["regions"][k]],
             "same_signing_identity_and_schemes": same_signer}
 
