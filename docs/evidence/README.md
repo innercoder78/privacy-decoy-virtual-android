@@ -1,7 +1,8 @@
 # Evidence index
 
 Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
-Actual hosted-pair outcome is recorded there; fixture controls alone are not APK evidence.
+Signed APK equality failed in two hosted pairs; the diagnostic pair locates
+20 differing build-ID bytes in each JNI library. No artifact prerequisite or gate closes.
 
 Evidence describes exact observations and limitations; it does not redefine
 requirements. Use the terminology and record fields in
