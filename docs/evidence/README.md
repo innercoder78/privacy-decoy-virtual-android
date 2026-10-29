@@ -1,5 +1,8 @@
 # Evidence index
 
+Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
+Actual hosted-pair outcome is recorded there; fixture controls alone are not APK evidence.
+
 Evidence describes exact observations and limitations; it does not redefine
 requirements. Use the terminology and record fields in
 [acceptance criteria](../acceptance-evidence-criteria.md).
