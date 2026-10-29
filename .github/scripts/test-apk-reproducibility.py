@@ -263,21 +263,22 @@ class ComparisonTests(unittest.TestCase):
         self.write(self.a, entries)
         args = (checkout, {"cmake": checkout, "ndk": checkout / "sdk/ndk/version"},
                 self.a, native, Path(self.tmp.name), "fixture")
-        with patch.object(repro, "command", return_value="clang -g -Wl,--build-id=sha1"), patch("builtins.print"):
+        with patch.object(repro, "command", return_value="clang -g -Wl,--build-id=sha1"), \
+                patch.object(repro, "mapping_control", return_value={"fixture_only": True}), patch("builtins.print"):
             repro.native_diagnostics(*args)
             changed = bytearray(raw)
             changed[325] = 1
             unstripped.write_bytes(changed)
             with self.assertRaisesRegex(ValueError, "Build-ID changed"):
-                repro.native_diagnostics(*args)
+                repro.native_diagnostics(*args[:-1], "note-mutation")
             unstripped.write_bytes(raw)
             (native / name).write_bytes(changed)
             with self.assertRaisesRegex(ValueError, "packaged bytes"):
-                repro.native_diagnostics(*args)
+                repro.native_diagnostics(*args[:-1], "package-mutation")
             (native / name).write_bytes(raw)
             (build / "compile_commands.json").unlink()
             with self.assertRaisesRegex(ValueError, "compile database"):
-                repro.native_diagnostics(*args)
+                repro.native_diagnostics(*args[:-1], "missing-input")
 
     def test_public_commands_label_known_roots_and_hide_unknown_paths(self):
         result = repro.public_commands('/sdk/clang -g /checkout/source.c /secret/input.o',
@@ -285,6 +286,94 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(result[0][:3], ['<sdk>/clang', '-g', '<checkout>/source.c'])
         self.assertNotIn('secret', repro.canonical(result))
         self.assertIn('path_token_sha256', result[0][3])
+
+    def test_mapping_flags_missing_changed_or_security_disabled_rejected(self):
+        source, build = Path("source"), Path("build")
+        flags = ["-fdebug-prefix-map=source=/pdva/jni/src", "-fdebug-prefix-map=build=/pdva/jni/build"]
+        tokens = ["clang", "-g", "-fstack-protector-strong", *flags]
+        self.assertEqual(repro.require_debug_mapping(tokens, source, build), flags)
+        for bad in (tokens[:-1], tokens + ["-g0"], tokens[2:],
+                    [x.replace("/pdva/jni/src", "/different") for x in tokens],
+                    [x.replace("-fdebug-prefix-map=", "-ffile-prefix-map=") for x in tokens],
+                    [x for x in tokens if x != "-fstack-protector-strong"]):
+            with self.assertRaises(ValueError):
+                repro.require_debug_mapping(bad, source, build)
+
+    def mapping_elf(self, paths, code=b"code", debug=b"full debug fixture", extra=()):
+        import struct
+        names = b"\0.shstrtab\0.text\0.debug_info\0.debug_str\0.debug_line\0" + b"".join(
+            name.encode() + b"\0" for name, _ in extra)
+        payloads = [(".shstrtab", names), (".text", code), (".debug_info", debug),
+                    (".debug_str", paths), (".debug_line", paths), *extra]
+        raw = bytearray(64 + 64 * (len(payloads) + 1))
+        raw[:6] = b"\x7fELF\x02\x01"
+        struct.pack_into("<Q", raw, 40, 64)
+        struct.pack_into("<HHH", raw, 58, 64, len(payloads) + 1, 1)
+        for i, (name, data) in enumerate(payloads, 1):
+            offset = len(raw)
+            raw.extend(data)
+            struct.pack_into("<IIQQQQIIQQ", raw, 64 + 64 * i, names.index(name.encode()),
+                             3 if i == 1 else 1, 0, 0, offset, len(data), 0, 0, 1, 0)
+        return bytes(raw)
+
+    def test_mapping_control_positive_and_real_section_negative_controls(self):
+        checkout, build = Path("private-checkout"), Path("private-checkout/build")
+        mapped = self.mapping_elf(b"/pdva/jni/src\0/pdva/jni/build\0")
+        paths = str(checkout).encode() + b"\0" + str(build).encode() + b"\0"
+        unmapped = self.mapping_elf(paths)
+        result = repro.verify_mapping_control(mapped, mapped, unmapped, checkout, build)
+        self.assertTrue(result["non_debug_sections_equal"])
+        for a, replay, b in ((mapped, unmapped, unmapped), (mapped, mapped, mapped),
+                             (unmapped, unmapped, unmapped),
+                             (mapped, mapped, self.mapping_elf(paths, code=b"mutant")),
+                             (self.mapping_elf(b"/pdva/jni/src\0/pdva/jni/build\0", debug=b""),) * 2 + (unmapped,)):
+            with self.assertRaises(ValueError):
+                repro.verify_mapping_control(a, replay, b, checkout, build)
+        for section in (".rela.debug_info", ".rela.text"):
+            a = self.mapping_elf(b"/pdva/jni/build\0", extra=[(section, b"offset-a")])
+            b = self.mapping_elf(paths, extra=[(section, b"offset-b")])
+            if section == ".rela.debug_info":
+                repro.verify_mapping_control(a, a, b, checkout, build)
+            else:
+                with self.assertRaisesRegex(ValueError, "non-debug"):
+                    repro.verify_mapping_control(a, a, b, checkout, build)
+
+    def test_mapping_control_runs_actual_arguments_only_with_fresh_outputs(self):
+        checkout = Path(self.tmp.name) / "checkout"
+        build = checkout / "build"
+        source = checkout / "android/gate0-harness/src/main/cpp"
+        packages = {"ndk": checkout / "ndk"}
+        compiler = packages["ndk"] / "toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+        maps = ["-fdebug-prefix-map=" + str(source) + "=/pdva/jni/src",
+                "-fdebug-prefix-map=" + str(build) + "=/pdva/jni/build"]
+        tokens = [str(compiler), "-g", "-fstack-protector-strong", *maps, "-o", "original.o", "-c", str(source / "probe.c")]
+        entry = {"command": repro.shlex.join(tokens), "file": str(source / "probe.c")}
+        output = Path(self.tmp.name) / "control"
+        output.mkdir()
+        calls = []
+        def compile_fixture(args, cwd):
+            calls.append((args, cwd))
+            Path(args[args.index("-o") + 1]).write_bytes(b"fixture")
+            return ""
+        with patch.object(repro.sys, "platform", "linux"), patch.dict(repro.os.environ, GITHUB_ACTIONS="true"), \
+                patch.object(repro, "command", side_effect=compile_fixture), \
+                patch.object(repro, "verify_mapping_control", return_value={"fixture_only": True}):
+            repro.mapping_control(entry, b"fixture", checkout, build, packages, output)
+            self.assertEqual(len(calls), 2)
+            for i, (args, cwd) in enumerate(calls):
+                expected = list(tokens)
+                expected[expected.index("-o") + 1] = str(output / ("probe.c." + ("mapped" if i == 0 else "unmapped") + ".o"))
+                if i:
+                    expected = [x for x in expected if x not in maps]
+                self.assertEqual(args, expected)
+                self.assertEqual(cwd, build)
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                repro.mapping_control(entry, b"fixture", checkout, build, packages, output)
+            with patch.object(repro, "command", side_effect=RuntimeError("compile failed")):
+                entry["file"] = str(source / "launch.c")
+                entry["command"] = repro.shlex.join(tokens[:-1] + [entry["file"]])
+                with self.assertRaisesRegex(RuntimeError, "compile failed"):
+                    repro.mapping_control(entry, b"fixture", checkout, build, packages, output)
 
 
 if __name__ == "__main__":

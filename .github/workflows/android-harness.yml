@@ -105,5 +105,5 @@ jobs:
           # No journal, APK, signing material or private path upload/log dump.
       - name: Exercise independent APK comparison failure controls
         run: python3 .github/scripts/test-apk-reproducibility.py
-      - name: Build reviewed main twice in isolated output and dependency directories
+      - name: Build exact reviewed candidate twice in isolated output and dependency directories
         run: python3 .github/scripts/apk-reproducibility.py

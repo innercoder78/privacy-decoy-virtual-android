@@ -9,17 +9,20 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-Both actual hosted pairs **failed signed-byte equality**: both JNI shared
+All five observed hosted pairs **failed signed-byte equality**: both JNI shared
 libraries differ despite equal declared inputs and the same verified signer.
-Local fixture success is not an independent APK build result. The diagnostic
-continuation retains that negative and adds byte-range/ELF-section reporting;
-it does not alter build inputs or the equality acceptance criterion.
+Local fixture success is not an independent APK build result. The latest
+continuation below introduces a narrowly scoped debug-path mapping candidate,
+pinned by immutable commit/tree. Its new hosted results are **unobserved**;
+causation and successful correction remain unproved. Historical sections below
+retain the prior procedures and negative results.
 
 The procedure is original PDVA standard-library code in
 [apk-reproducibility.py](../../.github/scripts/apk-reproducibility.py), with
 [disposable unsigned controls](../../.github/scripts/test-apk-reproducibility.py).
-No app, manifest, extraction policy, native source, Persona, dependency version,
-verification metadata, permanent key or production signing policy is changed.
+The candidate changes JNI CMake debug-path options only; no C/Java application
+source, manifest, extraction policy, Persona, dependency version, verification
+metadata, permanent key or production signing policy changes.
 
 ## Live preflight
 
@@ -470,3 +473,143 @@ one native chat-association verification, STOP.
 Windows native-host security incident: unresolved. Gate 0: **Unresolved**;
 Gates A-G: **Not reached**; physical native-launch readiness: **NOT READY — STOP**.
 No phone, USB, ADB, Android execution, quarantine restoration or security bypass.
+
+## Debug-path mapping candidate on PR #50
+
+Continuation date: **2026-10-29, America/Fortaleza**. Canonical main remains
+`61c68f87404a1b7e70e0314b73532322ee2de252`. Live PR #50 head was
+`6a2e6d883e44ce0781514cd4a980f41c170cb36b`, base main, the only open PR.
+Reviews, comments and threads were empty. Both applicable Android jobs genuinely
+ran and failed the independent signed-APK comparison; preceding build/lint,
+native/bootstrap/APK-policy/signature/receipt and 19 comparator checks succeeded.
+Foundation run `40953197411` succeeded: actual logs record 149 repository,
+19 comparator, 28 receipt, 45 image and four frame tests on Linux; Windows records
+45 image and four frame tests. No new candidate results are inferred from these.
+GitHub Status reported operational components/no incidents, snapshot updated
+`2026-10-29T20:39:47.555Z`. Full existing diff/files/100644 modes, requirements,
+ADRs, build source/provenance/dependencies and evidence were re-reviewed. Local
+tracked state was clean; one worktree, no stashes and 25,971 ignored files were
+inventoried. Unrelated branches, caches and artifacts remain preserved.
+
+### Confirmed diagnostic observations
+
+| Incoming-head run / job | Signed APK A SHA-256 | Signed APK B SHA-256 |
+|---|---|---|
+| [40953197416](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40953197416) / `123726426168` | `a7867392cddf1ec32056cc0665d95817ed26801f0428e0462d8222a20d619904` | `f827653df1bfd4429278f7dfeadeb38f556ff2d031e32a8a587466ffa43b56a9` |
+| [40953187201](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40953187201) / `123726391924` | `fe0584c09f423d2f64bad6475a3a27809ad8540ebe517de500704d832b674360` | `86bfe1f68d2b281abe7be12b4895c448e69a6d21662d5a31af95ab832538b7fd` |
+
+Both still built historical main, not a mapped candidate. In each ABI, both
+`probe.c` and `launch.c` object section comparisons differ only in `.debug_str`
+and `.debug_line`; checkout paths occur in those sections. Ordinary code section
+hashes match. Commands show `-g -O2 -DNDEBUG -fPIC`, stack-protector-strong and
+FORTIFY, with no prefix maps. Unstripped libraries differ in `.debug_info`,
+`.debug_str`, `.debug_line` and `.note.gnu.build-id`. Additionally, run
+`40953187201` has an ARM64 unstripped `.symtab` difference; its cause is **Unknown**
+and must not be erased by the debug-path hypothesis. Both runs confirm unchanged
+build-ID section hashes across stripping and exact stripped/package bytes.
+The full signed APK pairs differ. These are observations, not causal replay.
+
+### Reviewed source mechanism and minimal candidate
+
+At the adopted LLVM base `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c`,
+[Clang option definitions](https://github.com/llvm/llvm-project/blob/3b5e7c83a6e226d5bd7ed2e9b67449b64812074c/clang/include/clang/Driver/Options.td)
+and [driver forwarding](https://github.com/llvm/llvm-project/blob/3b5e7c83a6e226d5bd7ed2e9b67449b64812074c/clang/lib/Driver/ToolChains/Clang.cpp)
+support `-fdebug-prefix-map=old=new` for debug information. The broader
+`-ffile-prefix-map` also changes predefined file macros; it is unnecessary for
+the observed debug-only object differences and is not selected.
+[CGDebugInfo](https://github.com/llvm/llvm-project/blob/3b5e7c83a6e226d5bd7ed2e9b67449b64812074c/clang/lib/CodeGen/CGDebugInfo.cpp)
+applies prefix maps to source paths and the compilation directory, including
+`DW_AT_comp_dir`. It can split directory and filename strings, so diagnostics
+must not require one contiguous full synthetic source filename.
+The [upstream CodeGen tests](https://github.com/llvm/llvm-project/blob/3b5e7c83a6e226d5bd7ed2e9b67449b64812074c/clang/test/CodeGen/debug-prefix-map.c)
+cover compilation-directory mapping, absolute/relative replacements and ordering;
+[driver tests](https://github.com/llvm/llvm-project/blob/3b5e7c83a6e226d5bd7ed2e9b67449b64812074c/clang/test/Driver/debug-prefix-map.c)
+cover option forwarding/rejection. These tests were source-reviewed, not executed
+locally. Raw web retrieval failed for two source files; exact GitHub contents API
+retrieval succeeded. The LLD source cited above was rechecked: the output buffer
+participates in build-ID generation, so debug inputs can affect the retained ID.
+
+The recorded Android [patch ledger](https://android.googlesource.com/toolchain/llvm_android/+/e727bfb014bd436f581a66a450c939a6983a1fc3/patches/PATCHES.json)
+was searched for debug/prefix/reproducibility titles. Older debug-related entries
+have upper revision bounds below r530567; that title search is not a complete
+patch-content audit or independent reconstruction of the shipped compiler.
+Actual behavior remains subject to the qualified NDK controls below. No upstream
+source is copied. Existing LLVM Apache-2.0-with-exceptions, CMake BSD-3-Clause,
+Ninja Apache-2.0 and SDK/package notices remain the adoption basis; no new
+dependency or license assumption is introduced. Repository owner remains maintainer.
+
+The four-line CMake addition sets target-private compile options:
+
+```cmake
+# Keep full debug information, with stable identities for source and build paths.
+target_compile_options(substrate PRIVATE
+    "-fdebug-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=/pdva/jni/src"
+    "-fdebug-prefix-map=${CMAKE_CURRENT_BINARY_DIR}=/pdva/jni/build")
+```
+
+CMake documents [current source](https://cmake.org/cmake/help/v3.22/variable/CMAKE_CURRENT_SOURCE_DIR.html)
+and [current binary](https://cmake.org/cmake/help/v3.22/variable/CMAKE_CURRENT_BINARY_DIR.html)
+directories as full paths. These two disjoint locations cover the JNI source/
+headers and per-ABI generated build location, without incorporating runner roots
+or the CMake build-directory hash into their synthetic identities. Debug information
+is generated normally with mapped names; it is not removed or rewritten later.
+Debuggers may need source-location substitution to find a developer's checkout.
+No `-g` removal, build-ID flag change, stack-protection change, linker change,
+RELRO/NOW change, ABI change or output-byte normalization is present.
+
+**Immutable candidate source commit:** `aa517dfdfe2b72986d67ad65f7f1b34d8494118b`.
+**Candidate tree:** `5965f746c6093c2bb86a99f3b4f361b6c315798c`.
+That commit changes only the four CMake lines from incoming head `6a2e6d8`.
+The subsequent comparator/evidence commit sets `SOURCE`/`TREE` to these exact
+identities and adds CMakeLists.txt to the explicit configuration digest inventory.
+Thus both new independent APK builds will use the candidate, not historical main.
+The workflow step label is corrected accordingly; its commands, coverage,
+branch-specific trigger, failure behavior and other checks remain enabled.
+
+### Controls and current result boundary
+
+For each real source/ABI/build, the hosted diagnostic now requires the exact two
+mapping options, retained debug generation and stack protection. It replays that
+actual compile command with only `-o` redirected into a fresh private control
+directory. A second replay removes only the two mapping arguments. Compiler
+identity, cwd, source, target and every other argument remain fixed; no shell
+command evaluation is used. Commands with extra dependency-file outputs are
+rejected rather than allowed to overwrite independent build state.
+
+The positive replay must byte-match the independently built mapped object. Both
+must retain nonempty debug information and code. The unmapped control must differ
+and expose checkout/build paths; mapped bytes must exclude those paths and retain
+the synthetic compilation directory. All sections other than debug sections and
+their `.rel.debug*`/`.rela.debug*` relocation sections must match, including code
+and code relocations. This limited section test checks whether debug mapping
+changes generated code; it is **not** APK acceptance. Missing mapping, compiler
+failure, missing/empty output, changed code/relocations or a vacuous negative
+control stops the run. These separate outputs never replace either genuine APK,
+JNI object, unstripped library or stripped/package output.
+
+Existing build-ID-preservation and stripped/package checks remain mandatory.
+The final comparator still checks every complete signed APK byte, with identical
+verified signer/schemes within the pair. Build IDs, debug sections, signatures,
+DEX, resources and ZIP metadata are not patched or ignored for that assertion.
+No continue-on-error, expected-failure conversion or zero-step pass is added.
+
+Local standard-library tests exercise the replay argument boundary, missing/
+changed maps, disabled debug/stack protection, failed compiler propagation,
+fresh-output requirement, changed code/code-relocation rejection, debug-relocation
+handling and existing APK/signer/strip correspondence controls. Fixture success
+is only tooling validation. No Windows native compiler or Android execution is
+used; real qualified compiler replay, Android build/lint/APK checks and complete
+candidate APK equality are **pending/unobserved at publication**.
+
+This is a source-supported candidate correction, not proven causation or a proven
+reproducibility fix. The remaining `.symtab` observation and any future unequal
+APK must stay negative/Unknown. The user authorized exactly one final push of
+both commits to existing PR #50, one native association verification and STOP;
+no new-CI polling or intermediate iteration. Local validation passed: 22
+comparator/control tests; 149 repository tests (four platform skips); 28 receipt,
+45 offline-image and four frame-copy tests; foundation and harness validators;
+and whitespace checks. Full intended diff, regular 100644 modes, links, privacy,
+unchanged dependency/license inventory and exact candidate Android-tree
+correspondence were reviewed. All historical failures remain above for comparison.
+Gate 0 **Unresolved**; A-G **Not reached**; incident unresolved;
+physical native-launch readiness **NOT READY — STOP**.

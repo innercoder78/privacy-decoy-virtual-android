@@ -19,15 +19,16 @@ import sys
 import tempfile
 import zipfile
 
-SOURCE = "61c68f87404a1b7e70e0314b73532322ee2de252"
-TREE = "452cc52b115f7d0c5d8cb63be1f092f189d4b26d"
+SOURCE = "aa517dfdfe2b72986d67ad65f7f1b34d8494118b"
+TREE = "5965f746c6093c2bb86a99f3b4f361b6c315798c"
 ROOT = Path(__file__).resolve().parents[2]
 NATIVE = ("lib/arm64-v8a/libsubstrate.so", "lib/x86_64/libsubstrate.so",
           "lib/arm64-v8a/libpdva_launch.so")
 INPUT_KEYS = {"source", "tree", "tools", "dependencies", "verification", "configuration"}
 TOOL_NAMES = {"jdk", "sdk", "build_tools", "ndk", "cmake", "command_tools"}
 CONFIG_NAMES = ("android/build.py", "android/build.gradle", "android/settings.gradle",
-                "android/gradle.properties", "android/gate0-harness/build.gradle")
+                "android/gradle.properties", "android/gate0-harness/build.gradle",
+                "android/gate0-harness/src/main/cpp/CMakeLists.txt")
 
 
 def need(condition, message):
@@ -257,8 +258,69 @@ def public_commands(text, checkout, sdk):
     return result
 
 
+def require_debug_mapping(tokens, source_dir, build_dir):
+    expected = ["-fdebug-prefix-map=" + str(source_dir) + "=/pdva/jni/src",
+                "-fdebug-prefix-map=" + str(build_dir) + "=/pdva/jni/build"]
+    actual = [x for x in tokens if x.startswith(("-fdebug-prefix-map=", "-ffile-prefix-map="))]
+    need(actual == expected, "Missing or changed JNI debug-path mappings")
+    need("-g" in tokens and "-g0" not in tokens and "-fstack-protector-strong" in tokens,
+         "Missing JNI debug information or stack protection")
+    return expected
+
+
+def verify_mapping_control(mapped, replay, unmapped, checkout, build_dir):
+    need(mapped == replay, "Mapped compiler replay differs from real build object")
+    a = diagnostic_elf(mapped, checkout, build_dir)
+    b = diagnostic_elf(unmapped, checkout, build_dir)
+    sections = lambda snap: {x["name"]: (x["size"], x["sha256"]) for x in snap["sections"]}
+    left, right = sections(a), sections(b)
+    need(all(rows.get(name, (0,))[0] > 0 for rows in (left, right)
+             for name in (".debug_info", ".debug_str", ".debug_line")),
+         "Full JNI debug sections missing")
+    need(any(name.startswith(".text") and size > 0 for name, (size, _) in left.items()),
+         "JNI code sections missing")
+    # Debug-string offsets can also change relocations targeting debug sections.
+    # This control is not the APK comparator, which still checks every byte.
+    debug_prefixes = (".debug", ".rel.debug", ".rela.debug")
+    need({k: v for k, v in left.items() if not k.startswith(debug_prefixes)} ==
+         {k: v for k, v in right.items() if not k.startswith(debug_prefixes)},
+         "Mapping changed non-debug object sections")
+    need(not a["contains_checkout_path"] and not a["contains_build_path"] and
+         b"/pdva/jni/build" in mapped,
+         "Mapped object retains private paths or lacks stable debug identities")
+    need(mapped != unmapped and b["contains_checkout_path"] and b["contains_build_path"],
+         "Removing mappings did not expose the expected path-sensitive difference")
+    return {"mapped_sha256": a["sha256"], "replay_sha256": digest(replay),
+            "unmapped_sha256": b["sha256"], "non_debug_sections_equal": True,
+            "mapped_replay_equal": True, "missing_mapping_detected": True}
+
+
+def mapping_control(entry, mapped, checkout, build_dir, packages, output_dir):
+    """Compile real JNI source controls on hosted Linux; never alter built objects."""
+    need(sys.platform == "linux" and os.environ.get("GITHUB_ACTIONS") == "true",
+         "Compiler controls require authorized hosted Linux")
+    tokens = shlex.split(entry["command"])
+    maps = require_debug_mapping(tokens, checkout / "android/gate0-harness/src/main/cpp", build_dir)
+    compiler = packages["ndk"] / "toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+    need(Path(tokens[0]) == compiler and tokens.count("-c") == tokens.count("-o") == 1 and
+         tokens[tokens.index("-c") + 1] == entry["file"], "Unexpected JNI control command")
+    need(not any(x in tokens for x in ("-MD", "-MMD", "-MF", "-MT", "-MQ", "-save-temps")),
+         "Unexpected extra compiler outputs")
+    outputs = []
+    for label in ("mapped", "unmapped"):
+        args = list(tokens)
+        output = output_dir / (Path(entry["file"]).name + "." + label + ".o")
+        need(not output.exists(), "Compiler control output already exists")
+        args[args.index("-o") + 1] = str(output)
+        if label == "unmapped":
+            args = [x for x in args if x not in maps]
+        command(args, cwd=build_dir)
+        outputs.append(output.read_bytes())
+    return verify_mapping_control(mapped, *outputs, checkout, build_dir)
+
+
 def native_diagnostics(checkout, packages, apk, native, scratch, label):
-    """Read real outputs before comparison; do not rebuild, strip or rewrite them."""
+    """Inspect real outputs and compile separate controls; never rewrite outputs."""
     module = checkout / "android/gate0-harness"
     report = {}
     private = {}
@@ -273,6 +335,8 @@ def native_diagnostics(checkout, packages, apk, native, scratch, label):
         commands = command([str(packages["cmake"] / "bin/ninja"), "-C", str(build_dir),
                             "-t", "commands", "substrate"])
         private[abi] = {"compile_database": entries, "ninja_commands": commands}
+        controls_dir = scratch / (label + "-controls-" + abi)
+        controls_dir.mkdir()  # Fresh outputs; no reuse or overwrite.
         objects = {}
         for entry in entries:
             need(Path(entry["directory"]).resolve() == build_dir.resolve(), "Unexpected compile directory")
@@ -280,9 +344,11 @@ def native_diagnostics(checkout, packages, apk, native, scratch, label):
             need(tokens.count("-o") == 1, "Ambiguous object output")
             obj = (build_dir / tokens[tokens.index("-o") + 1]).resolve()
             need(obj.is_relative_to(build_dir.resolve()), "Object outside diagnostic build directory")
+            mapped = obj.read_bytes()
             objects[Path(entry["file"]).name] = {
                 "command": command_facts(entry["command"]),
-                "elf": diagnostic_elf(obj.read_bytes(), checkout, build_dir)}
+                "elf": diagnostic_elf(mapped, checkout, build_dir),
+                "mapping_control": mapping_control(entry, mapped, checkout, build_dir, packages, controls_dir)}
         libraries = list((module / "build/intermediates/cxx").glob(
             "RelWithDebInfo/*/obj/" + abi + "/libsubstrate.so"))
         need(len(libraries) == 1, "Missing or ambiguous unstripped JNI library")
