@@ -5,6 +5,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 SPEC = importlib.util.spec_from_file_location("repro", Path(__file__).with_name("apk-reproducibility.py"))
@@ -185,13 +186,105 @@ class ComparisonTests(unittest.TestCase):
         struct.pack_into("<IIQQQQIIQQ", raw, 128, 1, 3, 0, 0, 256, len(names), 0, 0, 1, 0)
         struct.pack_into("<IIQQQQIIQQ", raw, 192, 11, 7, 0, 0, 320, 20, 0, 0, 4, 0)
         before = repro.elf_sections(raw)
+        snapshot = repro.diagnostic_elf(raw, Path("/private/checkout"), Path("/private/build"))
+        self.assertFalse(snapshot["contains_checkout_path"])
+        self.assertFalse(snapshot["contains_build_path"])
+        self.assertEqual(repro.build_note(snapshot)["sha256"], before[1]["sha256"])
         raw[325] = 1
         after = repro.elf_sections(raw)
+        changed = repro.diagnostic_elf(raw, Path("/private/checkout"), Path("/private/build"))
+        self.assertNotEqual(repro.build_note(snapshot), repro.build_note(changed))
         self.assertEqual(before[0], after[0])
         self.assertNotEqual(before[1]["sha256"], after[1]["sha256"])
         self.assertEqual(before[1]["name"], ".note.gnu.build-id")
         with self.assertRaises(ValueError):
             repro.elf_sections(raw[:100])
+
+    def test_diagnostic_command_facts_do_not_publish_private_paths(self):
+        command = '/private/sdk/clang -g -O2 -fstack-protector-strong -o /private/out.o /private/input.c'
+        facts = repro.command_facts(command)
+        self.assertEqual(facts["flags"], ["-g", "-O2", "-fstack-protector-strong"])
+        self.assertNotIn("private", repro.canonical(facts))
+        self.assertNotEqual(facts["sha256"], repro.command_facts(command.replace("input.c", "other.c"))["sha256"])
+        self.assertEqual(repro.command_facts(command + ' -fdebug-prefix-map=/private=/source')["prefix_map_options"], 1)
+
+    def test_diagnostic_note_requires_exactly_one_section(self):
+        for sections in ([], [{"name": ".debug_info"}],
+                         [{"name": ".note.gnu.build-id"}] * 2):
+            with self.assertRaises(ValueError):
+                repro.build_note({"sections": sections})
+
+    def test_diagnostic_path_presence_is_not_normalization(self):
+        # Reuse a valid fixture, keeping path bytes outside its section payloads.
+        import struct
+        raw = bytearray(256)
+        raw[:6] = b"\x7fELF\x02\x01"
+        struct.pack_into("<Q", raw, 40, 64)
+        struct.pack_into("<HHH", raw, 58, 64, 1, 0)
+        raw[160:174] = b"/private/build"
+        result = repro.diagnostic_elf(raw, Path("/private"), Path("/private/build"))
+        # Path spelling is platform-specific; use exactly the encoded Path text.
+        expected = str(Path("/private/build")).encode() in raw
+        self.assertEqual(result["contains_build_path"], expected)
+        self.assertEqual(result["sha256"], repro.digest(raw))
+
+    def test_native_diagnostics_correspondence_and_missing_inputs(self):
+        import struct
+        raw = bytearray(512)
+        raw[:6] = b"\x7fELF\x02\x01"
+        struct.pack_into("<Q", raw, 40, 64)
+        struct.pack_into("<HHH", raw, 58, 64, 3, 1)
+        names = b"\0.shstrtab\0.note.gnu.build-id\0"
+        raw[256:256 + len(names)] = names
+        struct.pack_into("<IIQQQQIIQQ", raw, 128, 1, 3, 0, 0, 256, len(names), 0, 0, 1, 0)
+        struct.pack_into("<IIQQQQIIQQ", raw, 192, 11, 7, 0, 0, 320, 20, 0, 0, 4, 0)
+        checkout = Path(self.tmp.name) / "checkout"
+        module = checkout / "android/gate0-harness"
+        native = Path(self.tmp.name) / "stripped"
+        entries = {}
+        for abi in ("arm64-v8a", "x86_64"):
+            build = module / ".cxx/RelWithDebInfo/fixture" / abi
+            (build / "CMakeFiles").mkdir(parents=True)
+            database = []
+            for source in ("probe.c", "launch.c"):
+                (build / (source + ".o")).write_bytes(raw)
+                database.append({"directory": str(build), "file": source,
+                                 "command": "clang -g -o " + source + ".o -c " + source})
+            (build / "compile_commands.json").write_text(repro.canonical(database))
+            for name in ("CMakeCache.txt", "build.ninja", "CMakeFiles/rules.ninja"):
+                (build / name).write_text("fixture")
+            unstripped = module / "build/intermediates/cxx/RelWithDebInfo/fixture/obj" / abi / "libsubstrate.so"
+            unstripped.parent.mkdir(parents=True)
+            unstripped.write_bytes(raw)
+            name = "lib/" + abi + "/libsubstrate.so"
+            (native / name).parent.mkdir(parents=True)
+            (native / name).write_bytes(raw)
+            entries[name] = raw
+        self.write(self.a, entries)
+        args = (checkout, {"cmake": checkout, "ndk": checkout / "sdk/ndk/version"},
+                self.a, native, Path(self.tmp.name), "fixture")
+        with patch.object(repro, "command", return_value="clang -g -Wl,--build-id=sha1"), patch("builtins.print"):
+            repro.native_diagnostics(*args)
+            changed = bytearray(raw)
+            changed[325] = 1
+            unstripped.write_bytes(changed)
+            with self.assertRaisesRegex(ValueError, "Build-ID changed"):
+                repro.native_diagnostics(*args)
+            unstripped.write_bytes(raw)
+            (native / name).write_bytes(changed)
+            with self.assertRaisesRegex(ValueError, "packaged bytes"):
+                repro.native_diagnostics(*args)
+            (native / name).write_bytes(raw)
+            (build / "compile_commands.json").unlink()
+            with self.assertRaisesRegex(ValueError, "compile database"):
+                repro.native_diagnostics(*args)
+
+    def test_public_commands_label_known_roots_and_hide_unknown_paths(self):
+        result = repro.public_commands('/sdk/clang -g /checkout/source.c /secret/input.o',
+                                      '/checkout', '/sdk')
+        self.assertEqual(result[0][:3], ['<sdk>/clang', '-g', '<checkout>/source.c'])
+        self.assertNotIn('secret', repro.canonical(result))
+        self.assertIn('path_token_sha256', result[0][3])
 
 
 if __name__ == "__main__":

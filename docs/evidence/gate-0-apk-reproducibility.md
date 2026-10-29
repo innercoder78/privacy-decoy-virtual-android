@@ -370,3 +370,103 @@ After publication, attach the same PR natively, verify its identity/association
 once, and STOP without CI/bot/review/mergeability polling. Publication or required
 association failure means **UNPRESERVED pending recovery of the same PR or its
 association**, never authorization for a duplicate PR.
+
+## PR #50 continuation: intermediate evidence, not a correction
+
+Live preflight on 2026-10-29 confirmed canonical main remains
+`61c68f87404a1b7e70e0314b73532322ee2de252`, and PR #50 remains the only open
+PR, based on main, at `90e26acd89b368843f2212896173e63dec1f0df6`.
+Reviews, comments and review threads were empty; GitHub Status reported all
+systems operational. The local branch matched that head, with no tracked or
+untracked changes, one registered worktree and no stashes. Existing ignored
+build/toolchain/cache assets and historical branches were preserved. The full
+seven-file PR diff and 100644 modes, requirements, two ADRs, provenance and
+existing gate/security evidence were reviewed. No dependencies or licenses change.
+
+The exact-head [Android run 40910857669](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40910857669),
+job `123578110735`, failed the real independent comparison after successful
+build/lint, inspection, signature and comparator regression steps. This is a
+third observed pair, not a replacement for either earlier failure:
+
+| Artifact | SHA-256 |
+|---|---|
+| Complete signed APK A | `e9ddb200f2d62061522dbc9060140f860162debc16b932e9d9247a1cae904f5d` |
+| Complete signed APK B | `ab9637ec664be3d0f66321f74e43d250487efba138ecd68817a5310dfbb4ca7f` |
+
+ARM64 differs at 20 bytes `[792,812)`; x86_64 differs at 19 bytes
+`[736,748)` and `[749,756)`. One coincident byte inside the 20-byte x86_64
+build-ID descriptor explains the count; this does not establish a different
+descriptor size. The observed differences remain within `.note.gnu.build-id`.
+Exact-head foundation run `40910857630` succeeded. Its Linux job log confirms
+149 repository tests, 14 comparator tests, 28 receipt tests, 45 image tests and
+four frame tests, plus the existing native/model/Linux research controls.
+These are historical results for the incoming head, not validation of this revision.
+
+**Cause: Unknown. Whole signed APK equality: not established.** No retained
+hosted object/unstripped identities were available in those logs. A plausible
+debug-path contribution is not a proven causal explanation.
+
+Source review of the unchanged JNI CMake target confirms both C sources,
+stack-protector-strong and RELRO/NOW. Retained local generated commands show
+debug information in a RelWithDebInfo build, but are older Windows artifacts,
+not proof of the hosted commands. They were read only; no native Windows tools
+were run. At the recorded LLVM base
+`3b5e7c83a6e226d5bd7ed2e9b67449b64812074c`,
+[LLD Writer.cpp](https://github.com/llvm/llvm-project/blob/3b5e7c83a6e226d5bd7ed2e9b67449b64812074c/lld/ELF/Writer.cpp#L2822-L2886)
+hashes the output buffer, including section contents, before writing the ID.
+Its `Sha1` selection uses a 20-byte BLAKE3 construction with chunk hashing;
+the option name must not be mistaken for a literal SHA-1 algorithm here.
+This source mechanism can account for an ID surviving later debug stripping,
+but does not identify the differing input in our builds. The NDK's recorded
+Android patch layer remains relevant; this base-source review alone is not
+binary/source equivalence proof. No upstream code was copied or new tool adopted.
+
+This revision adds read-only diagnostics to each real independent build before
+the unchanged complete comparison. It records original command/database/cache/
+Ninja-rule hashes, labelled command tokens, object and unstripped/stripped ELF
+hashes and section identities, and whether checkout/build paths occur in original
+bytes (including which debug sections contain checkout paths). Missing or
+ambiguous compile databases, unexpected source sets and missing unstripped
+libraries stop the experiment. The build-ID section must survive stripping
+unchanged, and stripped JNI bytes must exactly match their packaged entry.
+Those checks are correspondence assertions, never whole-APK equality assertions.
+The existing pinned package inventories cover Clang/LLD/strip/CMake/Ninja inputs.
+The diagnostics observe strip outputs; they do not independently prove the
+precise strip invocation or exclude every other linker input as the cause.
+
+Actual command strings remain in ephemeral private runner files. Public display
+labels replace known checkout/SDK roots; unknown path-bearing tokens are hashed.
+This display redaction does not alter any original hash, ELF, APK or comparator
+input. Neither raw logs, keys nor APKs are uploaded. No debug-prefix-map or other
+compiler/linker adjustment is applied. There is no causal replay or corrected
+independent-build result in this revision. A future investigation must inspect
+the new real intermediates and use controlled input changes before proposing a fix.
+
+The temporary branch-specific push trigger is deliberately retained alongside
+PR/main coverage: no failing applicable experiment is hidden or disabled. Both
+independent worktrees, empty build/cache conditions, same signer within each pair,
+offline policy checks and strict final signed-byte assertion remain mandatory.
+There is no continue-on-error, expected-failure conversion or output normalization.
+
+Local validation for this continuation uses the existing bundled Python only:
+19 comparator/diagnostic tests, including positive correspondence and negative
+build-ID, package-byte and missing-input controls; foundation and harness
+validators; repository-validation, desktop-readiness, offline-image and frame-copy
+suites; and `git diff --check`. All passed: repository 149 tests (four platform
+skips), receipt 28, offline image 45 and frame copy four. The first sandboxed
+receipt/image attempts stalled creating temporary fixture directories; a bounded
+trace located the receipt stall in `tempfile.mkdtemp`. Those two test processes
+were stopped and both unchanged suites passed with authorized filesystem access.
+Synthetic fixtures validate diagnostics only and are never substituted for the
+two real APKs. No native compiler, device or Android runtime was executed locally.
+
+The user explicitly kept the strict publication stop boundary: publish diagnostics
+on this existing PR and leave **new CI results unobserved**. No intermediate push
+or post-publication CI polling is authorized in this continuation. The original
+negative results remain authoritative; this revision cannot be called a fix or
+recommended for merge with the applicable check failed. After publication and
+one native chat-association verification, STOP.
+
+Windows native-host security incident: unresolved. Gate 0: **Unresolved**;
+Gates A-G: **Not reached**; physical native-launch readiness: **NOT READY — STOP**.
+No phone, USB, ADB, Android execution, quarantine restoration or security bypass.

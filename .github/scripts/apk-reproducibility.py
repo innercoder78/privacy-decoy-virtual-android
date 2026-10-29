@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import struct
 import subprocess
 import sys
@@ -214,6 +215,96 @@ def load_inspector(root):
     return module
 
 
+def diagnostic_elf(raw, checkout, build_dir):
+    """Hash original bytes; path facts are observations, never equality inputs."""
+    sections = elf_sections(raw)
+    return {"sha256": digest(raw), "size": len(raw), "sections": sections,
+            "debug_path_sections": [row["name"] for row in sections
+                                    if row["name"].startswith(".debug") and
+                                    str(checkout).encode() in raw[row["offset"]:row["offset"] + row["size"]]],
+            "contains_checkout_path": str(checkout).encode() in raw,
+            "contains_build_path": str(build_dir).encode() in raw}
+
+
+def build_note(snapshot):
+    notes = [row for row in snapshot["sections"] if row["name"] == ".note.gnu.build-id"]
+    need(len(notes) == 1, "Missing or ambiguous diagnostic build-ID section")
+    return {key: notes[0][key] for key in ("size", "sha256")}
+
+
+def command_facts(text):
+    # Never publish raw command strings: compiler paths can disclose host paths.
+    tokens = shlex.split(text)
+    flags = ("-g", "-g0", "-g1", "-g2", "-O2", "-DNDEBUG", "-fPIC",
+             "-fstack-protector-strong", "-Wl,-z,relro,-z,now", "-Wl,--build-id=sha1")
+    return {"sha256": digest(text.encode()), "flags": [x for x in flags if x in tokens],
+            "prefix_map_options": sum(x.startswith(("-fdebug-prefix-map=", "-ffile-prefix-map="))
+                                      for x in tokens)}
+
+
+def public_commands(text, checkout, sdk):
+    result = []
+    for line in text.splitlines():
+        tokens = []
+        for token in shlex.split(line):
+            token = token.replace(str(checkout), "<checkout>").replace(str(sdk), "<sdk>")
+            # Unknown path-bearing tokens are hashed, never printed. Known roots
+            # are labels for display only; all identities hash the original bytes.
+            tokens.append({"path_token_sha256": digest(token.encode())}
+                          if "/" in token and "<checkout>" not in token and "<sdk>" not in token
+                          else token)
+        result.append(tokens)
+    return result
+
+
+def native_diagnostics(checkout, packages, apk, native, scratch, label):
+    """Read real outputs before comparison; do not rebuild, strip or rewrite them."""
+    module = checkout / "android/gate0-harness"
+    report = {}
+    private = {}
+    for abi in ("arm64-v8a", "x86_64"):
+        databases = list((module / ".cxx").glob("RelWithDebInfo/*/" + abi + "/compile_commands.json"))
+        need(len(databases) == 1, "Missing or ambiguous release compile database")
+        database = databases[0]
+        build_dir = database.parent
+        entries = json.loads(database.read_text())
+        need(len(entries) == 2 and {Path(x["file"]).name for x in entries} == {"probe.c", "launch.c"},
+             "Unexpected JNI compile inputs")
+        commands = command([str(packages["cmake"] / "bin/ninja"), "-C", str(build_dir),
+                            "-t", "commands", "substrate"])
+        private[abi] = {"compile_database": entries, "ninja_commands": commands}
+        objects = {}
+        for entry in entries:
+            need(Path(entry["directory"]).resolve() == build_dir.resolve(), "Unexpected compile directory")
+            tokens = shlex.split(entry["command"])
+            need(tokens.count("-o") == 1, "Ambiguous object output")
+            obj = (build_dir / tokens[tokens.index("-o") + 1]).resolve()
+            need(obj.is_relative_to(build_dir.resolve()), "Object outside diagnostic build directory")
+            objects[Path(entry["file"]).name] = {
+                "command": command_facts(entry["command"]),
+                "elf": diagnostic_elf(obj.read_bytes(), checkout, build_dir)}
+        libraries = list((module / "build/intermediates/cxx").glob(
+            "RelWithDebInfo/*/obj/" + abi + "/libsubstrate.so"))
+        need(len(libraries) == 1, "Missing or ambiguous unstripped JNI library")
+        unstripped = diagnostic_elf(libraries[0].read_bytes(), checkout, build_dir)
+        name = "lib/" + abi + "/libsubstrate.so"
+        stripped_bytes = (native / name).read_bytes()
+        stripped = diagnostic_elf(stripped_bytes, checkout, build_dir)
+        with zipfile.ZipFile(apk) as archive:
+            need(archive.read(name) == stripped_bytes, "Stripped JNI output differs from packaged bytes")
+        need(build_note(unstripped) == build_note(stripped), "Build-ID changed during stripping")
+        report[abi] = {"objects": objects, "unstripped": unstripped, "stripped": stripped,
+                       "strip_preserves_build_id": True, "packaged_bytes_equal_stripped": True,
+                       "generated_inputs": {name: file_hash(build_dir / name) for name in
+                                            ("compile_commands.json", "CMakeCache.txt", "build.ninja",
+                                             "CMakeFiles/rules.ninja")},
+                       "ninja_commands": command_facts(commands),
+                       "display_commands": public_commands(commands, checkout, packages["ndk"].parents[1])}
+    # Ephemeral private runner record only, never an uploaded artifact or log dump.
+    (scratch / (label + "-native-inputs.json")).write_text(canonical(private))
+    print("NATIVE_BUILD_DIAGNOSTICS=" + canonical({"build": label, "abis": report}), flush=True)
+
+
 def run():
     need(sys.platform == "linux" and os.environ.get("GITHUB_ACTIONS") == "true",
          "Independent native builds require authorized hosted Linux")
@@ -255,6 +346,7 @@ def run():
                                     apk, packages["command_tools"] / "bin/apkanalyzer",
                                     {name: native / name for name in NATIVE})
         need(receipt["source_tree"] == TREE, "Wrong inspected tree")
+        native_diagnostics(checkout, packages, apk, native, scratch, label)
         inputs = {"source": SOURCE, "tree": TREE, "tools": tools,
                   "dependencies": directory_hash(Path(env["GRADLE_USER_HOME"]) / "caches/modules-2/files-2.1"),
                   "verification": file_hash(checkout / "android/gradle/verification-metadata.xml"),
