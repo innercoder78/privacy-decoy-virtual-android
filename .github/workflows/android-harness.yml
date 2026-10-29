@@ -60,6 +60,9 @@ jobs:
           "$sdkmanager_path" --sdk_root="$ANDROID_HOME" 'platforms;android-37.0' 'build-tools;36.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
           cat "$ANDROID_HOME/platforms/android-37.0/source.properties"
           cat "$ANDROID_HOME/ndk/28.2.13676358/source.properties"
+          cat "$ANDROID_HOME/build-tools/36.0.0/source.properties"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" version
+          sha256sum "$ANDROID_HOME/build-tools/36.0.0/aapt2"
       - name: Build both variants and exercise protocol
         run: |
           python3 android/build.py :gate0-harness:assembleDebug :gate0-harness:assembleRelease :gate0-harness:assembleDebugAndroidTest :gate0-harness:protocolTest :gate0-harness:lintDebug
@@ -74,6 +77,9 @@ jobs:
           fi
           python3 .github/scripts/validate-harness.py --apkanalyzer "$apkanalyzer_path" --apk android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk
           python3 .github/scripts/validate-harness.py --apkanalyzer "$apkanalyzer_path" --apk android/gate0-harness/build/outputs/apk/debug/gate0-harness-debug.apk --variant debug
+          python3 .github/scripts/test-packaged-rules.py --apkanalyzer "$apkanalyzer_path" \
+            --apk android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk \
+            --android-jar "$ANDROID_HOME/platforms/android-37.0/android.jar"
           # Hash source/tool identities alongside package bytes; never execute the ARM64 payload here.
           sha256sum android/gate0-harness/src/main/cpp/launch* android/gate0-harness/build.gradle android/gradle/verification-metadata.xml
           sha256sum "$ANDROID_HOME/ndk/28.2.13676358/source.properties" "$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"

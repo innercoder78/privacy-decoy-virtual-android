@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import os
 from pathlib import Path
+import re
 import struct
 import subprocess
 import sys
@@ -13,6 +14,100 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 A = "{http://schemas.android.com/apk/res/android}"
 SOURCE = ROOT / "android/gate0-harness/src/main/AndroidManifest.xml"
+RULES = SOURCE.parent / "res/xml/data_extraction_rules.xml"
+DOMAINS = {"root", "file", "database", "sharedpref", "external", "device_root",
+           "device_file", "device_database", "device_sharedpref"}
+
+
+def extraction_policy(text):
+    """Accept only the reviewed two-section, all-domain exclusion policy."""
+    root = ET.fromstring(text)
+    if root.tag != "data-extraction-rules" or root.attrib or len(root) != 2:
+        raise ValueError("Extraction policy root/sections")
+    if {section.tag for section in root} != {"cloud-backup", "device-transfer"}:
+        raise ValueError("Extraction policy missing or duplicate section")
+    for node in root.iter():
+        if (node.text or "").strip() or (node.tail or "").strip():
+            raise ValueError("Extraction policy unexpected text")
+    policy = []
+    for section in root:
+        if section.attrib or len(section) != len(DOMAINS):
+            raise ValueError("Extraction policy section shape")
+        domains = []
+        for rule in section:
+            if (rule.tag != "exclude" or len(rule) or set(rule.attrib) != {"domain", "path"}
+                    or rule.get("path") != "."):
+                raise ValueError("Extraction policy rule/path")
+            domains.append(rule.get("domain"))
+        if set(domains) != DOMAINS:
+            raise ValueError("Extraction policy missing, duplicate or unexpected domain")
+        policy.append((section.tag, tuple(sorted(domains))))
+    return tuple(sorted(policy))
+
+
+def aapt2_path(apkanalyzer):
+    """Use the existing reviewed SDK, not PATH or a downloaded decoder."""
+    launcher = Path(apkanalyzer).resolve()
+    if launcher.parent.name != "bin" or launcher.parents[2].name != "cmdline-tools":
+        raise ValueError("Expected SDK cmdline-tools analyzer location")
+    return launcher.parents[3] / "build-tools/36.0.0" / ("aapt2.exe" if os.name == "nt" else "aapt2")
+
+
+def file_hash(path):
+    with Path(path).open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def resource_mapping(table, reference):
+    # Deliberately narrow supported dump format: one package and one XML resource,
+    # one default file value. Qualifiers, aliases and unfamiliar output fail closed.
+    lines = table.splitlines()
+    if lines[:2] != ["Binary APK", "Package name=org.pdva.gate0 id=7f"]:
+        raise ValueError("Extraction resource package/format")
+    if sum(line.startswith("Package ") for line in lines) != 1:
+        raise ValueError("Extraction resource ambiguous package")
+    ids = re.findall(r"^    resource (0x[0-9a-f]{8}) ", table, re.M)
+    if len(ids) != len(set(ids)):
+        raise ValueError("Extraction resource duplicate ID")
+    blocks = re.findall(r"^  type xml .*?(?=^  type |\Z)", table, re.M | re.S)
+    if len(blocks) != 1:
+        raise ValueError("Extraction resource missing/ambiguous XML type")
+    match = re.fullmatch(
+        r"  type xml id=([0-9a-f]{2}) entryCount=1\n"
+        r"    resource (0x7f[0-9a-f]{6}) xml/data_extraction_rules\n"
+        r"      \(\) \(file\) (res/[A-Za-z0-9_/.-]+\.xml) type=XML\n?", blocks[0])
+    if (not match or reference != "@ref/" + match[2]
+            or match[2][4:6] != match[1] or ".." in match[3].split("/")):
+        raise ValueError("Extraction resource reference/value/configuration")
+    return match[2], match[3]
+
+
+def packaged_rules(apk, command, apkanalyzer, manifest_text):
+    tool = aapt2_path(apkanalyzer)
+    before = {"aapt2": file_hash(tool), "source": file_hash(RULES)}
+    intended = extraction_policy(RULES.read_text(encoding="utf-8"))
+    table = subprocess.check_output([str(tool), "dump", "resources", str(apk)],
+                                    text=True, encoding="utf-8", timeout=120)
+    reference = ET.fromstring(manifest_text).find("application").get(A + "dataExtractionRules")
+    resource_id, entry = resource_mapping(table, reference)
+    with zipfile.ZipFile(apk) as archive:
+        if len(archive.namelist()) != len(set(archive.namelist())):
+            raise ValueError("Duplicate APK entry")
+        info = archive.getinfo(entry)
+        if not 8 <= info.file_size <= 65536:
+            raise ValueError("Extraction compiled XML size")
+        raw = archive.read(entry)
+    if struct.unpack_from("<HHI", raw) != (3, 8, len(raw)):
+        raise ValueError("Extraction compiled XML format/length")
+    decoded = subprocess.check_output([*command, "resources", "xml", "--file", entry, str(apk)],
+                                      text=True, encoding="utf-8", timeout=120)
+    if len(decoded) > 65536 or extraction_policy(decoded) != intended:
+        raise ValueError("Extraction policy differs from source")
+    if before != {"aapt2": file_hash(tool), "source": file_hash(RULES)}:
+        raise ValueError("Extraction inputs changed during inspection")
+    return {"policy": "all-domains-excluded-v1", "resource_id": resource_id, "entry": entry,
+            "compiled_sha256": hashlib.sha256(raw).hexdigest(),
+            "source_sha256": before["source"], "aapt2_sha256": before["aapt2"]}
 
 def manifest(text, release=False, packaged=False):
     root = ET.fromstring(text)
@@ -21,6 +116,10 @@ def manifest(text, release=False, packaged=False):
     app = root.find("application")
     if app is None or app.get(A + "allowBackup") != "false":
         raise ValueError("Backup must be disabled")
+    reference = app.get(A + "dataExtractionRules", "")
+    if ((packaged and not re.fullmatch(r"@ref/0x7f[0-9a-f]{6}", reference))
+            or (not packaged and reference != "@xml/data_extraction_rules")):
+        raise ValueError("Required dataExtractionRules reference")
     if release and app.get(A + "debuggable", "false") != "false":
         raise ValueError("Release must not be debuggable")
     if app.get(A + "usesCleartextTraffic") != "false" or app.get(A + "fullBackupContent") != "false":
@@ -180,6 +279,8 @@ def inspect_apk(apk, apkanalyzer, variant):
     """Shared packaged validation for CLI and the offline journal."""
     if variant not in {"debug", "release"}:
         raise ValueError("Unknown build variant")
+    apk_before = file_hash(apk)
+    native = inventory(apk)  # Bound entry sizes and reject duplicate ZIP names before SDK parsing.
     command = [str(apkanalyzer)]
     if os.name == "nt" and str(apkanalyzer).endswith(".bat"):
         # SDK launcher leaves its toolsdir JVM option unquoted for paths with spaces.
@@ -193,7 +294,10 @@ def inspect_apk(apk, apkanalyzer, variant):
     # A declared debug input must actually be debug; release already rejects it.
     if variant == "debug" and ET.fromstring(output).find("application").get(A + "debuggable") != "true":
         raise ValueError("Declared debug variant is not debuggable")
-    return {"manifest": "passed", "native": inventory(apk)}
+    rules = packaged_rules(apk, command, apkanalyzer, output)
+    if file_hash(apk) != apk_before:
+        raise ValueError("APK changed during inspection")
+    return {"manifest": "passed", "native": native, "extraction_rules": rules}
 
 def main():
     parser = argparse.ArgumentParser()
@@ -202,6 +306,7 @@ def main():
     parser.add_argument("--variant", choices=("debug", "release"), default="release")
     args = parser.parse_args()
     manifest(SOURCE.read_text(encoding="utf-8"))
+    extraction_policy(RULES.read_text(encoding="utf-8"))
     # Check generated merged manifests when present, including default build additions.
     for path in (ROOT / "android/gate0-harness/build/intermediates/merged_manifests").glob(
             "*/process*Manifest/AndroidManifest.xml"):
@@ -216,6 +321,7 @@ def main():
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (ValueError, ET.ParseError, OSError, subprocess.CalledProcessError) as error:
+    except (ValueError, KeyError, zipfile.BadZipFile, ET.ParseError, OSError,
+            subprocess.SubprocessError) as error:
         print("Harness validation failed: " + str(error), file=sys.stderr)
         sys.exit(1)
