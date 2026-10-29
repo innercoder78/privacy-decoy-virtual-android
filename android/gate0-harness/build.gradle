@@ -74,6 +74,8 @@ tasks.register('compileProtocolTests', JavaCompile) {
     source = files('src/main/java/org/pdva/gate0/Protocol.java',
                    'src/main/java/org/pdva/gate0/Report.java',
                    'src/main/java/org/pdva/gate0/LaunchResult.java',
+                   'src/main/java/org/pdva/gate0/ResearchAttempt.java',
+                   'src/test/java/org/pdva/gate0/ResearchAttemptTest.java',
                    'src/test/java/org/pdva/gate0/ProtocolTest.java')
     classpath = files()
     destinationDirectory = layout.buildDirectory.dir('protocol-tests')

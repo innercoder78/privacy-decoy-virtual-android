@@ -19,8 +19,12 @@ chosen for installer extraction, **not a JNI library**. Its synthetic operation
 returns 42. Target SDK stays 37; x86_64 retains JNI behavior and reports
 `UNSUPPORTED` for the new executable. Normal sessions attempt one fixed launch
 after the original probes, with separate creation/exec/identity/cleanup results.
-Uncertain reaping or a lost cleanup reply persistently blocks future sessions,
-including after restart. Do not clear state to bypass that lockout.
+A one-way reservation now precedes every isolated bind and INIT. Completion,
+worker CLEAN, Binder death and Stop never permit another attempt. Existing legacy
+preferences, including uncertain_child=false, are rejected without modification.
+First admission is conditional on intact fresh app data, not authenticated
+freshness. See the [guard evidence](../docs/evidence/gate-0-one-way-research-attempt.md).
+Physical native-launch readiness remains **NOT READY — STOP**.
 
 ## Build
 
@@ -134,43 +138,17 @@ Only a specific unresolved claim that genuinely cannot advance honestly without
 stock physical-device evidence requires stopping at that exact question. ChatGPT
 will identify future physical-device tasks separately.
 
-1. On Tony's stock non-rooted ARM64 production phone, install the release APK
-   through ordinary sideloading. Optional development installation:
-   `adb install -r android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk`.
-   Do not use `-g`, shell permission grants, root, Shizuku or system changes.
-2. Disconnect ADB and open **PDVA Gate 0 research** normally.
-3. Tap **Run fresh epoch**. Review each probe separately, then tap
-   **Copy sanitized JSON**. The clipboard export happens only on that button.
-4. Run **five start/stop cycles**, then **Worker death / rebind exercise**.
-   Compare synthetic epochs, UID/PID observations, stale requests and Binder death.
-   Numeric UID reuse is not evidence of instance reuse.
+The former multi-cycle and death/rebind procedure is withdrawn by the
+[one-way guard correction](../docs/evidence/gate-0-one-way-research-attempt.md).
+The two research buttons select either a normal attempt or a self-death attempt;
+both consume the same one-shot reservation. There is no automatic second session,
+rebind, reset, or recovery. Stop and Activity backgrounding request cancellation,
+including before a queued attempt starts. Clipboard export remains explicit and
+bounded. Any future physical procedure requires separate authorization and the
+unresolved independent enrollment, cleanup, incident and artifact prerequisites.
 
-   For the executable control, first run **one** fresh epoch using its
-   [bounded procedure](../docs/evidence/gate-0-isolated-native-launch.md#next-bounded-physical-experiment).
-   Repetition requires known cleanup; a lost reply or incomplete reaping means stop.
-   The existing death exercise does not inject death during exec.
-5. Rotate and background/foreground during a run. The Activity cancels its run
-   when stopped and the next launch begins a fresh epoch. No foreground service,
-   exemption or persistence mechanism is installed.
-6. Record public device model, OS build/security patch, stock/non-rooted attestation,
-   exact source revision and APK SHA-256 in a separate reviewed evidence record.
-   Never include serials, Android ID, accounts, paths or raw logcat. Preserve
-   failures and Unknowns. Do not label any result Gate 0 Passed.
-
-If a worker's death cannot be observed, further sessions in that management
-process are blocked. Closing descriptors alone is not revocation. Relaunching
-the app must not be treated as independent proof of kernel process reaping.
-
-Optional development instrumentation (not release/physical acceptance evidence):
-
-```text
-adb install -r android/gate0-harness/build/outputs/apk/debug/gate0-harness-debug.apk
-adb install -r android/gate0-harness/build/outputs/apk/androidTest/debug/gate0-harness-debug-androidTest.apk
-adb shell am instrument -w org.pdva.gate0.test/org.pdva.gate0.HarnessInstrumentation
-```
-
-This runs repeated sessions, protocol and FD assertions, death/rebind,
-Activity recreation, rotation, and foreground/background hooks. It supplies no
-permission grants. Installing debug over the locally signed release replaces the
-tested variant: reinstall release and launch normally for release evidence.
-Instrumentation is compiled in CI but requires an actual Android host to execute.
+Development instrumentation is compiled in CI and now makes at most one guarded
+Session call, then exercises Activity recreation/rotation/background hooks without
+starting another Session. It is not a physical acceptance result or a way around
+previous/ambiguous state. The original protocol negative controls and native probes
+remain; no device execution is authorized by this text.

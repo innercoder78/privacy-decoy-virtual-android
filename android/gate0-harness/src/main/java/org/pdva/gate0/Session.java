@@ -8,23 +8,45 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.*;
 
-/** Management-only supervisor. Each instance has a new service identity and epoch. */
+/** Management-only research session. An epoch never grants admission or cleanup authority. */
 final class Session {
-    private static String previousEpoch;
-    private static final AtomicBoolean ACTIVE = new AtomicBoolean();
+    private static final ResearchAttempt ATTEMPT = new ResearchAttempt();
     final String epoch = java.util.UUID.randomUUID().toString().replace("-", "");
     private final Context context;
     private final CountDownLatch connected = new CountDownLatch(1), dead = new CountDownLatch(1);
     private volatile IBinder worker;
     private volatile boolean cancelled;
-    private boolean bound;
+    private volatile boolean bindingClosed;
+    private boolean connectionSeen; // Callbacks use the main executor; never adopt a replacement endpoint.
+    private boolean bindAttempted;
     private final Binder owner = new Binder(); // No application operations implemented.
     Session(Context context) { this.context = context.getApplicationContext(); }
     void cancel() { cancelled = true; }
     interface Writer { void write(Parcel data); }
+    interface Cleanup { void run() throws Exception; }
+    private static void cleanup(Report report, String operation, Cleanup action) {
+        try { action.run(); }
+        catch (Throwable failure) {
+            report.add(operation, "best_effort", "failed", 0, "UNKNOWN",
+                    "Local cleanup failed. Reservation retained. No closure receipt");
+        }
+    }
+    private boolean reserveAttempt() {
+        try {
+            return ATTEMPT.reserve(context.getDataDir().toPath(), context.getFilesDir().toPath(), directory -> {
+                FileDescriptor fd = android.system.Os.open(directory.toString(),
+                        android.system.OsConstants.O_RDONLY, 0);
+                try {
+                    if (!android.system.OsConstants.S_ISDIR(android.system.Os.fstat(fd).st_mode))
+                        throw new IOException("reservation_directory");
+                    android.system.Os.fsync(fd);
+                }
+                finally { android.system.Os.close(fd); }
+            });
+        } catch (Exception failure) { return false; }
+    }
     private Parcel request(int code, String requestEpoch, Writer writer) throws Exception {
         if (cancelled && code != Protocol.STOP) throw new InterruptedException();
         IBinder current = worker;
@@ -46,18 +68,28 @@ final class Session {
     }
     private final ServiceConnection connection = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName name, IBinder service) {
+            if (connectionSeen || bindingClosed || cancelled) {
+                cancelled = true;
+                connected.countDown();
+                return;
+            }
+            connectionSeen = true;
             worker = service;
             try { service.linkToDeath(() -> dead.countDown(), 0); }
             catch (RemoteException e) { if (!service.isBinderAlive()) dead.countDown(); }
             connected.countDown();
         }
         @Override public void onServiceDisconnected(ComponentName name) {
+            cancelled = true;
             if (worker != null && !worker.isBinderAlive()) dead.countDown();
         }
         @Override public void onBindingDied(ComponentName name) {
+            cancelled = true;
             if (worker != null && !worker.isBinderAlive()) dead.countDown();
         }
-        @Override public void onNullBinding(ComponentName name) { connected.countDown(); }
+        @Override public void onNullBinding(ComponentName name) {
+            connectionSeen = true; cancelled = true; connected.countDown();
+        }
     };
     private static byte[] digest(File f) throws Exception {
         if (f.length() != 4096) return new byte[0];
@@ -74,26 +106,30 @@ final class Session {
 
     String run(boolean simulateDeath) {
         Report report = new Report(epoch, Build.VERSION.SDK_INT);
-        SharedPreferences launchState = context.getSharedPreferences("launch_lifetime", Context.MODE_PRIVATE);
-        if (launchState.getBoolean("uncertain_child", false)) {
-            report.add("launch_lockout", "known_cleanup", "blocked", 0, "UNKNOWN",
-                    "A previous launch lacks cleanup acknowledgement. No automatic retry after restart");
+        if (cancelled) {
+            report.add("experiment_completion", "not_started", "cancelled", 0, "UNKNOWN",
+                    "Cancelled before admission. No worker bound");
             return report.json();
         }
-        if (!ACTIVE.compareAndSet(false, true)) {
-            report.add("session", "exclusive", "busy", 0, "UNKNOWN", "Another experiment still owns resources");
+        if (!reserveAttempt()) {
+            report.add("research_attempt_lockout", "one_way_reservation", "blocked", 0, "UNKNOWN",
+                    "Prior or ambiguous state or reservation failure. No retry or cleanup inference");
             return report.json();
         }
-        File sentinel = new File(context.getFilesDir(), "gate0-sentinel");
-        File canaryFile = new File(context.getFilesDir(), "gate0-canary");
-        File scratchFile = new File(context.getFilesDir(), "gate0-scratch");
+        report.add("research_attempt", "one_way_reservation", "reserved", 0, "UNKNOWN",
+                "Conditional intact fresh app data only. Reservation never cleared. Physical NOT READY");
+        File sentinel = null, canaryFile = null, scratchFile = null;
         ParcelFileDescriptor canary = null, scratch = null, protectedFile = null;
         SharedMemory frame = null;
         ByteBuffer pixels = null;
         byte[] expected = null;
         long control = 0;
-        boolean initialized = false, returned = false;
+        boolean initAttempted = false, returned = false;
         try {
+            if (cancelled) throw new InterruptedException();
+            sentinel = new File(context.getFilesDir(), "gate0-sentinel");
+            canaryFile = new File(context.getFilesDir(), "gate0-canary");
+            scratchFile = new File(context.getFilesDir(), "gate0-scratch");
             byte[] secret = new byte[4096];
             new SecureRandom().nextBytes(secret);
             create(sentinel, secret); expected = digest(sentinel);
@@ -108,7 +144,9 @@ final class Session {
             pixels = frame.mapReadOnly();
             control = NativeProbe.allocateControl();
             if (control == 0) throw new IllegalStateException("memory_control");
-            bound = context.bindIsolatedService(new Intent(context, WorkerService.class),
+            if (cancelled) throw new InterruptedException();
+            bindAttempted = true;
+            boolean bound = context.bindIsolatedService(new Intent(context, WorkerService.class),
                     Context.BIND_AUTO_CREATE, "epoch_" + epoch, context.getMainExecutor(), connection);
             if (!bound || !connected.await(10, TimeUnit.SECONDS) || worker == null)
                 throw new IllegalStateException("bind_failed");
@@ -116,16 +154,19 @@ final class Session {
             final int sentinelNumber = protectedFile.getFd();
             final ParcelFileDescriptor ro = canary, rw = scratch;
             final SharedMemory transport = frame;
+            initAttempted = true; // A lost/partial INIT reply may already have transferred authority.
             Parcel p = request(Protocol.INIT, epoch, d -> {
                 d.writeLong(address); d.writeInt(sentinelNumber); d.writeStrongBinder(owner);
                 d.writeTypedObject(ro, 0); d.writeTypedObject(rw, 0); d.writeTypedObject(transport, 0);
             });
-            int pid = p.readInt(), uid = p.readInt(); p.recycle(); initialized = true;
+            int pid, uid;
+            try { pid = p.readInt(); uid = p.readInt(); }
+            finally { p.recycle(); }
             report.bool("distinct_worker_pid", pid != android.os.Process.myPid(), "Live response only");
             report.bool("distinct_worker_uid", uid != android.os.Process.myUid(), "No UID persistence assumption");
             if (pid == android.os.Process.myPid() || uid == android.os.Process.myUid())
                 throw new IllegalStateException("not_isolated");
-            report.bool("stale_epoch_rejected", rejected(Protocol.RUN, (previousEpoch == null ? "00000000000000000000000000000000" : previousEpoch), d -> {}),
+            report.bool("stale_epoch_rejected", rejected(Protocol.RUN, "00000000000000000000000000000000", d -> {}),
                     "Current worker rejects incorrect epoch");
             report.bool("unknown_operation_rejected", rejected(99, epoch, d -> {}), "Fixed operation set");
             report.bool("oversized_control_rejected", rejected(Protocol.INPUT, epoch,
@@ -192,19 +233,16 @@ final class Session {
                         "0".repeat(32), d -> {}), "Launch requires the authorized current epoch");
                 report.bool("launch_trailing_rejected", rejected(Protocol.LAUNCH, epoch,
                         d -> d.writeInt(1)), "No launch arguments or path accepted");
-                // Durable BEFORE IPC: owner death or a lost reply must not enable a new launch.
-                if (!launchState.edit().putBoolean("uncertain_child", true).commit())
-                    throw new IllegalStateException("launch_guard");
                 p = request(Protocol.LAUNCH, epoch, d -> {});
-                long[] launchValues = new long[LaunchResult.COUNT];
-                p.readLongArray(launchValues); // Reject a different length before allocation.
-                LaunchResult launch = new LaunchResult(launchValues);
-                if (p.dataAvail() != 0) throw new IllegalArgumentException("launch_trailing");
-                p.recycle();
+                LaunchResult launch;
+                try {
+                    long[] launchValues = new long[LaunchResult.COUNT];
+                    p.readLongArray(launchValues); // Reject a different length before allocation.
+                    launch = new LaunchResult(launchValues);
+                    if (p.dataAvail() != 0) throw new IllegalArgumentException("launch_trailing");
+                } finally { p.recycle(); }
                 launch.append(report);
                 if (launch.cleanupKnown()) {
-                    if (!launchState.edit().putBoolean("uncertain_child", false).commit())
-                        throw new IllegalStateException("launch_guard_clear");
                     report.bool("repeated_launch_rejected", rejected(Protocol.LAUNCH, epoch,
                             d -> {}), "One attempt including failure or Unsupported per worker");
                 }
@@ -215,7 +253,8 @@ final class Session {
                     e instanceof InterruptedException ? "cancelled" : "operation_failed",
                     0, e instanceof LinkageError ? "FAIL" : "UNKNOWN", "Inspect separately. Missing result is never a pass");
         } finally {
-            if (initialized && dead.getCount() != 0) {
+            bindingClosed = true;
+            if (worker != null && dead.getCount() != 0) {
                 try {
                     Parcel p = request(Protocol.STOP, epoch, d -> {}); p.recycle();
                     try {
@@ -225,7 +264,10 @@ final class Session {
                         report.bool("stopped_epoch_rejected", true, "Old endpoint died before stale transaction");
                     }
                 }
-                catch (Exception ignored) { }
+                catch (Throwable failure) {
+                    report.add("stop_request", "best_effort", "failed", 0, "UNKNOWN",
+                            "STOP or post-STOP check failed. Reservation retained");
+                }
             }
             try {
                 boolean death = worker != null && dead.await(3, TimeUnit.SECONDS);
@@ -234,7 +276,7 @@ final class Session {
                 report.add("worker_reaped", "independent_observer", "not_measured", 0, "UNKNOWN",
                         "No reaping or no-surviving-child claim");
             } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-            if (bound) context.unbindService(connection);
+            if (bindAttempted) cleanup(report, "unbind_request", () -> context.unbindService(connection));
             try {
                 if (expected != null) report.bool("sentinel_integrity",
                         Arrays.equals(expected, digest(sentinel)), "Manager positive control before and after probes");
@@ -248,23 +290,22 @@ final class Session {
             } catch (Exception e) {
                 report.add("integrity_verification", "completed", "unavailable", 0, "UNKNOWN", "Do not infer intact state");
             }
-            if (control != 0 && (returned || dead.getCount() == 0 || !initialized)) {
-                report.bool("synthetic_memory_integrity", NativeProbe.releaseControl(control),
-                        "Synthetic memory only. Allowed write control uses same byte");
+            if (control != 0 && !initAttempted) {
+                final long localControl = control;
+                cleanup(report, "memory_release", () -> report.bool("synthetic_memory_integrity",
+                        NativeProbe.releaseControl(localControl), "Local allocation never sent through INIT"));
             } else if (control != 0) {
                 // Keep allocation alive until process exit if worker lifetime is uncertain.
                 report.add("memory_control_lifetime", "released_after_worker", "retained", 0, "UNKNOWN",
                         "Uncertain death. Do not reuse address while worker may retain it");
             }
-            try { if (protectedFile != null) protectedFile.close(); } catch (IOException ignored) {}
-            try { if (canary != null) canary.close(); } catch (IOException ignored) {}
-            try { if (scratch != null) scratch.close(); } catch (IOException ignored) {}
-            if (pixels != null) SharedMemory.unmap(pixels);
-            if (frame != null) frame.close();
-            // A fresh session is blocked if an old worker might still hold capabilities.
-            previousEpoch = epoch;
-            if ((worker == null || dead.getCount() == 0)
-                    && !launchState.getBoolean("uncertain_child", false)) ACTIVE.set(false);
+            if (protectedFile != null) cleanup(report, "sentinel_close", protectedFile::close);
+            if (canary != null) cleanup(report, "canary_close", canary::close);
+            if (scratch != null) cleanup(report, "scratch_close", scratch::close);
+            final ByteBuffer localPixels = pixels;
+            if (localPixels != null) cleanup(report, "frame_unmap", () -> SharedMemory.unmap(localPixels));
+            if (frame != null) cleanup(report, "frame_close", frame::close);
+            // Local requests/releases never reopen admission or certify delegated resource closure.
         }
         try { return report.json(); }
         catch (IllegalArgumentException e) {

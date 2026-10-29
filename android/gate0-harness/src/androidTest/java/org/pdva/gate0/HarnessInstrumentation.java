@@ -12,11 +12,9 @@ public final class HarnessInstrumentation extends Instrumentation {
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
-            String previous = "";
-            for (int i = 0; i < 5; i++) {
+            // One guarded attempt only. Lifecycle hooks below never start another session.
+            {
                 JSONObject report = new JSONObject(new Session(getTargetContext()).run(false));
-                if (previous.equals(report.getString("epoch"))) throw new AssertionError("epoch_reuse");
-                previous = report.getString("epoch");
                 String[] required = { "distinct_worker_uid", "stale_epoch_rejected", "oversized_control_rejected",
                         "trailing_control_rejected", "invalid_frame_rejected", "input_flood_rejected",
                         "readonly_fd_write", "delegated_canary_read", "frame_sequence_1", "frame_sequence_2",
@@ -42,9 +40,6 @@ public final class HarnessInstrumentation extends Instrumentation {
                             !"42".equals(row.getString("observed"))) throw new AssertionError("generated_return");
                 }
             }
-            new Session(getTargetContext()).run(true);
-            JSONObject restarted = new JSONObject(new Session(getTargetContext()).run(false));
-            if (previous.equals(restarted.getString("epoch"))) throw new AssertionError("restart_epoch");
             Intent launch = new Intent(getTargetContext(), MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             Activity activity = startActivitySync(launch);
             ActivityMonitor monitor = addMonitor(MainActivity.class.getName(), null, false);

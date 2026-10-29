@@ -9,7 +9,8 @@ public final class ProtocolTest {
         try { action.run(); } catch (IllegalArgumentException e) { rejected = true; }
         check(rejected);
     }
-    public static void main(String[] ignored) {
+    public static void main(String[] ignored) throws Exception {
+        ResearchAttemptTest.run();
         Protocol p = new Protocol();
         rejects(() -> p.check(E)); rejects(() -> p.initialize("../bad"));
         p.initialize(E); rejects(() -> p.initialize(E));
@@ -52,6 +53,10 @@ public final class ProtocolTest {
         Report unsupportedReport = new Report(E, 37);
         unsupported.append(unsupportedReport);
         check(unsupportedReport.json().contains("UNSUPPORTED"));
+        check(unsupportedReport.json().contains("\"observed\":\"reported_clean\""));
+        check(unsupportedReport.json().contains("\"expected\":\"worker_report_only\""));
+        check(unsupportedReport.json().contains("\"probe\":\"launch_cleanup\",\"expected\":\"worker_report_only\","
+                + "\"observed\":\"reported_clean\",\"errno\":0,\"status\":\"UNKNOWN\""));
         launch[0] = launch[1] = launch[3] = 1;
         rejects(() -> new LaunchResult(launch)); // Claimed cleanup without wait.
         launch[13] = 0; launch[12] = 1;

@@ -10,7 +10,6 @@ public final class MainActivity extends Activity {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private volatile Session active;
     private TextView output;
-    private volatile boolean abortCycles;
     private String report = "";
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -19,10 +18,9 @@ public final class MainActivity extends Activity {
         TextView title = new TextView(this);
         title.setText("Gate 0 isolated-worker substrate harness\nResearch only. Gate 0 Unresolved. No QEMU or guest.");
         layout.addView(title);
-        button(layout, "Run fresh epoch", () -> run(1, false));
-        button(layout, "Run five start/stop cycles", () -> run(5, false));
-        button(layout, "Worker death / rebind exercise", () -> run(2, true));
-        button(layout, "Stop", () -> { abortCycles = true; if (active != null) active.cancel(); });
+        button(layout, "Request one research attempt", () -> run(false));
+        button(layout, "Request one worker-death attempt", () -> run(true));
+        button(layout, "Stop", () -> { if (active != null) active.cancel(); });
         button(layout, "Copy sanitized JSON", () -> {
             if (!report.isEmpty()) {
                 android.content.ClipboardManager clipboard =
@@ -40,27 +38,21 @@ public final class MainActivity extends Activity {
         Button button = new Button(this); button.setText(text);
         button.setOnClickListener(v -> action.run()); layout.addView(button);
     }
-    private void run(int count, boolean death) {
+    private void run(boolean death) {
         if (active != null) return;
-        abortCycles = false;
         report = "";
-        active = new Session(this);
+        Session session = new Session(this);
+        active = session;
         output.setText(R.string.running_status);
         executor.execute(() -> {
-            StringBuilder all = new StringBuilder("[");
             try {
-                for (int i = 0; i < count; i++) {
-                    if (i != 0) { all.append(','); active = new Session(this); }
-                    all.append(active.run(death && i == 0));
-                    if (abortCycles || isFinishing() || isDestroyed()) break;
-                }
-                all.append(']'); report = all.toString();
+                report = "[" + session.run(death) + "]";
                 runOnUiThread(() -> output.setText(report));
             } finally { active = null; }
         });
     }
     @Override protected void onStop() {
-        abortCycles = true; if (active != null) active.cancel();
+        if (active != null) active.cancel();
         super.onStop();
     }
     @Override protected void onDestroy() {
