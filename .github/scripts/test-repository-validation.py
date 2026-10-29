@@ -1538,9 +1538,57 @@ class FdtDiscoveryTests(unittest.TestCase):
             self.assertIn(token, research.ANDROID_FDT_PROBE)
 
 
+class ExtractionPolicyTests(unittest.TestCase):
+    TABLE = ("Binary APK\nPackage name=org.pdva.gate0 id=7f\n"
+             "  type xml id=02 entryCount=1\n"
+             "    resource 0x7f020000 xml/data_extraction_rules\n"
+             "      () (file) res/4j.xml type=XML\n")
+
+    def test_exact_source_and_mapping(self):
+        harness.extraction_policy(harness.RULES.read_text(encoding="utf-8"))
+        self.assertEqual(harness.resource_mapping(self.TABLE, "@ref/0x7f020000"),
+                         ("0x7f020000", "res/4j.xml"))
+
+    def test_unsupported_ambiguous_or_unresolved_mapping(self):
+        for table in ("", self.TABLE.replace("Binary APK", "Proto APK"),
+                      self.TABLE.replace("()", "(v31)"),
+                      self.TABLE.replace("res/4j.xml", "res/../4j.xml"),
+                      self.TABLE.replace("type=XML", "type=UNKNOWN"),
+                      self.TABLE.replace("id=02", "id=03"),
+                      self.TABLE + self.TABLE,
+                      self.TABLE.replace("      ()", "    resource 0x7f020000 xml/other\n      ()")):
+            with self.subTest(table=table), self.assertRaises(ValueError):
+                harness.resource_mapping(table, "@ref/0x7f020000")
+        for ref in (None, "", "@xml/data_extraction_rules", "@ref/0x7f020001"):
+            with self.subTest(ref=ref), self.assertRaises(ValueError):
+                harness.resource_mapping(self.TABLE, ref)
+
+    def test_decoder_and_missing_tool_failures_propagate(self):
+        with mock.patch.object(harness, "file_hash", return_value="a" * 64):
+            for error in (FileNotFoundError("tool absent"), subprocess.TimeoutExpired("decoder", 120),
+                          subprocess.CalledProcessError(1, "decoder")):
+                with self.subTest(error=error), mock.patch.object(
+                        harness.subprocess, "check_output", side_effect=error):
+                    with self.assertRaises(type(error)):
+                        harness.packaged_rules("unused.apk", ["analyzer"],
+                            Path("sdk/cmdline-tools/test/bin/apkanalyzer"), "unused")
+
+    def test_source_policy_cannot_silently_change(self):
+        text = harness.RULES.read_text(encoding="utf-8")
+        for changed in (text.replace('path="."', 'path="subdir"', 1),
+                        text.replace("<cloud-backup>", "<cloud-backup>unexpected"),
+                        text.replace("<exclude", "<include", 1)):
+            with self.subTest(changed=changed), self.assertRaises(ValueError):
+                harness.extraction_policy(changed)
+
+
 class ManifestTests(unittest.TestCase):
     def setUp(self): self.source = harness.SOURCE.read_text(encoding="utf-8")
     def test_valid(self): harness.manifest(self.source, release=True)
+    def test_extraction_reference_required(self):
+        for value in ("", "@xml/other", "@ref/0x7f020000"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                harness.manifest(self.source.replace("@xml/data_extraction_rules", value))
     def test_any_permission_rejected(self):
         for tag in ("uses-permission", "uses-permission-sdk-23", "permission"):
             changed = self.source.replace("<application", '<' + tag +
@@ -1562,6 +1610,7 @@ class ManifestTests(unittest.TestCase):
     def test_extraction_and_sdk_required_in_package(self):
         packaged = self.source.replace('<application ', '<uses-sdk android:minSdkVersion="30" '
                 'android:targetSdkVersion="37"/><application android:extractNativeLibs="true" ')
+        packaged = packaged.replace("@xml/data_extraction_rules", "@ref/0x7f020000")
         harness.manifest(packaged, True, True)
         for old, new in [('extractNativeLibs="true"', 'extractNativeLibs="false"'),
                          ('targetSdkVersion="37"', 'targetSdkVersion="28"'),

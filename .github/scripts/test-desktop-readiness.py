@@ -4,6 +4,7 @@ import importlib.util
 import os
 from pathlib import Path
 import subprocess
+import struct
 import sys
 import tempfile
 import unittest
@@ -19,7 +20,11 @@ NATIVE = {name: {"sha256": "d" * 64, "role": role, "needed": ["libc.so"]}
           for name, role in (("lib/arm64-v8a/libsubstrate.so", "JNI-shared"),
                              ("lib/x86_64/libsubstrate.so", "JNI-shared"),
                              ("lib/arm64-v8a/libpdva_launch.so", "dynamic-PIE"))}
-RESULT = {"build": BUILD, "validation": {"manifest": "passed", "native": NATIVE},
+RULE_RECEIPT = {"policy": "all-domains-excluded-v1", "resource_id": "0x7f020000",
+                "entry": "res/4j.xml", "compiled_sha256": "1" * 64,
+                "source_sha256": "2" * 64, "aapt2_sha256": "3" * 64}
+RESULT = {"build": BUILD, "validation": {"manifest": "passed", "native": NATIVE,
+                                        "extraction_rules": RULE_RECEIPT},
           "artifacts": {k: {"path": "synthetic/" + k, "sha256": v["sha256"]} for k, v in NATIVE.items()},
           "validator_sha256": "c" * 64, "analyzer_sha256": "e" * 64, "source_tree": "f" * 40,
           "scope": "offline-inspection-only"}
@@ -194,6 +199,17 @@ class JournalTests(unittest.TestCase):
         with self.assertRaises(m.Rejected):
             m.status(self.path)
 
+    def test_old_or_incomplete_resource_receipt_rejected(self):
+        import copy
+        for field in (None, *RULE_RECEIPT):
+            result = copy.deepcopy(RESULT)
+            if field is None:
+                del result["validation"]["extraction_rules"]
+            else:
+                del result["validation"]["extraction_rules"][field]
+            with self.subTest(field=field), self.assertRaises(m.Rejected):
+                m.receipt(result, BUILD)
+
     def test_corruption_truncation_stale_record_and_duplicate_keys(self):
         original = self.path.read_bytes()
         cases = [b"", original[:-1], original + original,
@@ -253,6 +269,8 @@ class InspectionTests(unittest.TestCase):
                    "lib/arm64-v8a/libpdva_launch.so": fixture()}
         paths = {}
         with zipfile.ZipFile(self.apk, "w", compression=zipfile.ZIP_DEFLATED) as z:
+            # Synthetic transport only; genuine compiled controls run separately.
+            z.writestr("res/4j.xml", struct.pack("<HHI", 3, 8, 8))
             for i, (name, data) in enumerate(entries.items()):
                 z.writestr(name, data)
                 local = Path(self.temp.name) / (str(i) + ".fixture")
@@ -260,13 +278,28 @@ class InspectionTests(unittest.TestCase):
                 paths[name] = local
         text = regression.harness.SOURCE.read_text(encoding="utf-8")
         text = text.replace("<application", '<uses-sdk android:minSdkVersion="30" android:targetSdkVersion="37"/><application android:extractNativeLibs="true"')
-        analyzer = Path(self.temp.name) / "analyzer.fixture"
+        text = text.replace("@xml/data_extraction_rules", "@ref/0x7f020000")
+        analyzer = Path(self.temp.name) / "sdk/cmdline-tools/test/bin/apkanalyzer"
+        analyzer.parent.mkdir(parents=True)
+        aapt = regression.harness.aapt2_path(analyzer)
+        aapt.parent.mkdir(parents=True)
+        aapt.write_bytes(b"synthetic tool identity; never executed")
         analyzer.write_bytes(b"synthetic transport identity; never executed")
         return dict(BUILD, apk_sha256=m.file_hash(self.apk)), analyzer, paths, text
 
+    def output(self, command, manifest):
+        if "resources" in command and "dump" in command:
+            return ("Binary APK\nPackage name=org.pdva.gate0 id=7f\n"
+                    "  type xml id=02 entryCount=1\n"
+                    "    resource 0x7f020000 xml/data_extraction_rules\n"
+                    "      () (file) res/4j.xml type=XML\n")
+        if "xml" in command:
+            return (m.ROOT / "android/gate0-harness/src/main/res/xml/data_extraction_rules.xml").read_text()
+        return manifest
+
     def test_actual_validators_and_local_correspondence(self):
         build, analyzer, paths, manifest = self.inspection_fixture()
-        with patch.object(m, "check_source", return_value="f" * 40), patch.object(m.subprocess, "check_output", return_value=manifest):
+        with patch.object(m, "check_source", return_value="f" * 40), patch.object(m.subprocess, "check_output", side_effect=lambda command, **kw: self.output(command, manifest)):
             result = m.inspect(build, self.apk, analyzer, paths)
         m.receipt(result, build)
         self.assertEqual(set(result["validation"]["native"]), set(paths))
@@ -277,7 +310,7 @@ class InspectionTests(unittest.TestCase):
         swapped = dict(paths)
         swapped[next(iter(paths))] = self.apk
         cases.append(swapped)
-        with patch.object(m, "check_source", return_value="f" * 40), patch.object(m.subprocess, "check_output", return_value=manifest):
+        with patch.object(m, "check_source", return_value="f" * 40), patch.object(m.subprocess, "check_output", side_effect=lambda command, **kw: self.output(command, manifest)):
             for mapping in cases:
                 with self.subTest(keys=list(mapping)), self.assertRaises(m.Rejected):
                     m.inspect(build, self.apk, analyzer, mapping)
@@ -295,7 +328,7 @@ class InspectionTests(unittest.TestCase):
         build, analyzer, paths, manifest = self.inspection_fixture()
         def change(*args, **kwargs):
             analyzer.write_bytes(b"changed")
-            return manifest
+            return self.output(args[0], manifest)
         with patch.object(m, "check_source", return_value="f" * 40), patch.object(m.subprocess, "check_output", side_effect=change):
             with self.assertRaisesRegex(m.Rejected, "Inputs changed"):
                 m.inspect(build, self.apk, analyzer, paths)

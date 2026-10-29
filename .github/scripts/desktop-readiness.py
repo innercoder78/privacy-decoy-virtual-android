@@ -65,9 +65,21 @@ def receipt(data, build):
             isinstance(data["source_tree"], str) and
             re.fullmatch(r"[0-9a-f]{40}", data["source_tree"]), "Invalid tool/source identity")
     validation = data["validation"]
-    require(isinstance(validation, dict) and set(validation) == {"manifest", "native"} and
+    require(isinstance(validation, dict) and set(validation) == {"manifest", "native", "extraction_rules"} and
             validation["manifest"] == "passed" and isinstance(validation["native"], dict) and
             len(validation["native"]) == 3, "Incomplete validation receipt")
+    rules = validation["extraction_rules"]
+    require(isinstance(rules, dict) and set(rules) == {"policy", "resource_id", "entry",
+            "compiled_sha256", "source_sha256", "aapt2_sha256"} and
+            rules["policy"] == "all-domains-excluded-v1" and
+            isinstance(rules["resource_id"], str) and
+            re.fullmatch(r"0x7f[0-9a-f]{6}", rules["resource_id"]) and
+            isinstance(rules["entry"], str) and
+            re.fullmatch(r"res/[A-Za-z0-9_/.-]+\.xml", rules["entry"]) and
+            ".." not in rules["entry"].split("/") and
+            all(isinstance(rules[k], str) and HEX.fullmatch(rules[k]) for k in
+                ("compiled_sha256", "source_sha256", "aapt2_sha256")),
+            "Incomplete extraction policy receipt; historical results cannot be upgraded")
     require(isinstance(data["artifacts"], dict) and
             set(data["artifacts"]) == set(validation["native"]), "Artifact identity mismatch")
     for name, item in validation["native"].items():
