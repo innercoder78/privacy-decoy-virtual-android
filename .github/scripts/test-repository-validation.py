@@ -34,6 +34,113 @@ startup = load("startup-order-research")
 revocation = load("revocation-research")
 
 
+class ResearchAttemptSourceTests(unittest.TestCase):
+    """Deliberately narrow source contracts, not an Android scheduler or Java parser."""
+    root = SCRIPTS.parents[1] / "android/gate0-harness/src"
+
+    @classmethod
+    def sources(cls):
+        main = cls.root / "main/java/org/pdva/gate0"
+        return [(main / name).read_text(encoding="utf-8") for name in
+                ("Session.java", "MainActivity.java", "ResearchAttempt.java")] + [
+            (cls.root / "androidTest/java/org/pdva/gate0/HarnessInstrumentation.java").read_text(encoding="utf-8")]
+
+    def contract(self, session, ui, guard, instrumentation):
+        # Strip comments so descriptive text cannot satisfy these code anchors.
+        session, ui, guard, instrumentation = [re.sub(r"//[^\n]*|/\*.*?\*/", "", x, flags=re.S)
+                                                for x in (session, ui, guard, instrumentation)]
+        self.assertIn("private static final ResearchAttempt ATTEMPT = new ResearchAttempt();", session)
+        self.assertEqual(session.count("new ResearchAttempt("), 1)
+        run = session[session.index("String run(boolean simulateDeath)"):]
+        self.assertIn("if (!reserveAttempt())", run)
+        denial = run[run.index("if (!reserveAttempt())"):run.index('report.add("research_attempt",')]
+        self.assertIn("return report.json();", denial)
+        self.assertLess(run.index("if (cancelled)"), run.index("if (!reserveAttempt())"))
+        self.assertLess(run.index("if (!reserveAttempt())"), run.index("create(sentinel"))
+        self.assertLess(run.index("if (!reserveAttempt())"), run.index("context.bindIsolatedService"))
+        self.assertLess(run.index("context.bindIsolatedService"), run.index("request(Protocol.INIT"))
+        self.assertEqual(run.count("reserveAttempt()"), 1)
+        self.assertIn("if (cancelled) throw new InterruptedException();", run)
+        self.assertIn("if (cancelled && code != Protocol.STOP) throw new InterruptedException();", session)
+        self.assertIn("initAttempted = true;", run)
+        self.assertLess(run.index("initAttempted = true;"), run.index("request(Protocol.INIT"))
+        self.assertIn("if (worker != null && dead.getCount() != 0)", run)
+        self.assertIn('cleanup(report, "unbind_request",', run)
+        self.assertIn('if (bindAttempted) cleanup(report, "unbind_request",', run)
+        self.assertLess(run.index("bindAttempted = true;"), run.index("context.bindIsolatedService"))
+        self.assertIn("control != 0 && !initAttempted", run)
+        self.assertNotRegex(session, r"getSharedPreferences|getBoolean|putBoolean|ACTIVE|previousEpoch")
+        self.assertNotRegex(session + guard, r"\.delete\(|\.deleteIfExists\(|\.clear\(|\.remove\(|attempted\s*=\s*false")
+        self.assertIn("synchronized boolean reserve(", guard)
+        self.assertIn("if (attempted) return false;", guard)
+        self.assertLess(guard.index("attempted = true;"), guard.index("Files.newDirectoryStream"))
+        self.assertIn('equals("shared_prefs")) return false;', guard)
+        self.assertIn("if (entries.iterator().hasNext()) return false;", guard)
+        self.assertIn("StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE", guard)
+        self.assertNotRegex(guard, r"TRUNCATE_EXISTING|DELETE_ON_CLOSE")
+        for required in ("out.force(true)", "sync.sync(files)", "sync.sync(data)"):
+            self.assertIn(required, guard)
+        self.assertLess(guard.index("out.force(true)"), guard.index("sync.sync(files)"))
+        self.assertLess(guard.index("sync.sync(files)"), guard.index("sync.sync(data)"))
+        self.assertLess(guard.index("sync.sync(data)"), guard.index("return true;"))
+        self.assertRegex(guard, r"catch \(Exception failure\)\s*\{\s*return false;")
+        self.assertIn("android.system.Os.fsync(fd)", session)
+        self.assertIn("finally { android.system.Os.close(fd); }", session)
+        self.assertIn("if (connectionSeen || bindingClosed || cancelled)", session)
+        self.assertIn("bindingClosed = true;", run)
+        self.assertEqual(ui.count("new Session("), 1)
+        self.assertEqual(ui.count("session.run("), 1)
+        self.assertNotRegex(ui, r"\bfor\s*\(|\bwhile\s*\(|abortCycles|run\(5|run\(2|rebind|fresh epoch")
+        self.assertEqual(instrumentation.count("new Session("), 1)
+        self.assertNotRegex(instrumentation[:instrumentation.index("new Session(")], r"\bfor\s*\(|\bwhile\s*\(")
+        self.assertNotRegex(instrumentation, r"run\(true\)|restart_epoch")
+
+    def test_current_source_order_and_irreversible_admission(self):
+        self.contract(*self.sources())
+
+    def test_old_behavior_mutants_are_detected(self):
+        original = self.sources()
+        mutations = [
+            (0, "if (!reserveAttempt())", "if (false)"),
+            (0, "return report.json();\n        }\n        report.add(\"research_attempt\",", "}\n        report.add(\"research_attempt\","),
+            (0, "launch.append(report);", 'launch.append(report); launchState.edit().putBoolean("uncertain_child", false).commit();'),
+            (0, "boolean death = worker != null", "ACTIVE.set(false); boolean death = worker != null"),
+            (0, "if (worker != null && dead.getCount() != 0)", "if (initialized && dead.getCount() != 0)"),
+            (0, "if (connectionSeen || bindingClosed || cancelled)", "if (false)"),
+            (0, "if (cancelled && code != Protocol.STOP) throw new InterruptedException();", ""),
+            (0, 'cleanup(report, "unbind_request", () -> context.unbindService(connection))', "context.unbindService(connection)"),
+            (1, "report = \"[\" + session.run(death)", "for (int i = 0; i < 5; i++) report = \"[\" + session.run(death)"),
+            (2, 'equals("shared_prefs")) return false;', 'equals("shared_prefs")) return true;'),
+            (2, "if (entries.iterator().hasNext()) return false;", ""),
+            (2, "StandardOpenOption.CREATE_NEW", "StandardOpenOption.CREATE"),
+            (2, "out.force(true);", ""),
+            (2, "sync.sync(data);", ""),
+            (2, "catch (Exception failure)", "catch (IOException failure)"),
+            (3, "Intent launch =", "new Session(getTargetContext()).run(true); Intent launch ="),
+        ]
+        for index, before, after in mutations:
+            with self.subTest(mutant=before):
+                self.assertIn(before, original[index])
+                changed = list(original)
+                changed[index] = changed[index].replace(before, after, 1)
+                with self.assertRaises(AssertionError):
+                    self.contract(*changed)
+
+    def test_all_session_and_bind_call_sites_are_accounted_for(self):
+        sources = {str(p.relative_to(self.root)).replace("\\", "/"): p.read_text(encoding="utf-8")
+                   for p in self.root.rglob("*.java")}
+        callers = {p for p, text in sources.items() if "new Session(" in text}
+        self.assertEqual(callers, {"main/java/org/pdva/gate0/MainActivity.java",
+                                  "androidTest/java/org/pdva/gate0/HarnessInstrumentation.java"})
+        binders = {p for p, text in sources.items() if re.search(r"\.bind(?:Isolated)?Service\(", text)}
+        self.assertEqual(binders, {"main/java/org/pdva/gate0/Session.java"})
+        session = self.sources()[0]
+        self.assertEqual(session.count("context.bindIsolatedService("), 1)
+        self.assertEqual(session.count("request(Protocol.INIT,"), 1)
+        self.assertEqual(session.count("p = request(Protocol.LAUNCH, epoch, d -> {});"), 1)
+        self.assertNotRegex("\n".join(sources.values()), r"startService\(|startForegroundService\(|WorkManager|AlarmManager")
+
+
 class RevocationReceiptTests(unittest.TestCase):
     def test_loss_retry_wire_receipts_reach_unchanged_oracles(self):
         for case in ("loss", "uncertain"):

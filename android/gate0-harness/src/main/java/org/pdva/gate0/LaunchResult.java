@@ -56,7 +56,7 @@ final class LaunchResult {
         row(r, "exit", "42", Long.toString(v[10]), 0, v[10] == 42 && v[14] == 1 ? "PASS" : "UNKNOWN");
         row(r, "signal", "none", Long.toString(v[11]), 0, "UNKNOWN");
         row(r, "timeout", "false", Boolean.toString(v[12] == 1), 0, v[12] == 1 ? "FAIL" : "UNKNOWN");
-        row(r, "cleanup", "known", cleanupKnown() ? "known" : "incomplete", v[22], cleanupKnown() ? "PASS" : "UNKNOWN");
+        row(r, "cleanup", "worker_report_only", cleanupKnown() ? "reported_clean" : "incomplete", v[22], "UNKNOWN");
         row(r, "output", "fixed_40_bytes_result_42", v[14] == 1 ? "valid" : v[14] == -1 ? "invalid" : "absent",
                 0, v[14] == 1 ? "PASS" : "UNKNOWN");
         String[] names = {"distinct_pid", "same_worker_uid", "same_worker_euid"};
