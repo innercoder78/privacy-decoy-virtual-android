@@ -110,6 +110,126 @@ Unknown cannot satisfy a required assertion. Any future change to which contract
 is required for merging needs explicit owner approval and a separately reviewed
 requirements/check transition; historical failures must remain failures.
 
+## PROPOSED Option D contract: additive research correspondence
+
+**Status: PROPOSED; Option D is not approved or implemented.** This section is the
+decision-ready contract, dated 2026-10-30. Recommend **D1: additive, per-property
+research reporting with the existing whole-byte assertion and merge block intact**.
+It relies on the [existing evidence](../evidence/gate-0-apk-reproducibility.md), not
+a new APK experiment or a new definition of reproducibility. Approval of Option A
+does not approve this reporting contract.
+
+### Evidence envelope and independence
+
+Each proposed report must identify its schema/contract revision, experiment/run/job,
+diagnostic source SHA, tested candidate SOURCE/TREE, build variant and ABI scope,
+tool versions and actual inventories, dependency-verification/configuration hashes,
+verifier identity, and both original complete APK sizes and SHA-256 values. Attach
+per-result procedure, coverage, control outcomes, evidence links, limitations and
+the emitting tool's exit status. A report is not a cryptographic attestation.
+
+Build A and B must come from separate fresh checkouts/output and dependency homes,
+with caches disabled and the same authorized signer within the pair. Bind every
+measurement and verifier invocation to its original artifact hash; recheck identity
+around measurement. Never substitute a mutation fixture, copy of A, retained APK
+or imported JSON claim for independently built B. Distinct paths and matching
+hashes alone cannot prove independence: retain build execution and source/input
+records. The current pairs share a hosted runner/toolchain and trust domain;
+they do not demonstrate independently operated builders or compiler diversity.
+
+The following proposed result names are report labels, not new requirement IDs.
+All positive results require an admitted envelope and completed controls. Builders
+can recompute these properties when they possess both original artifacts and the
+necessary inputs/intermediates; current public logs alone permit review, not a
+fresh cryptographic verification or reconstruction of unavailable artifacts.
+
+### Property coverage, existing evidence and required controls
+
+| Proposed result | Exact comparison / demonstrated scope | Required positive and negative controls before reporting a positive result |
+|---|---|---|
+| `INPUT_CORRESPONDENCE` | Exact source/tree, configuration, resolved dependency inventories/verification policy and actual qualified tool inventories match. Demonstrated for the recorded pairs. Does not cover entropy, every environment input, source-to-tool-binary reconstruction or key custody. | Positive: recompute both complete inventories from the actual builds. Negative: changed source, tool/dependency/configuration hash, omitted field, stale receipt and reused build output must prevent a positive result. Same-path and copied-artifact controls cannot substitute for fresh-build evidence. |
+| `APPLICATION_CONTENT_CORRESPONDENCE` | All ZIP entries: names/count/order, uncompressed bytes, recorded metadata including times/flags/compression/attributes/extra/comments/offsets; separately compare raw local-record, central-directory and EOCD regions. No DEX/resource/native exclusions. Demonstrated within recorded pairs. Covers these enumerated regions, not the signing block or runtime semantics. | Positive: validated identity fixture plus recomputation over both genuine APKs. Negative: mutate DEX/resource/native payload, add/remove/reorder an entry, change ZIP metadata/raw region or introduce duplicate/truncated entries. Each mutation must fail the affected result; metadata-only changes must not be described as changed application payload. |
+| `NATIVE_OUTPUT_CORRESPONDENCE` | For both JNI ABIs, exact object, unstripped and stripped library hashes, section inventories/build IDs, and stripped-to-packaged bytes; inventory the separate ARM64 launch payload. Demonstrated for current measured scope, not every platform or native toolchain. | Positive: actual object/library inventory and packaged correspondence, with mapped replay controls. Negative: change an object, code/debug/build-ID section or packaged native byte; omit an ABI/output; remove a required mapping or security flag. No section normalization. Missing intermediates yield Unknown, not a source-to-native claim. |
+| `SIGNATURE_VALIDITY` | Qualified external apksigner verifies each original APK under the required scheme policy. Demonstrated v2 validity; structural parsing alone is insufficient. This authenticates scheme-covered content, not every outer metadata pair or provenance. | Positive: both original verifier successes with exact artifact/tool identities. Negative: existing disposable altered-signature controls must cause the expected cryptographic rejection, not a missing-tool/parse/infrastructure error. Missing output, false scheme result or failed control prevents a positive result. |
+| `SIGNER_AND_V2_CORRESPONDENCE` | Separately compare certificate/public-key identities, scheme set, algorithm IDs, complete v2 block, signed data/digests/attributes and signature bytes. Demonstrated same signer and RSA-PKCS1-v1_5 signature bytes within current pairs; not production authorization/custody or cross-run identity. | Positive: bounded parse bound to each externally verified leaf certificate and compare all listed fields. Negative: different signer/scheme/algorithm/signature, duplicate or missing mandatory record, malformed prefix or forbidden trailing bytes must fail the relevant comparison/admission. A valid differently signed APK may pass validity while failing signer correspondence. |
+| `SIGNING_BLOCK_INVENTORY` | Inventory every outer ID/value pair, offsets/sizes/hashes and padding without ignoring unknown pairs. Current v2 and padding match; dependency-info `0x504b4453` differs. Report each field's equality explicitly; no overall signing-block-equality success is available. Plaintext equivalence and individual historical random inputs remain Unknown. | Positive: complete bounded inventory tied to originals and expected identities. Negative: changed/extra/missing/duplicate pair, changed padding, malformed size or unsupported interpretation must be detected. A dependency-info-only change must be reported as different; never infer plaintext equality from size, source pins or valid v2 signatures. Unknown IDs stay opaque and cannot earn semantic validation. |
+| `WHOLE_SIGNED_APK_EQUALITY` | Both complete original signed files, including all signing metadata, must meet the unchanged strict comparator and signer policy. Repeated genuine result: **FAIL**. No reduced, normalized or unsigned digest may replace this result. | Positive test control: equal disposable fixture admitted by the comparator, labelled fixture-only. Negative: any real byte mutation, append/truncation or artifact/report substitution must reject equality. Genuine success requires two independent real signed builds satisfying the unchanged check; the positive fixture proves no such result. |
+
+Existing synthetic and hosted controls support parts of this matrix, but the
+future reporter's envelope binding, every per-result mutation mapping and complete
+fail-closed behavior have **not** been qualified as a new D contract. They require
+implementation review and tests after approval. No control is claimed executed
+merely because it is specified here; no new build is needed to decide this proposal.
+
+### Fail-closed result and reporting rules
+
+Each result carries `PASS_FOR_SCOPE`, `FAIL` or `UNKNOWN`, an explicit scope and
+reason, plus `evidence_admission=VALID` or `REJECTED`. These are proposed labels.
+Malformed, duplicate, inconsistent, truncated or substituted evidence is REJECTED
+and fails evidence admission; missing/unsupported/unexecuted proof is UNKNOWN.
+UNKNOWN or REJECTED never satisfies a mandatory assertion. A failed verifier is
+FAIL for validity; an unavailable verifier makes validity UNKNOWN and fails the
+mandatory verification prerequisite. A control that fails to detect its injected
+defect invalidates the associated positive claim. Do not retain an aggregate pass
+when prerequisites or controls are missing.
+
+Recompute from originals rather than trusting imported result booleans. Reject
+ambiguous schema versions, mismatched artifact/tool identities and stale run links.
+Bounds and parser policy remain fail-closed; no inferred field identities, silent
+discard or accepted arbitrary padding. Do not manufacture missing artifacts from
+logs. Privately retained inputs require authorized custody and access; public
+reports contain reviewed hashes and bounded facts, not keys, private paths or raw
+sensitive reports. Hash correspondence relies on the stated hash assumptions and
+trusted tools; neither it nor this envelope supplies supply-chain attestation.
+
+A future summary for the observed kind of pair would read: research build A/B
+completed; measured input/application/native correspondence PASS_FOR_SCOPE;
+signature validity and signer/v2 correspondence PASS_FOR_SCOPE; dependency-info
+values DIFFERENT; metadata plaintext correspondence UNKNOWN; whole signed APK
+equality FAIL; mandatory Android outcome FAIL; merge BLOCKED; release readiness
+NOT ESTABLISHED. This is an illustrative report, not executed D implementation.
+No umbrella "reproducible", "secure" or "ready" status is permitted.
+
+Research findings answer a bounded question and preserve negative outcomes.
+Release/distribution requirements need their own approved artifact, custody,
+provenance, rights, maintenance and gate evidence; this research contract cannot
+satisfy them. Mandatory signature, APK policy, native protection and provenance
+checks remain mandatory regardless of a content match. Whole-byte reproducibility
+and limited correspondence are distinct results, and neither passes Gate 0.
+
+### Smallest alternatives, requirements and merge consequences
+
+| Alternative | Approval and requirements effect | PR #50 consequence and risk |
+|---|---|---|
+| Retain current reporting under A only | Already selected policy; no Option D implementation. PDVA-REQ-036–041, 048, 051 and 054 continue unchanged. | Honest existing negative evidence is sufficient to retain STOP. PR remains blocked; less structured presentation, no extra implementation trust. |
+| **D1 — PROPOSED, recommended: additive report with A intact** | Separately approve the exact envelope, coverage/control matrix and bounded research-only implementation. Elaborates PDVA-REQ-039/040 evidence, 036/037 provenance, 041/042 security limits, 048 privacy and 051 validation. No obligation is waived or marked satisfied; 008/054 governance and approved A remain intact. | Existing strict failure/exit/check and merge blocker remain. No applicability, workflow or merge-rule change is needed for this documentation or inherently required for a supplemental report; any future workflow edit still needs review. Costs: reporter/parser trust and risk of readers mistaking scoped passes for full equality. |
+| D2 — PROPOSED for decision comparison only, not recommended here: make limited correspondence sufficient for research merging | This would change the current required merge contract and cannot preserve A's present whole-byte merge prerequisite intact. Requires explicit reconsideration of that part of A, dated governance disposition under PDVA-REQ-008/054, and separately approved precise research acceptance/required-check revisions. Must reassess 036, 039/040 and 041/042; no implicit supply-chain or security satisfaction. | Cannot be applied to finish PR #50 under existing authorization. Any future legitimate transition must state what obligation changes, why research-only acceptance is adequate, what remains failed, and how every test continues to run with honest outcomes. Making the same applicable failed assertion green, hiding/removing it or merely relabelling the job is not legitimate. No such transition is designed or authorized by this proposal. |
+
+PDVA-REQ-034/035 concern guest-image supply chain/lifecycle and are **not** host-APK
+merge waivers. PDVA-REQ-050's foundation scope and its existing reviewed Android
+research extension are not broadened here. All alternatives leave production
+security boundaries and guest obligations untouched. The exact current host
+whole-byte/merge obligation comes from approved Option A and existing experiment
+acceptance, not an invented claim that the register expressly mandates identical
+host APKs under PDVA-REQ-034. The register is unchanged; a future material policy
+revision must preserve stable IDs and traceability rather than silently edit history.
+
+**Merge answer:** completing and publishing this research proposal does not require
+a CI-rule change; merging PR #50 while the applicable strict assertion fails
+cannot be achieved under A's current rules. D1 does not solve that blocker. No
+approved secure deterministic configuration has been established to satisfy the
+existing condition. A decision to revise a merge obligation is a separate owner
+policy decision, not a technical fix justified by a negative experiment.
+
+**Minimum next owner decision, still pending:** explicitly approve or reject D1's
+exact scope, envelope, result meanings and control matrix, and separately authorize
+its bounded implementation with A's strict failure and merge block preserved.
+Full ADR acceptance needs explicit final-text approval; approving D1 alone must
+not be recorded as accepting unrelated portions. If the owner instead seeks a
+merge-rule transition, require a separate explicit decision identifying the exact
+part of A being reconsidered and the replacement obligations before implementation.
+This request to prepare the proposal approves none of those choices.
+
 ## Acceptance criteria, residual risks and falsifiers
 
 Before any implementation, require all of the following:

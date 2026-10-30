@@ -9,7 +9,7 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-As of the 2026-10-30 source investigation, eleven observed hosted pairs
+As of the 2026-10-30 Option D proposal, twelve observed hosted pairs
 **failed signed-byte equality**. Recent pairs establish matching native outputs, ZIP entries and v2
 signatures; only the dependency-info signing-block value differs. The mechanism
 uses fresh ephemeral-key and IV randomness in the reviewed implementation; actual
@@ -1257,3 +1257,60 @@ Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows native-host incident
 unresolved; physical native-launch readiness **NOT READY — STOP**. No phone, USB,
 ADB, emulator/guest execution or security bypass. One final reviewed publication
 and native association check, then STOP without new-CI/review/mergeability polling.
+
+## Option D contract proposal — 2026-10-30
+
+Question: what limited artifact correspondence can be reported independently of
+the failed whole-byte assertion, without weakening approved Option A? The focused
+[PROPOSED Option D contract in ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#proposed-option-d-contract-additive-research-correspondence)
+is the sole new contract proposal. It specifies an artifact-bound envelope,
+per-property scope and controls, failure/Unknown admission, requirement mappings
+and exact owner decisions. Recommendation D1 adds research reporting while keeping
+the strict assertion and merge block intact. It cannot unblock PR #50. D2 would
+require separately reconsidering A's merge prerequisite and is not recommended
+or authorized here. Option D and full ADR acceptance remain pending.
+
+Live preflight: main `61c68f87404a1b7e70e0314b73532322ee2de252`, PR #50 head
+`82e2eb17f9ab0581000ff92afe7ac68e04c537a6`, base main, only open PR; reviews,
+comments and threads empty. Reviewed the full ten-file accumulated diff, commits,
+100644 modes, workflows/checks, requirements/ADRs, provenance/dependencies and
+existing evidence. Local tracked state was clean; 51 branches, one worktree, no
+stashes and 25,971 ignored files were preserved. GitHub Status snapshot updated
+`2026-10-30T22:09:55.822Z` listed components operational but an active minor
+Dependabot-alert viewing incident; no clean security-alert review is inferred.
+
+Read-only inspection of [Android run 41136876242](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41136876242),
+job `124341388131`, found both builds complete and genuine strict equality failure.
+APK A SHA-256 `2d8afa90ae0586527058438ed6290a05b3d032a37072c5376410be5e1ca31d81`;
+APK B SHA-256 `a73dadbc097dc9b3875e1fe0b3aa7b20b4689ff48137973f6960cbe73db7ce2b`.
+No ZIP entries changed; signer identity matched; signing-field differences were
+`/blocks/1/sha256` and enclosing `/sha256`, and `signing_block` was the only changed
+APK region. This is the twelfth failed pair, not an experiment initiated by this
+proposal. The earlier parser failures and encryption investigation remain intact.
+
+[Foundation run 41136876193](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41136876193)
+passed: Linux job `124341388102` logged 149 repository, 29 comparator, 28 receipt,
+45 image and four frame tests; Windows job `124341388368` logged 45 image and four
+frame tests. These observed successes do not override Android's failure. Existing
+source hashes, binary-verification identities and license/provenance limits are
+reused; no repeated source download, encryption control or new APK build occurred.
+
+Only ADR-0003, this record and its index change. No source, Gradle, signing,
+metadata, comparator, tests, workflow, required check, exit code, permission or
+security setting changes. Contract controls described in the ADR are proposed
+qualification requirements, not newly executed tests or demonstrated D acceptance.
+The missing proof is the future reporter's complete binding/control behavior,
+not another undifferentiated independent APK comparison.
+
+Local validation for this proposal: foundation validator passed (149 files,
+92 Markdown files, 54 requirements, three ADRs), harness validator passed and
+149 repository tests passed with four platform skips. Reviewed all three changed
+documents, local links/new anchor, requirements and approval wording, privacy,
+unchanged dependencies/licenses, regular 100644 modes and whitespace. No comparator
+suite, encryption diagnostic, native compiler, Android build or runtime was run
+locally for this documentation-only proposal. Hosted counts above are separate.
+
+Gate 0 **Unresolved**; Gates A-G **Not reached**; physical native-launch readiness
+**NOT READY — STOP**. No phone, USB, ADB, emulator/guest execution or security
+bypass. Publish to existing PR #50, verify native association once, then STOP;
+new CI/review/mergeability remains unobserved.
