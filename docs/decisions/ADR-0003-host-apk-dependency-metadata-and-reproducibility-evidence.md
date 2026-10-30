@@ -1,9 +1,11 @@
 # ADR-0003: Host APK dependency metadata and reproducibility evidence
 
 **Status: PROPOSED.** **Date: 2026-10-30, America/Fortaleza.**
-**Owner: project owner. Approval: pending explicit review of the final text.**
-Documenting, committing or merging this proposal does not accept it. No owner
-acceptance date or implementation authorization is recorded.
+**Owner: project owner. Option A approved: 2026-10-30.**
+**Full ADR acceptance: pending explicit approval of its final text.**
+The owner's explicit instruction in the existing PDVA conversation approves only
+Option A. The remaining proposal stays PROPOSED; documenting, committing or merging
+it does not accept the entire ADR or authorize implementation changes.
 
 ## Context and verified scope
 
@@ -43,9 +45,11 @@ of unavoidable nondeterminism across all toolchains or future builds follows.
 
 ## Proposed decision and scope
 
-Recommend **A: retain dependency metadata in host APKs**, with the strict
-whole-signed-byte reproducibility claim unresolved and its observed assertions
-failed. Preserve the maintenance/reporting benefit while investigating honestly.
+**Selected direction: Option A, approved by the project owner on 2026-10-30.**
+Retain dependency metadata in PDVA host APKs, preserve the existing strict
+whole-signed-APK reproducibility requirement, and retain all observed failures
+and unresolved limitations. Complete signed-byte equality remains unestablished.
+Preserve the maintenance/reporting benefit while investigating honestly.
 This proposal authorizes no build, signing, comparator, workflow or acceptance
 change. **Current failing Android CI blocks merging PR #50 under existing rules.**
 Neither this ADR nor passing documentation checks is a merge waiver.
@@ -66,13 +70,14 @@ These are separate evidence questions, not interchangeable definitions:
 
 | Alternative | Benefits, costs and disposition |
 |---|---|
-| A. Preserve metadata and unresolved strict signed-byte claim | **Preferred pending approval.** Retains upstream-recommended reporting and all evidence integrity. Leaves applicable CI failed and PR #50 blocked; no promise of a future byte-equality solution. |
+| A. Preserve metadata and unresolved strict signed-byte claim | **Approved policy choice, 2026-10-30.** Retains upstream-recommended reporting and all evidence integrity. Leaves applicable CI failed and PR #50 blocked; no promise of a future byte-equality solution. Full ADR acceptance remains pending. |
 | B. Disable metadata for a narrowly defined development-only artifact | Could isolate the metadata contribution, but success is unproved and cannot describe the metadata-bearing artifact. Requires separate owner approval of exact variant, audience, non-distribution controls, maintenance tradeoff, original-artifact comparison and positive/negative evidence. No configuration change is authorized here. |
 | C. Disable metadata for distributed artifacts | **Not recommended.** Sacrifices the reporting channel to pursue a byte claim, with maintenance and distribution implications. Would require explicit distribution/security policy review and compensating evidence; no claimed equality benefit until measured. |
 | D. Define a separate artifact-correspondence evidence contract | Could give useful positive evidence for source, application content and signatures despite a negative whole-byte result. Must name every covered/excluded field and limitation, retain raw artifact identities and the strict result, and have its own falsifiers. Cannot rename limited equivalence as complete reproducibility or silently replace required checks. Requires separate owner-approved contract and implementation review. |
 
-A and a future separately approved D could coexist. B or C would produce a
-different artifact policy, not repair the historical comparisons. No alternative
+**Options B, C and D remain unapproved.** A and a future separately approved D
+could coexist. B or C would produce a different artifact policy, not repair the
+historical comparisons. No alternative
 permits stripping, copying, normalizing or replacing metadata/signatures to make
 the original pair appear equal.
 
@@ -107,8 +112,9 @@ Before any implementation, require all of the following:
 
 1. Record the owner's dated acceptance, rejection or requested revision of this
    exact ADR; identify selected alternatives, artifact scope and remaining Unknowns.
-   Approval of A alone retains the present check and merge block. B, C or D needs
-   its own explicit scope and implementation authorization; no implicit CI waiver.
+   The recorded approval of A alone retains the present check and merge block.
+   B, C or D needs its own explicit scope and implementation authorization;
+   no implicit CI waiver.
 2. For D, approve the precise evidence schema, field coverage/exclusions, failure
    and Unknown semantics, reviewer responsibility and relationship to merge rules.
    For B/C, approve exact variants/distribution boundaries and the maintenance loss.
@@ -158,11 +164,19 @@ compatibility, certification or attestation. The independently gated
 direction and ADR-0002's proposed delivery scope remain unchanged. No VM engine,
 guest architecture or product boundary is selected or modified.
 
-**Exact owner decision pending:** accept, reject or revise recommendation A and
-this separation of claims; explicitly decide whether to commission a separate D
-contract or a narrowly scoped B experiment. Any implementation or merge-rule
-revision requires separately stated approval. Until then, status stays PROPOSED,
-metadata remains enabled, strict CI remains applicable and PR #50 remains blocked.
+**Owner disposition, 2026-10-30:** Option A is explicitly approved, as recorded
+above. This is approval of that specific policy choice, not acceptance of this
+entire ADR. No approval is granted to disable metadata, modify signing behavior
+or algorithms, ignore/normalize/exclude differing bytes, weaken/suppress/skip CI
+failures, change merge requirements, adopt B/C/D, claim whole-APK reproducibility
+or merge PR #50.
+
+**Still pending:** explicit approval of the final ADR text and any separately
+scoped implementation. A future Option D evidence contract and any change to
+required CI/merge criteria each need separate explicit owner approval. B and C
+also remain unapproved. Status stays PROPOSED for all unapproved portions;
+metadata remains enabled, strict CI remains applicable and PR #50 stays OPEN
+and blocked. No failed assertion is reclassified as a pass.
 
 Gate 0 **Unresolved**; Gates A-G **Not reached**. Windows native-host security
 incident remains unresolved. Physical native-launch readiness **NOT READY — STOP**.

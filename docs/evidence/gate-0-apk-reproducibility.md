@@ -9,8 +9,8 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-As of the 2026-10-30 continuation, nine observed hosted pairs **failed signed-byte
-equality**. The latest two establish matching native outputs, ZIP entries and v2
+As of the 2026-10-30 owner-decision continuation, ten observed hosted pairs
+**failed signed-byte equality**. The latest three establish matching native outputs, ZIP entries and v2
 signatures; only the dependency-info signing-block value differs. The mechanism
 producing those differing bytes remains **Unknown**. See the
 [latest observation and policy proposal](#dependency-info-observation-and-policy-proposal).
@@ -973,3 +973,62 @@ physical native-launch readiness **NOT READY — STOP**. No phone, USB, ADB,
 emulator, guest execution or antivirus bypass. One final documentation commit/push
 to existing PR #50, one native association verification, then STOP; subsequent
 hosted results remain unobserved for owner review.
+
+## Owner approval of Option A — 2026-10-30
+
+The project owner explicitly approved **Option A** in the existing PDVA
+conversation on October 30, 2026: retain dependency metadata in PDVA host APKs,
+preserve the existing strict whole-signed-APK reproducibility requirement, and
+retain all observed failures and unresolved limitations. This supersedes the
+earlier pending disposition for Option A only. The dated research observations
+and negative results above are preserved.
+
+[ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
+records the selected direction while retaining **PROPOSED** status for its
+unapproved portions. Approval of the entire final ADR text remains pending.
+Options B, C and D are unapproved. A future D evidence contract and any change to
+required CI/merge criteria need separate explicit owner approval. No disabling
+metadata, signing change, byte exclusion/normalization, CI suppression/skipping,
+whole-APK success claim or merge is authorized. PR #50 remains **OPEN and blocked**.
+
+Live preflight confirmed main `61c68f87404a1b7e70e0314b73532322ee2de252` and
+PR #50 head `9efb446d2aab901f335a12b4b09ec809a4799af2`, base main, the only
+open PR. Reviews/comments/threads were empty. Full incoming ten-file diff and
+100644 modes, workflows, requirements/ADRs, provenance/dependency records and
+history were reviewed. Clean tracked state, 51 branches, one worktree, no stashes
+and 25,971 ignored files were preserved. GitHub Status reported operational/no
+incidents (snapshot updated `2026-10-30T16:19:08.314Z`).
+
+The newly inspected exact-head [Android run 41091266035](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41091266035),
+job `124185439375`, completed independent builds A and B and failed the strict
+comparison. APK A SHA-256 is
+`3118fe5789ba4215e9b61deeed4ddffebf684239735c9ccc57504d338915b264`;
+APK B SHA-256 is
+`fa2cfa56522a62ed07070da1bef2c1c8699795e154a70e1543b0012688705df5`.
+It reports no changed ZIP entries, matching signer identity, and only the
+dependency-info block value hash plus enclosing signing-block hash changed.
+V2 signatures and padding match. The result remains `signed_bytes_equal=false`
+and `APK_REPRODUCIBILITY=STOP: APK bytes or signing identity differ`. This is the
+tenth failed compared pair, separate from the two earlier parser failures.
+The precise field is established; the underlying encryption/nondeterminism
+mechanism and plaintext correspondence remain Unknown.
+
+[Foundation run 41091265814](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41091265814)
+passed: Linux job `124185439239` logged 149 repository, 29 comparator, 28 receipt,
+45 image and four frame tests; Windows job `124185438796` logged 45 image and
+four frame tests. These successes do not override the genuine Android failure.
+Candidate SOURCE/TREE, dependencies, binaries/provenance, build/signing behavior,
+comparator and required coverage are unchanged by this documentation revision.
+
+Local validation for this owner-decision revision: foundation validator passed
+(149 files, 92 Markdown files, 54 requirements, three ADRs), harness validator
+passed, and 149 repository tests passed with four platform skips. Reviewed the
+complete four-document diff, Markdown targets, approval/status wording, unchanged
+requirements, privacy, provenance/license scope, 100644 modes and whitespace.
+No comparator suite, native compilation, Android build or runtime was executed
+locally for this revision; the hosted test counts above are separate observations.
+
+Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows incident unresolved;
+physical native-launch readiness **NOT READY — STOP**. No phone, USB, ADB,
+emulator/guest execution or antivirus bypass. One final commit/push to existing
+PR #50 and one native association verification, then STOP without new-CI polling.

@@ -9,7 +9,9 @@ and cannot silently amend requirements.
 
 Pending decisions include
 [ADR-0003: host APK dependency metadata and reproducibility evidence](decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md).
-It is a documentation-only proposal; no signing, CI or acceptance change is approved.
+The owner approved only Option A on 2026-10-30: retain host dependency metadata,
+the strict signed-byte requirement, failures and unresolved limitations. The full
+ADR remains PROPOSED; B/C/D, signing changes and CI/merge-rule changes are unapproved.
 
 Material changes to product scope, host privileges, guest platform/image policy,
 primary boundary, networking contract, or evidence gates require a new PDVA ADR
