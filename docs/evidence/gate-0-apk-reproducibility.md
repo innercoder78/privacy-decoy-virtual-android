@@ -769,3 +769,99 @@ do not execute the hosted verifier or prove the new diagnostic result.
 Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows incident unresolved;
 physical native-launch readiness **NOT READY — STOP**. No phone, USB, ADB,
 emulator/guest execution, quarantine restoration or antivirus bypass.
+
+## Parser correction: apksig's empty signed-data element
+
+Continuation date: **2026-10-29, America/Fortaleza**. Live main remains
+`61c68f87404a1b7e70e0314b73532322ee2de252`; incoming PR #50 head is
+`2b76ab5a939262b98e10c561580899c2dff524a9`, base main, the only open PR.
+Comments, reviews and review threads were empty. Existing eight-file diff and
+100644 modes, requirements/ADRs, governance, provenance, dependencies, signing
+source and evidence were reviewed. Local tracked state was clean; 51 branches,
+one worktree, no stashes and 25,971 ignored files were preserved. No applicable
+AGENTS.md was found. GitHub Status reported operational/no incidents (snapshot
+updated `2026-10-30T00:04:37.964Z`, October 29 in the task timezone).
+
+[Android run 40988011993](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40988011993),
+job `123843463808`, and
+[Android run 40988005880](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40988005880),
+job `123843443920`, both completed independent build A and then stopped with
+`APK_REPRODUCIBILITY=STOP: Trailing signing data`. Neither reached independent
+build B or the final comparison. These are **two diagnostic-parser failures**,
+not two additional compared APK pairs. The seven earlier compared failures and
+native correspondence remain intact. External signature verification precedes
+the failing parser call in the pinned script. The logs contain no traceback or
+raw signed-data bytes, so runtime byte attribution is not independently retained.
+
+Foundation run `40988012006` passed. Actual Linux log: 149 repository tests,
+27 comparator tests, 28 receipt tests, 45 image tests and four frame tests.
+Windows log: 45 image and four frame tests. The 27 structural fixtures omitted
+the pinned emitter's fourth element and therefore did not expose this defect.
+
+### Exact source mismatch and reproduced call boundary
+
+The already-recorded official apksig 9.4.0 source archive was fetched again and
+its SHA-256 checked against
+`c7a0f43d1e40fdf39725ac090f5c7bbaeae82d1e0bfd9cf2ee507a70eb5136b5`.
+In `V2SchemeSigner.generateSignerBlock`, lines 269-277 encode four elements:
+digests, certificates, additional attributes, and `new byte[0]`. Its
+`ApkSigningBlockUtils.encodeAsSequenceOfLengthPrefixedElements`, lines 762-773,
+writes a uint32 length for every element. The empty fourth element therefore
+contributes exactly **four zero bytes inside signed data**, covered by the
+signature. It is not verity padding or another outer signing-block ID/value pair.
+
+File SHA-256 identities in that source archive:
+
+- `V2SchemeSigner.java`: `b55ae7a6fed23de3bedacc35df169558b432b25059280f6e1a0c88e60a7e8db5`.
+- `ApkSigningBlockUtils.java`: `57b724a9299b78bdb4d6580d143382daa6f056be279ce129739a1d47f9f72b16`.
+- Signflinger 9.4.0 `SignedApk.java`: `3771acd04812f4b089e28c16b5eb1d84358650986a72a5277d508ffa1337b24e`.
+
+The public v2 overview lists the first three signed-data elements. The pinned
+encoder adds this fourth one; its verifier authenticates the complete signed-data
+bytes before parsing the first three fields and does not require exhaustion at
+that boundary. Signflinger's reviewed integration uses the signing engine's block
+and inserts dependency metadata separately. Accepting arbitrary verifier-tolerated
+trailing bytes would be unjustified; only this exact emitter form is recognized.
+No source is copied and existing dependency/license provenance remains unchanged.
+
+The new source-shaped structural regression was executed **before** the parser
+edit. It failed with the same error and a traceback through
+`signing_block_snapshot → v2_signers → data.finish()`. The failure is specifically
+the signed-data exhaustion check after reading the third field; not `value.finish()`
+on the outer v2 sequence, `signer.finish()` after public key, or `item.finish()` on
+digest/signature algorithm records. This reproduces the defect from the exact
+encoder shape; it is not a retained genuine APK or a new cryptographic proof.
+
+### Narrow correction and falsifiers
+
+At that signed-data boundary only, the parser accepts either the three-field
+overview form or one additional exact four-zero-byte empty-field encoding.
+It records the latter as `apksig_empty_field` with absolute offset, size four and
+SHA-256; absence is explicitly null. The complete signed-data hash still includes
+every byte. The name describes the pinned implementation's empty element and
+does not assign an undocumented semantic meaning. No bytes are discarded.
+
+`SigningReader.finish()` is unchanged and still runs after this explicit field.
+Nonzero lengths/contents, one-to-three-byte truncations, extra bytes, two empty
+elements, and misplaced four-zero sequences after the signer sequence, public
+key or algorithm record are rejected. Existing oversized-field, duplicate/missing
+record, certificate-identity and altered-signature controls remain intact.
+The new regression verifies field offsets/hashes and also proves that adding
+this recognized field still fails the complete APK comparator when bytes differ.
+Both new tests pass after the edit; the complete comparator suite now has 29 tests.
+
+Local validation completed: 29 comparator tests; 149 repository tests with four
+platform skips; 28 receipt, 45 offline-image and four frame-copy tests; foundation
+and harness validators; and whitespace checks, all passing after the correction.
+The focused regression's deliberate pre-fix failure is retained above. Reviewed
+final diff, privacy, links, provenance, unchanged dependency/license inventory
+and regular 100644 modes. No local native compiler or APK/device execution.
+
+Candidate SOURCE/TREE, JNI mapping, native protections, signing policy/identity,
+APK generation, external verifier, signature mutation control, equality acceptance
+and all CI coverage remain unchanged. Actual signing-block field difference and
+cause remain **Unknown** until parsing finishes on both real independent APKs.
+New hosted results are **pending/unobserved**: one final push to existing PR #50,
+one native chat-association verification, then STOP without CI/review polling.
+Gate 0 **Unresolved**; A-G **Not reached**; Windows incident unresolved;
+phone/native-launch readiness **NOT READY — STOP**.

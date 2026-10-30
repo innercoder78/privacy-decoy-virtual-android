@@ -132,6 +132,13 @@ def v2_signers(value):
         signer.finish()
         need(key.raw, "Missing signer public key")
         digests, certificates, attributes = data.field(), data.field(), data.field()
+        # Pinned apksig 9.4.0 emits a fourth length-prefixed empty element.
+        # Recognize exactly its four-byte encoding here, not arbitrary padding.
+        empty_field = None
+        if data.position < len(data.raw):
+            extension = data.take(4)
+            need(extension.raw == bytes(4), "Unsupported v2 signed-data extension")
+            empty_field = extension.identity()
         data.finish()
         digest_rows, signature_rows = algorithm_records(digests), algorithm_records(signatures)
         need([x["id"] for x in digest_rows] == [x["id"] for x in signature_rows],
@@ -143,7 +150,7 @@ def v2_signers(value):
             identifier = item.u32()
             need(identifier not in [x["id"] for x in attrs], "Duplicate signed attribute")
             attrs.append({"id": identifier, "value": item.take(len(item.raw) - item.position).identity()})
-        result.append({"signed_data": data.identity(), "digests": digest_rows,
+        result.append({"signed_data": data.identity(), "apksig_empty_field": empty_field, "digests": digest_rows,
                        "certificates": [x.identity() for x in cert_rows], "attributes": attrs,
                        "signatures": signature_rows, "public_key": key.identity()})
     need(result, "Missing v2 signers")

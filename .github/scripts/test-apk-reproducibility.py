@@ -148,14 +148,15 @@ class ComparisonTests(unittest.TestCase):
         self.assertIn("signing_block", result["changed_regions"])
 
     def signing_fixture(self, cert=b"fixture-cert", sig=b"fixture-signature", key=b"fixture-key",
-                        algorithm=0x0103, signature_algorithm=None, extra=(), v2=None):
+                        algorithm=0x0103, signature_algorithm=None, extra=(), v2=None,
+                        signed_data_tail=b"", signer_tail=b"", algorithm_tail=b""):
         # Structural transport only: these bytes are NOT cryptographic signatures.
         import struct
         lp = lambda data: struct.pack("<I", len(data)) + data
-        digests = lp(struct.pack("<I", algorithm) + lp(b"fixture-digest"))
-        signatures = lp(struct.pack("<I", algorithm if signature_algorithm is None else signature_algorithm) + lp(sig))
+        digests = lp(struct.pack("<I", algorithm) + lp(b"fixture-digest") + algorithm_tail)
+        signatures = lp(struct.pack("<I", algorithm if signature_algorithm is None else signature_algorithm) + lp(sig) + algorithm_tail)
         data = lp(digests) + lp(lp(cert)) + lp(lp(struct.pack("<I", 7) + b"fixture-attribute"))
-        signer = lp(data) + lp(signatures) + lp(key)
+        signer = lp(data + signed_data_tail) + lp(signatures) + lp(key) + signer_tail
         value = lp(lp(signer)) if v2 is None else v2
         pairs = [(0x7109871a, value), (0x42726577, bytes(12)), *extra]
         payload = b"".join(struct.pack("<QI", len(value) + 4, identifier) + value for identifier, value in pairs)
@@ -170,6 +171,42 @@ class ComparisonTests(unittest.TestCase):
         changed = bytearray(raw[:offset] + block + raw[offset:])
         struct.pack_into("<I", changed, end + len(block) + 16, offset + len(block))
         path.write_bytes(changed)
+
+    def test_apksig_940_empty_signed_data_field_regression(self):
+        # V2SchemeSigner.generateSignerBlock encodes new byte[0] as a fourth
+        # length-prefixed signed-data element. This is NOT a signed APK fixture.
+        block = self.signing_fixture(signed_data_tail=bytes(4))
+        report = repro.signing_block_snapshot(block)
+        signer = report["blocks"][0]["signers"][0]
+        field = signer["apksig_empty_field"]
+        self.assertEqual(field["size"], 4)
+        self.assertEqual(block[field["offset"]:field["offset"] + 4], bytes(4))
+        self.assertEqual(field["sha256"], repro.digest(bytes(4)))
+        data = signer["signed_data"]
+        self.assertEqual(data["offset"] + data["size"], field["offset"] + 4)
+        self.assertEqual(data["sha256"], repro.digest(block[data["offset"]:data["offset"] + data["size"]]))
+        baseline = repro.signing_block_snapshot(self.signing_fixture())
+        self.assertIsNone(baseline["blocks"][0]["signers"][0]["apksig_empty_field"])
+        self.assertTrue(repro.signing_differences(baseline, report))
+
+    def test_signed_data_extension_is_exact_and_boundary_specific(self):
+        import struct
+        for tail in (b"\0", bytes(2), bytes(3), bytes(5), bytes(8),
+                     struct.pack("<I", 1) + b"x", struct.pack("<I", 0xffffffff)):
+            with self.assertRaises(ValueError):
+                repro.signing_block_snapshot(self.signing_fixture(signed_data_tail=tail))
+        # The same four zeros are not accepted after the v2 signer sequence.
+        block = self.signing_fixture()
+        size = struct.unpack_from("<Q", block, 8)[0]
+        value = block[20:16 + size]
+        with self.assertRaisesRegex(ValueError, "Trailing signing data"):
+            repro.signing_block_snapshot(self.signing_fixture(v2=value + bytes(4)))
+        for kwargs in ({"signer_tail": bytes(4)}, {"algorithm_tail": bytes(4)}):
+            with self.assertRaisesRegex(ValueError, "Trailing signing data"):
+                repro.signing_block_snapshot(self.signing_fixture(**kwargs))
+        self.insert_signing_fixture(self.a, self.signing_fixture())
+        self.insert_signing_fixture(self.b, self.signing_fixture(signed_data_tail=bytes(4)))
+        self.rejected()  # Never normalize even this recognized field for equality.
 
     def test_signing_parser_identifies_fields_and_preserves_unknown_blocks(self):
         block = self.signing_fixture(extra=[(0x12345678, b"opaque-private-fixture")])

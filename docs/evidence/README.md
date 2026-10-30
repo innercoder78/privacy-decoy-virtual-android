@@ -5,7 +5,10 @@ Signed APK equality failed in seven observed hosted pairs. The mapped candidate
 now has matching JNI objects/libraries/build IDs and every ZIP entry; only signing
 block bytes differ. The exact field and cause remain Unknown. Bounded signing
 field diagnostics and altered-signature controls are added; new hosted results
-remain unobserved at publication. No prerequisite or gate closes.
+remain unobserved at publication. The first diagnostic runs stopped on an
+unrecognized apksig empty signed-data field; a source-demonstrated parser
+correction and failing-before/passing-after regression are now recorded.
+No prerequisite or gate closes.
 
 Evidence describes exact observations and limitations; it does not redefine
 requirements. Use the terminology and record fields in
