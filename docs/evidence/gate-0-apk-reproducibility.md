@@ -9,7 +9,7 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-As of the 2026-10-30 Option D proposal, twelve observed hosted pairs
+As of the 2026-10-30 research-only merge proposal, thirteen observed hosted pairs
 **failed signed-byte equality**. Recent pairs establish matching native outputs, ZIP entries and v2
 signatures; only the dependency-info signing-block value differs. The mechanism
 uses fresh ephemeral-key and IV randomness in the reviewed implementation; actual
@@ -1314,3 +1314,66 @@ Gate 0 **Unresolved**; Gates A-G **Not reached**; physical native-launch readine
 **NOT READY — STOP**. No phone, USB, ADB, emulator/guest execution or security
 bypass. Publish to existing PR #50, verify native association once, then STOP;
 new CI/review/mergeability remains unobserved.
+
+## Research-only merge-policy decision proposal — 2026-10-30
+
+The [decision in ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#research-only-merge-decision-stop-under-current-authority)
+recommends STOP under approved A. D1 adds reporting but cannot unblock PR #50.
+A narrowly scoped D2 research-preservation exception could permit a merge with
+an openly failed equality assertion only after explicit amendment of A's merge
+prerequisite, exact acceptance/control mapping approval and independently reviewed
+implementation. It cannot preserve that part of A unchanged. No exception,
+workflow change or full ADR acceptance is approved by requesting this proposal.
+The ADR is the single decision text; its existing control matrix is not duplicated.
+
+Live preflight reverified main/base `61c68f87404a1b7e70e0314b73532322ee2de252`,
+PR #50 head `c6474685be60870b32c9cc4cecdfabfa562c8b43`, twelve commits and the
+full ten-file accumulated diff with regular 100644 modes. PR #50 was the only
+open PR; reviews, comments and threads were empty. Requirements, ADRs, governance,
+security/evidence policies, source investigation, dependency and binary adoption
+records were reviewed. Local tracked state was clean; 51 branches, one worktree,
+no stashes and 25,971 ignored files were preserved. GitHub Status snapshot updated
+`2026-10-30T22:32:14.2Z` reported operational components and the Dependabot incident
+in monitoring after mitigation. This is not a vulnerability-free dependency claim.
+Classic main protection returned HTTP 404, "Branch not protected"; main branch
+rules and repository rulesets returned empty arrays. These observations do not
+waive documented merge obligations or authorize using a merge button.
+
+Read-only review of existing [Android run 41138308496](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41138308496),
+job `124346137487`, confirmed both independent builds and the thirteenth genuine
+failed whole-byte pair at that head. APK A SHA-256
+`00e9e9bd2e25929788dd2183632bc3a991a065918a6da8f6cd81937d27a62393`;
+APK B SHA-256 `547651c104bba4c4650944eb6bbf284640516af5a4582cc621129e3845dd6191`.
+Both sizes were 81,312 bytes. ZIP entries/content, v2 block/signatures and padding
+matched; the 185-byte dependency-info values differed and signing_block was the
+only changed APK region. Same signer/schemes held. The job ended with the real
+STOP for differing APK bytes; its prior checks and 29 comparator tests succeeded.
+This inspection initiated no experiment and does not claim historical plaintext
+identity or a new runtime encryption falsifier.
+
+[Foundation run 41138308198](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41138308198)
+passed at the same head: Linux job `124346136054` logged 149 repository, 29 comparator,
+28 receipt, 45 image and four frame tests; Windows job `124346136266` logged 45 image
+and four frame tests. These are inspected hosted results, not locally rerun tests,
+and neither passes Android nor qualifies production. Prior failures remain intact.
+
+The policy review rejects making the combined Android job optional: it also owns
+mandatory security/build obligations. A future owner-approved separation would
+need independent enforcement and failure-propagation controls, complete coverage
+and honest visible failure, not a passing wrapper around the failed assertion.
+No CI, comparator, signing, encryption, dependency, metadata, source or security
+setting changes here. The accumulated PR's earlier code still needs full review;
+this documentation revision supplies no adoption or merge waiver.
+
+Local validation: foundation validator (149 files, 92 Markdown files, 54 requirements,
+three ADRs), harness validator, and 149 repository tests with four platform skips.
+Reviewed the three-document diff, local Markdown targets/new anchor, approval/status
+wording, requirement consistency, privacy, unchanged licenses/dependencies and
+provenance, regular file modes and whitespace. No local comparator/encryption test,
+native compiler, Android build or runtime execution was performed for this proposal.
+
+Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows native-host incident
+unresolved; physical native-launch readiness **NOT READY — STOP**. No phone, ADB,
+USB, emulator, guest execution or security bypass. Publish one documentation commit
+to existing PR #50, check native association once, then STOP without observing new
+CI, reviews, bots or mergeability.

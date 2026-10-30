@@ -230,6 +230,86 @@ merge-rule transition, require a separate explicit decision identifying the exac
 part of A being reconsidered and the replacement obligations before implementation.
 This request to prepare the proposal approves none of those choices.
 
+### Research-only merge decision: STOP under current authority
+
+**Recommendation, 2026-10-30:** retain A and the negative research on OPEN PR #50;
+D1 remains the recommended additive reporting direction, subject to approval.
+There is no merge path that both preserves A's current merge prerequisite and
+accepts this failed pair. D2 is a policy amendment for owner consideration, not
+a reproducibility fix or an authorized implementation. The following narrows
+the decision without replacing the contract/control matrix above.
+
+| Question | Honest outcome and consequence |
+|---|---|
+| Are the two complete original signed APKs identical? | No for the observed pairs. The strict assertion and its nonzero failure remain genuine, including when only encrypted dependency metadata differs. |
+| Does the comparator correctly detect differences? | Passed controls support that bounded tool behavior. Identical fixtures must pass and mutations must fail; this says nothing positive about equality of the real pair. An unexpected exception is not successful difference detection. |
+| Is the negative research worth preserving? | Yes: it records a falsified equality claim and a source-established randomized encryption mechanism, with historical plaintext/random values Unknown. Preservation is already required; it does not authorize merge. |
+| Which CI obligations must succeed? | Every applicable foundation/Windows, build/JVM/lint, APK policy, native/security, signing, provenance and comparator-control obligation. Today the combined Android job also requires strict equality and genuinely fails. |
+| Is the research production-qualified? | No. Content/v2 agreement, valid development signatures and accepted research records cannot qualify releases, key custody, supply-chain reconstruction, containment or any gate. |
+
+**Exact D2 policy change for a separate decision:** allow preservation-only
+merging of this reviewed PR's negative research despite its visible strict
+whole-signed-APK equality failure, conditional on independent review of the
+complete PR and successful mandatory controls. This would replace **only A's
+requirement that this equality assertion succeed before this research PR merges**.
+It would retain metadata, the unchanged complete-byte assertion and every failure,
+and would grant no release, adoption, device or production qualification. It
+would not make limited correspondence sufficient by itself. This conflicts with
+an approved part of A; it cannot be described as implementing A unchanged.
+No such exception is approved here, and no general exception for future PRs is
+proposed. PR #50 also contains earlier comparator, CMake and workflow changes;
+calling this revision documentation-only does not exempt that accumulated code
+from review or validation.
+
+**Checks and controls before any separately authorized implementation:** an
+independent reviewer must map every existing job/step and obligation to its
+enforced outcome, using the envelope and positive/negative controls above.
+The current combined Android job cannot simply become optional: that would
+also waive its security/build failures. Any future separation must demonstrate
+that each security, signature, input/provenance, malformed-evidence and control
+failure still blocks merging; missing, skipped, stale or Unknown mandatory
+evidence must also block. Review exact-head binding, permissions, triggers,
+dependencies between jobs and enforcement, not just check names. Preserve
+applicable test execution and coverage; moving code cannot drop a check or turn
+a prerequisite failure into an accepted negative experiment.
+
+The real comparison must still execute when applicable and report failure for
+different bytes. Reject catching that failure as an expected-success result,
+continue-on-error, suppressed exits, a green replacement/umbrella status,
+retained/synthetic APK substitution, renamed conclusions, or applicability changes
+that hide the experiment. A future explicitly approved policy could permit a
+merge **with a visible failed research assertion**, never report all checks passed.
+A separately passing evidence-integrity control must prove its own stated scope;
+it cannot replace or certify the failed equality assertion. No workflow/check
+arrangement or enforcement transition has been implemented or qualified here.
+
+**Owner decision required:** explicitly approve or reject this narrowly scoped
+D2 exception, identifying the superseded A merge clause and the exact final
+research acceptance text. Approval must separately name the mandatory control
+and required-check mapping and authorize its implementation/review before any
+change; a general wish to preserve research, D1 approval or PR merge is insufficient.
+Full ADR acceptance remains a separate final-text decision. Until those decisions
+and qualification are complete, **STOP: PR #50 stays blocked**. Failure of any
+mandatory control, unreviewed code/provenance, missing approval or misleading
+reporting must continue blocking even under a future D2 exception.
+
+Affected policy: A's host research merge prerequisite and its governance/check
+mapping under PDVA-REQ-008/054; evidence obligations 039/040 and validation 051.
+Review 036/037 supply-chain adoption, 041/042 security limits and 048 privacy as
+non-waivable prerequisites; 034/035 guest release obligations and 050's existing
+scope remain unchanged. No requirement is satisfied, weakened or superseded by
+this proposal. The governance preservation duty requires a substantive PR, not
+automatic merging of a failed applicable check.
+
+Risks/falsifiers: an optional combined job, omitted prerequisite, stale receipt,
+green summary concealing failure, or acceptance of an injected security/control
+failure rejects the proposed arrangement. Opaque metadata semantics and mutable
+runner trust remain unresolved. A new difference outside the documented metadata
+scope invalidates that pair's scoped explanation and requires review. Reopen
+technical experimentation only for a new falsifier; unchanged repeat builds do
+not resolve this policy decision. GitHub merge-button availability is not owner
+authority, and a research merge would not advance Gate 0 or production work.
+
 ## Acceptance criteria, residual risks and falsifiers
 
 Before any implementation, require all of the following:

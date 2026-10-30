@@ -1,7 +1,7 @@
 # Evidence index
 
 Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
-Signed APK equality failed in twelve observed hosted pairs. Recent pairs
+Signed APK equality failed in thirteen observed hosted pairs. Recent pairs
 localize the difference to dependency-info block `0x504b4453`; native outputs,
 ZIP entries, v2 signatures and padding match within each pair. The underlying
 source path now establishes fresh ECIES ephemeral-key and AES-GCM-IV randomness;
@@ -17,7 +17,11 @@ No prerequisite or gate closes.
 [PROPOSED Option D contract](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#proposed-option-d-contract-additive-research-correspondence)
 recommends additive, per-property research reporting with Option A's strict failure
 and merge block intact. The contract, its implementation and any merge-rule change
-remain unapproved; no CI behavior changes.
+remain unapproved; no CI behavior changes. The
+[research-only merge decision](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#research-only-merge-decision-stop-under-current-authority)
+is STOP under A: D2 would need an explicit amendment of A's merge prerequisite,
+independent mandatory controls and visible retention of the failed assertion.
+No exception is approved; production/release obligations remain intact.
 
 Evidence describes exact observations and limitations; it does not redefine
 requirements. Use the terminology and record fields in
