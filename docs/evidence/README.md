@@ -1,11 +1,13 @@
 # Evidence index
 
 Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
-Signed APK equality failed in ten observed hosted pairs. The three latest pairs
+Signed APK equality failed in eleven observed hosted pairs. Recent pairs
 localize the difference to dependency-info block `0x504b4453`; native outputs,
 ZIP entries, v2 signatures and padding match within each pair. The underlying
-encryption/nondeterminism mechanism remains Unknown. Both earlier parser failures
-and their source-demonstrated correction remain recorded.
+source path now establishes fresh ECIES ephemeral-key and AES-GCM-IV randomness;
+historical plaintext/random values remain Unknown. No supported secure deterministic
+retention mode was found in the reviewed configuration. Both earlier parser failures
+and their source-demonstrated correction remain recorded. Stop forcing byte equality.
 [PROPOSED ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
 records the owner's 2026-10-30 approval of Option A: retain host metadata, the
 strict requirement, failures and unresolved limitations. Full ADR acceptance and

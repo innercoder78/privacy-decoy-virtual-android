@@ -38,10 +38,14 @@ information separately from the v2 block.
 
 **Inference and Unknown:** matching v2 signatures alongside a different metadata
 value explains why signature validity cannot imply complete file equality.
-The exact differing field is established; the underlying encryption/randomness
-mechanism, plaintext correspondence and causal input have **not** been independently
-reproduced. Upstream's encryption description is not that experiment. No conclusion
-of unavoidable nondeterminism across all toolchains or future builds follows.
+The [bounded source investigation](../evidence/gate-0-apk-reproducibility.md#dependency-metadata-encryption-source-investigation)
+establishes that the pinned AGP/Tink path uses P-256 ECIES, HKDF-SHA256 and
+AES-128-GCM, with a fresh ephemeral key pair and 12-byte IV on each encryption.
+No supported deterministic-retention mode was found for that configuration.
+Actual historical plaintext equality, individual random values and exact runtime
+causal isolation remain **Unknown**; source review is not a reconstruction of
+those ciphertexts. Stop attempts to force equality through deterministic randomness
+or ciphertext reuse. No universal impossibility claim for future schemes follows.
 
 ## Proposed decision and scope
 

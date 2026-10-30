@@ -9,11 +9,12 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-As of the 2026-10-30 owner-decision continuation, ten observed hosted pairs
-**failed signed-byte equality**. The latest three establish matching native outputs, ZIP entries and v2
+As of the 2026-10-30 source investigation, eleven observed hosted pairs
+**failed signed-byte equality**. Recent pairs establish matching native outputs, ZIP entries and v2
 signatures; only the dependency-info signing-block value differs. The mechanism
-producing those differing bytes remains **Unknown**. See the
-[latest observation and policy proposal](#dependency-info-observation-and-policy-proposal).
+uses fresh ephemeral-key and IV randomness in the reviewed implementation; actual
+historical plaintext and random values remain Unknown. See the
+[bounded source investigation](#dependency-metadata-encryption-source-investigation).
 Local fixture success is not an independent APK build result. Historical sections
 below retain their prior observations, failed parser runs and now-superseded Unknowns.
 
@@ -1032,3 +1033,227 @@ Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows incident unresolved;
 physical native-launch readiness **NOT READY — STOP**. No phone, USB, ADB,
 emulator/guest execution or antivirus bypass. One final commit/push to existing
 PR #50 and one native association verification, then STOP without new-CI polling.
+
+## Dependency-metadata encryption source investigation
+
+Date: **2026-10-30, America/Fortaleza**. Question: can the current retained
+dependency-info path reproduce complete signed bytes while preserving its security
+properties? Scope: one source-driven investigation under approved Option A,
+PDVA-REQ-036–041, 048 and 054. No build/policy/CI implementation is authorized.
+
+### Preflight and latest negative observation
+
+Live main remains `61c68f87404a1b7e70e0314b73532322ee2de252`; incoming PR #50
+head `5e1dcb0213e1e4f7ef74e30ff6e9999c539555ee`, base main, only open PR.
+Reviews/comments/threads were empty. The full ten-file accumulated diff, commits,
+100644 modes, checks/workflows, requirements, ADRs, governance, provenance,
+dependency identities and preceding investigation were reviewed. Clean tracked
+state, 51 branches, one worktree, no stashes and 25,971 ignored files were preserved.
+GitHub Status reported operational/no incidents (snapshot update
+`2026-10-30T16:19:08.314Z`). No new APK experiment was requested or run locally.
+
+[Android run 41093594199](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41093594199),
+job `124193478821`, completed both independent builds and failed complete equality.
+APK A SHA-256: `bf81c47bd03d86aa165d276a9afd7e02b75d324671a2a07f80ef33e19fb83769`;
+APK B SHA-256: `2b9f172c20486db9b8584c865d1745e977cd7d05d8e999069fb3324f91c90c64`.
+The unchanged candidate SOURCE/TREE is recorded above. The log again reports
+`/blocks/1/sha256` and enclosing `/sha256` as the signing diagnostic differences,
+and only `signing_block` as a changed APK region. This is the **eleventh failed
+compared pair**, separate from the earlier two parser failures. Prior observations
+remain unchanged, not retroactively reclassified.
+
+[Foundation run 41093594133](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41093594133)
+passed: Linux job `124193477438` logged 149 repository, 29 comparator, 28 receipt,
+45 image and four frame tests; Windows job `124193477961` logged 45 image and
+four frame tests. Android's preceding build/lint/inspection controls and its 29
+synthetic comparator tests passed. Those are hosted observations, not a successful
+whole-APK comparison or fresh local execution.
+
+### Immutable sources and provenance
+
+Official Google Maven source archives for AGP, Signflinger and apksig 9.4.0 were
+read in memory and their hashes matched the existing ledger above. Additionally,
+[builder 9.4.0 sources](https://dl.google.com/dl/android/maven2/com/android/tools/build/builder/9.4.0/builder-9.4.0-sources.jar)
+hash to `384e5cfd3aa1292a85145c40f0b4b9f4af6f963c3c93d38ef8c19eff374b159a`.
+These are existing build dependencies, not new adoption.
+
+Tink is already pinned as `com.google.crypto.tink:tink:1.7.0`, binary SHA-256
+`88970a456a08ba4c66b01b23e5846ca1095cc14e54cb48363e5d2e15a1307308`
+in [verification metadata](../../android/gradle/verification-metadata.xml).
+Maven Central's source-archive fetch failed TLS certificate verification (expired
+certificate); no certificate validation was disabled. The official GitHub
+`google/tink` repository redirects to `tink-crypto/tink`; its v1.7.0 annotated
+tag `9940095f3081a116fa7a1337ad5ba27a3ccc59fe` resolves to immutable commit
+[27b061bb9ed1af1a6f538410bff443290e427e66](https://github.com/tink-crypto/tink/tree/27b061bb9ed1af1a6f538410bff443290e427e66).
+Files were retrieved over verified HTTPS from that commit. This establishes
+release-source identity, **not an independent source-to-binary reconstruction**.
+
+File SHA-256 ledger (AGP paths are relative to `com/android/build/gradle/`;
+Tink Java paths are relative to `java_src/src/main/java/com/google/crypto/tink/`
+at the immutable commit above):
+
+| Source file | SHA-256 |
+|---|---|
+| AGP `internal/tasks/PerModuleReportDependenciesTask.kt` | `3564c644514be25a03b90e90866f8b42346be50ef0cd44218bd842b70a665318` |
+| AGP `internal/tasks/SdkDependencyDataGeneratorTask.kt` | `e242e157a0073c26256a1c05d2560b2d910f31cda8aa8e4f7a876c69eedf163f` |
+| AGP `internal/tasks/ApplicationTaskManager.kt` | `86a3f4624f2cc0e9c59f199bd42ab2bb8bed05f7a9aa816490cf176972a46d01` |
+| AGP `tasks/PackageAndroidArtifact.kt` | `babff9a2066aa7aad6edee3b0ade91c85fcb0335a3f216cf3ce7adc39a82c1d8` |
+| AGP `internal/packaging/IncrementalPackagerBuilder.java` | `331c54b1c5ff7f337e05fa994c28a3fb8960b84337f82ec8b4362800078b2ffe` |
+| AGP archive `com/android/tools/build/libraries/metadata/AppDependencies.java` | `948812d2830abae85f713de7344f5cf338c1c7048407d53b65da13a99703960c` |
+| Builder `com/android/builder/internal/packaging/ApkFlinger.kt` | `c29dbf8e8a755ce8c20f8527e667c852e582d497e8d6c69f35466f63dccc6096` |
+| Signflinger `com/android/signflinger/SigningBlockUtils.java` | `6b48fca354da4972a4ff5f12f70a7edca9c48022383172f53c808af1898b0fc5` |
+| Tink `hybrid/EciesAeadHkdfPublicKeyManager.java` | `4acf42e5da9a1334d6071fc631946e57529f8b8ffe12bb463701cdf3126c8883` |
+| Tink `subtle/EciesAeadHkdfHybridEncrypt.java` | `c551789f40ca54fde0932d6bffa9cc384ffd32b699d2f27aa3b3c173c6be137b` |
+| Tink `subtle/EciesHkdfSenderKem.java` | `2a4a7b519defeca4c5724b2c7389d171d4f74dfb8c55cde869f3274e6afb0d8a` |
+| Tink `subtle/EllipticCurves.java` | `a3d96df7f18260795b641d228a95f0c543188406b10da3c60da988669f1741d8` |
+| Tink `subtle/Hkdf.java` | `a0c29dbe05478baf58469351e6c1637d5b2e4b12397cc4b9f7943c3e47c403e7` |
+| Tink `hybrid/RegistryEciesAeadHkdfDemHelper.java` | `5891f72753866cc4f6a9895adfbcc12c4e3c8cb200851b32f63556862cbdcdbf` |
+| Tink `aead/AesGcmKeyManager.java` | `1b71a4552dbc4d9bdae42de1f51d7bfee9caebe11dbeb913923d69cab7c687a1` |
+| Tink `subtle/AesGcmJce.java` | `9c6e86dd4d8516cc42c24d2ae9ba36dbb75f0ebc2809994e2069ea61c9c1795b` |
+| Tink `aead/internal/InsecureNonceAesGcmJce.java` | `a09dcbdbe6e7060297a253b854a4101917515bb2404ed90ad8ca8fd376cb58ab` |
+| Tink `subtle/Random.java` | `c7282eba27707158c1db2d4241fc85eb628c5b8da232de7d2e6bcc6941041dee` |
+| Tink `hybrid/HybridEncryptWrapper.java` | `b5fe699327cd255d22605ff802fdec6a160ff20fa2662e9358abc0e714c7294a` |
+| Tink `CryptoFormat.java` | `3a174200477736cddeed8b76ea060ee5a42ab3b1919d789ae31e617e9a283e13` |
+
+Schema hashes at the same Tink commit: `proto/tink.proto`
+`b77fb17296d5ca4cb8d24766d789ee79e19da0b6af1b3a66f45fd971ddecd9d4`;
+`proto/ecies_aead_hkdf.proto`
+`f4e8eab3d79234665184871542a55d0fdcd95d5594f57b352a16d29c7daceb72`;
+`proto/common.proto`
+`a77dc0e6087e2aebf4068763bfdbbf41073dbe8bdcc005b3fcf64c2f42ad6a98`;
+`proto/aes_gcm.proto`
+`4e7fb4958c76849b0a44b902ff4a5adef1f811f55434f9cdf54bce72da42e8f3`.
+Previously recorded SignedApk/apksig file hashes still apply. Reviewed sources
+carry Apache-2.0 notices; existing protobuf/SDK/component notices remain applicable.
+No source archive, copied upstream code, binary, key, dependency or license-policy
+change is committed. Source references do not adopt a new runtime.
+
+### Direct source facts: complete production path
+
+1. **Inventory.** `PerModuleReportDependenciesTask` lines 90–224 hashes runtime
+   external AAR/JAR artifacts, traverses the resolved graph, records Maven
+   coordinates, library edges, repository URLs and module dependencies. File
+   repositories are excluded at lines 242–246. It uses iteration/index order;
+   no claim that arbitrary graph order is canonical follows. Artifact bytes,
+   coordinates, graph/order, repository/order and module name affect plaintext.
+   Multiple files for one component select the first after warning. Actual
+   historical `dependencies.pb` bytes were not retained in public evidence.
+2. **Serialization.** The task builds `AppDependencies` and writes
+   `dependencies.pb` using protobuf `writeTo`. Generated serializer lines
+   301–315 write repeated fields in their stored order. The same fully ordered
+   message gives the same encoding; equal source/tool inventories alone do not
+   prove identical report bytes.
+3. **Compression.** `SdkDependencyDataGeneratorTask` lines 301–326 reads that
+   exact file and applies Java `DeflaterOutputStream`, then encryption. This is
+   zlib/DEFLATE, not a timestamp-bearing gzip header. There is no random/time input
+   in this wrapper. Byte identity is conditional on identical input and compressor
+   implementation, not established by examining equal APK ZIP entries.
+4. **Configuration.** A read-only standard-library wire decoder inspected only
+   the embedded public configuration's algorithm fields, checked against the four
+   Tink schemas. It reported ECIES-AEAD-HKDF public material; enabled primary;
+   P-256 (enum 2), HKDF-SHA256 (3), empty salt, point format
+   `DO_NOT_USE_CRUNCHY_UNCOMPRESSED` (3), CRUNCHY output prefix (4), and
+   `AesGcmKey` format key size 16 bytes. No key coordinates, key ID or key bytes
+   were emitted, substituted or used to encrypt. Context is the fixed UTF-8 string
+   `SDK_DEPENDENCY_INFO`. These are decoded source parameters, not a new crypto
+   execution or decrypted APK report.
+5. **Encryption.** AGP calls `HybridEncrypt.encrypt` with compressed data and
+   context. Tink's
+   [ECIES primitive](https://github.com/tink-crypto/tink/blob/27b061bb9ed1af1a6f538410bff443290e427e66/java_src/src/main/java/com/google/crypto/tink/subtle/EciesAeadHkdfHybridEncrypt.java#L61)
+   calls the sender KEM on every encryption. Its
+   [sender KEM](https://github.com/tink-crypto/tink/blob/27b061bb9ed1af1a6f538410bff443290e427e66/java_src/src/main/java/com/google/crypto/tink/subtle/EciesHkdfSenderKem.java#L69)
+   creates a fresh ephemeral EC key pair, computes ECDH with the configured
+   recipient, encodes the ephemeral public point, and derives the 16-byte DEM key
+   through HKDF-SHA256 over encoded point plus shared secret, salt and context.
+   `EllipticCurves.generateKeyPair` uses JCA `EC`, `initialize(spec)`,
+   `generateKeyPair()`; the [JDK 17 API contract](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/KeyPairGenerator.html)
+   supplies default SecureRandom when no random argument is given. The particular
+   historical provider/entropy state is not identified here.
+6. **Nonce and authentication.** The DEM helper replaces template key material
+   with the derived key, and AesGcmKeyManager selects
+   [AesGcmJce](https://github.com/tink-crypto/tink/blob/27b061bb9ed1af1a6f538410bff443290e427e66/java_src/src/main/java/com/google/crypto/tink/subtle/AesGcmJce.java#L49).
+   Every encryption draws 12 bytes from Tink's thread-local, self-seeded
+   `SecureRandom`. The underlying transformation is `AES/GCM/NoPadding`,
+   AES-128 with a 16-byte authentication tag. IV is prepended to ciphertext/tag.
+   ECIES uses empty AEAD associated data; the context is bound through HKDF.
+   The helper's initial random template key is overwritten by the derived key;
+   it is not an additional serialized random field.
+7. **Output and insertion.** The hybrid wrapper prefixes the result with the
+   fixed five-byte CRUNCHY identifier. ECIES includes its ephemeral public point
+   before IV/ciphertext/tag. PackageAndroidArtifact lines 931–939 reads encrypted
+   `sdkDependencyData.pb`; IncrementalPackagerBuilder and ApkFlinger forward those
+   bytes to SignedApkOptions. SignedApk lines 253–257 adds them under
+   `0x504b4453` separately from apksig's v2/v3 output. SigningBlockUtils rebuilds
+   the container/padding through apksig, preserving the supplied value. This path
+   does not decrypt, normalize or regenerate the encrypted value at insertion.
+
+### Conclusion, security implications and falsifiers
+
+**Source-established mechanism:** this configured production path consumes fresh
+ephemeral-key randomness and fresh GCM-IV randomness on each encryption. Identical
+plaintext, recipient configuration and context can legitimately yield different
+ciphertext. Randomized outputs are the intended operation, not a compiler path or
+v2 RSA-signature defect. Fresh random draws are not a mathematical guarantee that
+two outputs can never collide; no universal impossibility claim is made.
+
+**Inference for the recorded APKs:** the source mechanism explains their differing
+dependency-info values while application contents, v2 signatures and padding
+match. It is a sufficient source-level explanation, not a controlled reconstruction
+of those particular ciphertexts. Equal historical plaintext, individual nonce/KEM
+bytes, provider entropy and their precise contribution to each observed pair remain
+**Unknown**. Whole-value hashes cannot isolate those subfields.
+
+The reviewed AGP task hard-codes this configuration and exposes no deterministic
+encryption option. The inspected
+[Android dependency-metadata documentation](https://developer.android.com/build/dependencies#dependency-info)
+describes retaining metadata or opting out, not a supported deterministic-retention
+mode. No documented, source-supported configuration was found that both preserves
+this fresh-randomness contract and reliably reproduces whole signed bytes across
+genuinely independent builds. This conclusion is scoped to the reviewed versions
+and current configuration, not every possible future scheme.
+
+Forcing repeatable ephemeral secrets changes the ECIES security assumptions;
+deriving them from public inputs could expose the shared secret. Reusing an
+AES-GCM key/IV pair across different plaintexts undermines confidentiality and
+authentication. Fixing only the IV would not remove the ephemeral-key variation.
+A specially designed deterministic encryption scheme requires separate protocol,
+recipient-compatibility and security review; it is not a safe configuration toggle.
+No keys were generated, recovered, disclosed, altered or substituted. No crypto
+operation, RNG override, ciphertext reuse or byte normalization was performed.
+
+**Disposition: STOP attempts to force byte equality under the current encryption
+path.** Retain metadata, strict comparison and its honest failures under approved
+Option A. PR #50 stays OPEN and blocked. No Option B/C/D, changed acceptance
+contract, required-check change or merge is approved; full ADR acceptance is pending.
+No policy question needs improvisation to finish this source-only record.
+
+**Smallest falsifiers / reopening conditions:** a supported upstream API and source
+path demonstrating secure deterministic retention would reopen the configuration
+assessment. A source/binary mismatch or a different selected primitive invalidates
+this source-path attribution. If exact historical causal isolation is later needed,
+a separately reviewed diagnostic could hash pre-encryption report/compressed bytes
+and separately hash the public output prefix, ephemeral point and IV of both
+original outputs, without keys or RNG changes. Different plaintext would refute the
+same-plaintext premise for that pair; different point/IV hashes would locate fresh
+output variation. This is a proposed falsifier, **not implemented or executed**.
+Another full APK pair without those new measurements would add no causal resolution.
+
+No synthetic encryption demo was run: it would only demonstrate general randomized
+crypto and could not establish the historical report bytes. The source-parameter
+decoder is a diagnostic observation; it does not prove actual Google decryption or
+metadata semantics. The existing tests and original failures retain their exact scope.
+
+Local validation for this source-only revision: foundation validator (149 files,
+92 Markdown files, 54 requirements, three ADRs), harness validator and 149
+repository tests passed, with four platform skips. Source archives/file hashes
+and parameter decoding were actually inspected as described above. No local
+Tink encryption, independent APK build, native compilation or runtime test ran;
+no synthetic crypto result is claimed. Reviewed links/anchors, Option A approval
+and remaining PROPOSED status, privacy, existing license/dependency scope and
+regular 100644 modes. An extra final blank line found by the initial whitespace
+check was removed before publication; the final whitespace check passed.
+
+Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows native-host incident
+unresolved; physical native-launch readiness **NOT READY — STOP**. No phone, USB,
+ADB, emulator/guest execution or security bypass. One final reviewed publication
+and native association check, then STOP without new-CI/review/mergeability polling.
