@@ -9,13 +9,14 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-All five observed hosted pairs **failed signed-byte equality**: both JNI shared
-libraries differ despite equal declared inputs and the same verified signer.
-Local fixture success is not an independent APK build result. The latest
-continuation below introduces a narrowly scoped debug-path mapping candidate,
-pinned by immutable commit/tree. Its new hosted results are **unobserved**;
-causation and successful correction remain unproved. Historical sections below
-retain the prior procedures and negative results.
+All seven observed hosted pairs **failed signed-byte equality**. The latest two
+pairs establish matching native objects, libraries and build IDs after the debug
+mapping correction, plus equal ZIP entries/local records/central directory/EOCD.
+Only APK signing-block bytes still differ. Its exact differing fields and cause
+remain **Unknown**. This continuation adds bounded signing-field diagnostics;
+their new hosted results are **unobserved**. Local fixture success is not an
+independent APK build result. Historical sections below retain the prior
+procedures and negative results, including now-superseded native Unknowns.
 
 The procedure is original PDVA standard-library code in
 [apk-reproducibility.py](../../.github/scripts/apk-reproducibility.py), with
@@ -613,3 +614,158 @@ unchanged dependency/license inventory and exact candidate Android-tree
 correspondence were reviewed. All historical failures remain above for comparison.
 Gate 0 **Unresolved**; A-G **Not reached**; incident unresolved;
 physical native-launch readiness **NOT READY — STOP**.
+
+## Signing-block investigation: native correspondence established
+
+Continuation date: **2026-10-29, America/Fortaleza**. Live canonical main remains
+`61c68f87404a1b7e70e0314b73532322ee2de252`; incoming PR #50 head is
+`614060c03e891c32dc773844837aa5b21a6ce2f9`, base main, the only open PR.
+No reviews, comments or review threads. Actual jobs/logs confirm both applicable
+Android runs failed only at strict final signed-APK equality. Foundation run
+`40958523488` succeeded: Linux logs record 149 repository, 22 comparator,
+28 receipt, 45 image and four frame tests; Windows records 45 image and four
+frame tests. These are incoming-head results, not new signing-parser validation.
+GitHub Status reported all operational/no incidents, snapshot updated
+`2026-10-30T00:04:37.964Z` (still October 29 in America/Fortaleza).
+
+Reviewed all eight existing PR files and 100644 modes, source/signing/toolchain
+provenance, dependencies, requirements, both ADRs, governance and evidence.
+Local tracked work was clean at the incoming head; 51 branches, one worktree,
+no stashes and 25,971 ignored files were inventoried and preserved. No applicable
+AGENTS.md was found. No native-host incident disposition or security setting changes.
+
+### Direct observations from the mapped candidate
+
+Both runs built candidate `aa517dfdfe2b72986d67ad65f7f1b34d8494118b`, tree
+`5965f746c6093c2bb86a99f3b4f361b6c315798c`, twice with fresh independent build
+and dependency directories. Both real JNI compile replay controls passed for
+both sources/ABIs in both builds: mapped replay equals the real object; removing
+the mapping exposes path differences while non-debug code/relocation sections
+remain unchanged. Cross-build object, unstripped and stripped library hashes now
+match, including complete build-ID bytes. The prior ARM64 unstripped `.symtab`
+difference is absent in these candidate pairs; its historical result is retained.
+
+| Run / job | Complete signed APK A SHA-256 | Complete signed APK B SHA-256 |
+|---|---|---|
+| [40958523492](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40958523492) / `123744884558` | `9bd9b562d828f0909d24a9489f7a46c48b9fc48bd802d1d795d2989e2486206b` | `36654490d12b14acfc7f242c3295f8cf98d398f8ab1fe7cc3fb32dfaedff5444` |
+| [40958514716](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40958514716) / `123744853517` | `dedf7e1ee1b0e11b8ccc40da65eb33be9b0992bead9001c3301aa2bea68772a1` | `878651c4d661f0f24aabc324d662df017c6151eb815b86a9bc1f5046cdeff863` |
+
+Every ZIP entry (content and recorded metadata), local records, central directory
+and EOCD match within each pair. Only the complete APK signing-block hash differs.
+Each pair has the same externally verified certificate fingerprint and schemes:
+v2 true; v1/v3/v3.1/v4 false. This does **not** identify the actual v2 signature
+algorithm or distinguish signature bytes from additional signing-block metadata.
+No whole-signed-APK equality pass exists. Original ephemeral hosted APKs were not
+uploaded or retained for this continuation; their logs contain aggregate block
+hashes, not the fields needed to establish the remaining cause.
+
+### Signing source review and hypotheses
+
+The [AOSP v2 format](https://source.android.com/docs/security/features/apksigning/v2)
+defines the little-endian block size/magic, length-prefixed ID/value pairs, nested
+v2 signer data, algorithm-tagged digests/signatures, certificates, attributes and
+public keys. Algorithm IDs distinguish RSA-PSS, RSA-PKCS1-v1_5, ECDSA and DSA.
+The format explicitly supports deterministic PKCS1-v1_5 RSA signing. A certificate
+fingerprint alone does not identify the selected signature algorithm.
+
+The exact already-adopted official source publications were read without installing
+or executing them. Content hashes pin this review:
+
+| Source publication | SHA-256 |
+|---|---|
+| [apksig 9.4.0 sources](https://dl.google.com/dl/android/maven2/com/android/tools/build/apksig/9.4.0/apksig-9.4.0-sources.jar) | `c7a0f43d1e40fdf39725ac090f5c7bbaeae82d1e0bfd9cf2ee507a70eb5136b5` |
+| [signflinger 9.4.0 sources](https://dl.google.com/dl/android/maven2/com/android/signflinger/9.4.0/signflinger-9.4.0-sources.jar) | `6ea6551350faf30f27845283e2961eed980228efaa1899f1839303b648ac50bb` |
+| [AGP 9.4.0 sources](https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/9.4.0/gradle-9.4.0-sources.jar) | `d462c399729eb35241208899f937037e40f2f9157a54fa9c455595ed6ceca091` |
+
+In apksig, `V2SchemeSigner.getSuggestedSignatureAlgorithms` chooses deterministic
+PKCS1-v1_5 for RSA, not PSS; the key size determines SHA-256 versus SHA-512.
+EC/DSA have distinct choices, and DSA has a deterministic-signing option. This
+is source behavior, not evidence of the key/algorithm actually used in our APKs.
+`SignatureAlgorithm.java` SHA-256 is
+`f30b355e14c2970f91d4e875d08c72e602c628d18214622a4264f1ee9766cc45`;
+`V2SchemeVerifier.java` SHA-256 is
+`c33606383a44f77189144acbefc777f53b42d48901f5c3cfae36b9ff91bc5799`.
+The verifier's nested parsing, algorithm-list comparison and cryptographic
+signature checks were reviewed. The existing binary apksig dependency hash is
+`7ae2e5980c77d853e3513074ee7c822bbdcdcde1668889d17faa7fe8bc8aa821`
+in strict Gradle verification metadata. This source publication review is not an
+independent source-to-binary reconstruction.
+
+Signflinger `SignedApk.java` also inserts SDK dependency information under block
+ID `0x504b4453`, separately from v2/v3 signatures. Official
+[dependency-information documentation](https://developer.android.com/build/dependencies#dependency-info-play)
+describes compressed/encrypted metadata in the signing block. Thus signature
+randomness, metadata differences, padding and other blocks remain distinguishable
+hypotheses; **none is identified as the actual cause yet**. No dependency metadata,
+signature scheme or other field is disabled to obtain equality.
+
+All source is reference-only; the new parser is original Python standard-library
+code. Existing Apache-2.0 tool notices and SDK terms remain applicable, no package
+is added, and no source archive or binary is committed. The repository owner
+remains update owner. Builder apksig 9.4.0 is distinct from the SDK build-tools
+36.0.0 verifier; installed tool-tree inventories already cover both environments,
+and new diagnostics add verifier version, launcher hash and verifier-JAR hash.
+
+### New bounded diagnostics and controls, not a correction
+
+For each genuine independent APK, the existing qualified `apksigner verify`
+success still precedes diagnostics. The parser admits at most a 4-MiB signing
+block, 64 blocks and 64 entries per nested sequence, checks both outer sizes,
+magic, length bounds, duplicate block/algorithm/attribute IDs, required fields,
+and digest/signature algorithm-list agreement. It records offsets, lengths and
+SHA-256 identities of every block and every parsed v2 field. It also reports
+actual numeric algorithm IDs, certificate-chain/public-key identities, attributes
+and whether verity padding is all zero. It binds the parsed leaf certificate to
+the independent verifier's identity. DER/cryptographic validity is delegated to
+the existing qualified verifier, not inferred from structural parsing.
+
+Unknown IDs remain explicitly Unknown and hash-visible; additional schemes or
+opaque blocks are inventoried without pretending to decode unsupported contents.
+This does not exclude them from final equality. The pair report lists differing
+diagnostic field paths; all original signing-block bytes remain in the strict
+whole-APK comparison. No confidential field contents, raw keys, certificates,
+signatures, keystores or host paths are logged.
+
+A separate disposable copy flips a byte in each v2 signature. The same qualified
+verifier must exit with signature-verification failure; zero exit, unrelated
+failure or missing execution cannot count as a negative-control pass. The two
+original APKs are never overwritten or replaced by those copies. This control
+is authorized malformed-signature testing, not a reproducibility correction.
+
+A separate signing-repetition experiment is **not performed**. The reviewed
+Signflinger path closes its archive and inserts signatures in place; the current
+pipeline retains no separate original unsigned APK for replay. The completed
+hosted runners and their original inputs are unavailable. Constructing an unsigned
+replacement by removing signatures would violate this task's restriction.
+No alternate unsigned packaging pipeline, signing-policy change or key access
+is introduced merely to manufacture that control. The two genuine builds still
+provide independently generated signed outputs for direct field comparison.
+
+No defensible signing correction can be selected before observing these real
+fields. **Exact remaining field/cause: Unknown.** There is currently no established
+need for a material policy change. If future evidence requires changing the
+approved signing/security contract, explicit owner/ADR disposition is required;
+this revision grants none. In particular it neither selects a weaker algorithm
+nor introduces a permanent key or disables an existing scheme.
+
+The pinned candidate SOURCE/TREE, Android configuration, original compiler
+controls, all workflow triggers/checks and whole-signed-APK acceptance remain
+unchanged. Existing failures and native correspondence are preserved. Local
+fixtures test parser bounds, missing/duplicate fields, unknown IDs, actual
+algorithm decoding, changed signature/key/certificate identity, verifier-control
+outcomes and continued rejection of all signing-block differences. They are
+structural fixtures only, never real signature validation or APK reproducibility.
+Qualified execution of the new diagnostics and negative control remains
+**pending/unobserved at publication**. One final push to PR #50, one native
+association check, then STOP without new-CI polling.
+
+Local validation actually completed for this revision: 27 comparator/diagnostic
+tests; 149 repository tests (four platform skips); 28 desktop-readiness tests;
+45 offline-image tests; four frame-copy tests; foundation and harness validators;
+and `git diff --check`, all passing. Full intended diff, local links, privacy,
+dependency/license scope and 100644 file modes were reviewed. These local tests
+do not execute the hosted verifier or prove the new diagnostic result.
+
+Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows incident unresolved;
+physical native-launch readiness **NOT READY — STOP**. No phone, USB, ADB,
+emulator/guest execution, quarantine restoration or antivirus bypass.

@@ -72,6 +72,162 @@ def signature(text):
     return {"certificate_sha256": certs[0], "schemes": dict(schemes)}
 
 
+class SigningReader:
+    """Bounded little-endian diagnostic reader; never emits field contents."""
+    def __init__(self, raw, offset=0):
+        self.raw, self.offset, self.position = raw, offset, 0
+
+    def take(self, count):
+        need(0 <= count <= len(self.raw) - self.position, "Truncated signing field")
+        start = self.position
+        self.position += count
+        return SigningReader(self.raw[start:self.position], self.offset + start)
+
+    def u32(self):
+        return struct.unpack("<I", self.take(4).raw)[0]
+
+    def field(self):
+        return self.take(self.u32())
+
+    def finish(self):
+        need(self.position == len(self.raw), "Trailing signing data")
+
+    def identity(self):
+        return {"offset": self.offset, "size": len(self.raw), "sha256": digest(self.raw)}
+
+    def sequence(self):
+        rows = []
+        while self.position < len(self.raw):
+            need(len(rows) < 64, "Oversized signing sequence")
+            rows.append(self.field())
+        return rows
+
+
+SIGNATURE_ALGORITHMS = {0x0101: "RSA-PSS-SHA256", 0x0102: "RSA-PSS-SHA512",
+                        0x0103: "RSA-PKCS1-v1_5-SHA256", 0x0104: "RSA-PKCS1-v1_5-SHA512",
+                        0x0201: "ECDSA-SHA256", 0x0202: "ECDSA-SHA512", 0x0301: "DSA-SHA256",
+                        0x0421: "verity-RSA-PKCS1-v1_5-SHA256", 0x0423: "verity-ECDSA-SHA256",
+                        0x0425: "verity-DSA-SHA256"}
+
+
+def algorithm_records(reader):
+    result = []
+    for item in reader.sequence():
+        algorithm = item.u32()
+        value = item.field()
+        item.finish()
+        need(value.raw and algorithm not in [x["id"] for x in result], "Empty or duplicate algorithm record")
+        result.append({"id": algorithm, "algorithm": SIGNATURE_ALGORITHMS.get(algorithm, "Unknown"),
+                       "value": value.identity()})
+    need(result, "Missing signing algorithms")
+    return result
+
+
+def v2_signers(value):
+    signers = value.field()
+    value.finish()
+    result = []
+    for signer in signers.sequence():
+        data, signatures, key = signer.field(), signer.field(), signer.field()
+        signer.finish()
+        need(key.raw, "Missing signer public key")
+        digests, certificates, attributes = data.field(), data.field(), data.field()
+        data.finish()
+        digest_rows, signature_rows = algorithm_records(digests), algorithm_records(signatures)
+        need([x["id"] for x in digest_rows] == [x["id"] for x in signature_rows],
+             "Digest/signature algorithm lists differ")
+        cert_rows = certificates.sequence()
+        need(cert_rows and all(x.raw for x in cert_rows), "Missing signer certificate")
+        attrs = []
+        for item in attributes.sequence():
+            identifier = item.u32()
+            need(identifier not in [x["id"] for x in attrs], "Duplicate signed attribute")
+            attrs.append({"id": identifier, "value": item.take(len(item.raw) - item.position).identity()})
+        result.append({"signed_data": data.identity(), "digests": digest_rows,
+                       "certificates": [x.identity() for x in cert_rows], "attributes": attrs,
+                       "signatures": signature_rows, "public_key": key.identity()})
+    need(result, "Missing v2 signers")
+    return result
+
+
+def signing_block_snapshot(raw, offset=0):
+    need(32 <= len(raw) <= 4 * 1024 * 1024 and raw[-16:] == b"APK Sig Block 42",
+         "Missing or oversized APK signing block")
+    need(struct.unpack_from("<Q", raw)[0] == struct.unpack_from("<Q", raw, len(raw) - 24)[0]
+         == len(raw) - 8, "Invalid signing block sizes")
+    reader = SigningReader(raw[8:-24], offset + 8)
+    blocks = []
+    names = {0x7109871a: "v2", 0xf05368c0: "v3", 0x1b93ad61: "v3.1",
+             0x42726577: "verity-padding", 0x504b4453: "dependency-info"}
+    while reader.position < len(reader.raw):
+        need(len(blocks) < 64, "Too many signing blocks")
+        size = struct.unpack("<Q", reader.take(8).raw)[0]
+        need(size >= 4, "Invalid signing pair size")
+        pair = reader.take(size)
+        identifier = pair.u32()
+        need(identifier not in [x["id"] for x in blocks], "Duplicate signing block ID")
+        value = pair.take(len(pair.raw) - pair.position)
+        row = {"id": identifier, "kind": names.get(identifier, "Unknown"), **value.identity()}
+        if identifier == 0x7109871a:
+            row["signers"] = v2_signers(value)
+        elif identifier == 0x42726577:
+            row["all_zero"] = not any(value.raw)
+        blocks.append(row)
+    need(any(x["id"] == 0x7109871a for x in blocks), "Missing v2 signing block")
+    return {"offset": offset, "size": len(raw), "sha256": digest(raw), "blocks": blocks}
+
+
+def verified_signing_snapshot(apk, verified):
+    apk_snapshot(apk)  # Existing bounded ZIP admission, with no byte exclusions.
+    raw = Path(apk).read_bytes()
+    end = raw.rfind(b"PK\x05\x06", max(0, len(raw) - 65557))
+    central = struct.unpack_from("<I", raw, end + 16)[0]
+    need(central >= 32 and raw[central - 16:central] == b"APK Sig Block 42", "Missing signing magic")
+    size = struct.unpack_from("<Q", raw, central - 24)[0]
+    need(24 <= size <= min(4 * 1024 * 1024 - 8, central - 8), "Invalid signing block bounds")
+    start = central - size - 8
+    result = signing_block_snapshot(raw[start:central], start)
+    signers = next(x["signers"] for x in result["blocks"] if x["id"] == 0x7109871a)
+    need(len(signers) == 1 and signers[0]["certificates"][0]["sha256"] == verified["certificate_sha256"]
+         and verified["schemes"].get("v2") == "true", "Parsed signer differs from verified signer")
+    return result
+
+
+def signing_mutation_control(apk, report, verifier, output):
+    """Alter a disposable copy only; real APKs remain the comparison inputs."""
+    need(sys.platform == "linux" and os.environ.get("GITHUB_ACTIONS") == "true",
+         "Signature mutation controls require authorized hosted Linux")
+    signers = next(x["signers"] for x in report["blocks"] if x["id"] == 0x7109871a)
+    raw = bytearray(Path(apk).read_bytes())
+    for signer in signers:
+        for sig in signer["signatures"]:
+            raw[sig["value"]["offset"]] ^= 1
+    with Path(output).open("xb") as stream:
+        stream.write(raw)
+    check = subprocess.run([str(verifier), "verify", "--verbose", str(output)],
+                           capture_output=True, text=True, timeout=900)
+    need(check.returncode == 1 and "DOES NOT VERIFY" in check.stdout + check.stderr,
+         "Altered-signature control did not fail cryptographic verification")
+    return {"altered_signature_rejected": True, "verifier_sha256": file_hash(verifier)}
+
+
+def signing_differences(left, right):
+    """Report field paths only; this never decides whole-APK equality."""
+    changed = []
+    def visit(a, b, path):
+        if type(a) is dict and type(b) is dict and a.keys() == b.keys():
+            for key in sorted(a):
+                visit(a[key], b[key], path + "/" + key)
+        elif type(a) is list and type(b) is list and len(a) == len(b):
+            for i, (x, y) in enumerate(zip(a, b)):
+                visit(x, y, path + "/" + str(i))
+        elif a != b:
+            need(len(changed) < 4096, "Too many signing diagnostic differences")
+            changed.append(path)
+    visit(left, right, "")
+    return changed
+
+
 def apk_snapshot(path):
     path = Path(path)
     need(path.is_file() and 0 < path.stat().st_size <= 128 * 1024 * 1024, "Missing or oversized APK")
@@ -390,7 +546,7 @@ def run():
     need(command(["git", "rev-parse", SOURCE + "^{tree}"]) == TREE, "Reviewed source unavailable")
     # New directories only. Never delete or reuse worktrees or compilation state.
     scratch = Path(tempfile.mkdtemp(prefix="pdva-repro-", dir=os.environ["RUNNER_TEMP"]))
-    results = []
+    results, signing_reports = [], []
     for label in ("a", "b"):
         checkout = scratch / label
         command(["git", "worktree", "add", "--detach", str(checkout), SOURCE])
@@ -406,6 +562,16 @@ def run():
         apk = checkout / "android/gate0-harness/build/outputs/apk/release/gate0-harness-release.apk"
         sign = signature(command([str(packages["build_tools"] / "apksigner"), "verify", "--verbose",
                                   "--print-certs", str(apk)]))
+        signing_report = verified_signing_snapshot(apk, sign)
+        verifier = packages["build_tools"] / "apksigner"
+        verifier_version = command([str(verifier), "version"])
+        need(re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", verifier_version), "Unexpected verifier version")
+        print("APK_SIGNING_DIAGNOSTICS=" + canonical({"build": label, "report": signing_report,
+              "apksigner_version": verifier_version,
+              "apksigner_jar_sha256": file_hash(packages["build_tools"] / "lib/apksigner.jar")}), flush=True)
+        control = signing_mutation_control(apk, signing_report, verifier, scratch / (label + "-altered-signature.apk"))
+        print("SIGNATURE_NEGATIVE_CONTROL=" + canonical({"build": label, **control}), flush=True)
+        signing_reports.append(signing_report)
         inspector = load_inspector(checkout)
         native = checkout / "android/gate0-harness/build/intermediates/stripped_native_libs/release/stripReleaseDebugSymbols/out"
         receipt = inspector.inspect({"source": SOURCE, "apk_sha256": file_hash(apk), "variant": "release"},
@@ -426,6 +592,7 @@ def run():
     a, b = results
     args = (a[0], b[0], a[1], b[1], a[2], b[2])
     result = compare(*args)
+    print("SIGNING_BLOCK_CHANGED_FIELDS=" + canonical(signing_differences(*signing_reports)), flush=True)
     print("APK_REPRODUCIBILITY=" + canonical(result), flush=True)
     verify_result(result, *args)
     print("SIGNED_APK_EQUALITY=PASS; no installation or safety claim", flush=True)

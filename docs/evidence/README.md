@@ -1,11 +1,11 @@
 # Evidence index
 
 Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
-Signed APK equality failed in five observed hosted pairs. The latest diagnostics
-confirm debug-path differences before linking and preserved differing build IDs.
-A minimal JNI debug-prefix mapping candidate is now pinned by exact commit/tree;
-new compiler controls and whole-APK results remain unobserved at publication.
-Causation and successful correction remain unproved. No prerequisite or gate closes.
+Signed APK equality failed in seven observed hosted pairs. The mapped candidate
+now has matching JNI objects/libraries/build IDs and every ZIP entry; only signing
+block bytes differ. The exact field and cause remain Unknown. Bounded signing
+field diagnostics and altered-signature controls are added; new hosted results
+remain unobserved at publication. No prerequisite or gate closes.
 
 Evidence describes exact observations and limitations; it does not redefine
 requirements. Use the terminology and record fields in

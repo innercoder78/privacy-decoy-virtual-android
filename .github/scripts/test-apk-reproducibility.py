@@ -147,6 +147,126 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(result["changed_entries"], [])
         self.assertIn("signing_block", result["changed_regions"])
 
+    def signing_fixture(self, cert=b"fixture-cert", sig=b"fixture-signature", key=b"fixture-key",
+                        algorithm=0x0103, signature_algorithm=None, extra=(), v2=None):
+        # Structural transport only: these bytes are NOT cryptographic signatures.
+        import struct
+        lp = lambda data: struct.pack("<I", len(data)) + data
+        digests = lp(struct.pack("<I", algorithm) + lp(b"fixture-digest"))
+        signatures = lp(struct.pack("<I", algorithm if signature_algorithm is None else signature_algorithm) + lp(sig))
+        data = lp(digests) + lp(lp(cert)) + lp(lp(struct.pack("<I", 7) + b"fixture-attribute"))
+        signer = lp(data) + lp(signatures) + lp(key)
+        value = lp(lp(signer)) if v2 is None else v2
+        pairs = [(0x7109871a, value), (0x42726577, bytes(12)), *extra]
+        payload = b"".join(struct.pack("<QI", len(value) + 4, identifier) + value for identifier, value in pairs)
+        size = struct.pack("<Q", len(payload) + 24)
+        return size + payload + size + b"APK Sig Block 42"
+
+    def insert_signing_fixture(self, path, block):
+        import struct
+        raw = path.read_bytes()
+        end = raw.rfind(b"PK\x05\x06")
+        offset = struct.unpack_from("<I", raw, end + 16)[0]
+        changed = bytearray(raw[:offset] + block + raw[offset:])
+        struct.pack_into("<I", changed, end + len(block) + 16, offset + len(block))
+        path.write_bytes(changed)
+
+    def test_signing_parser_identifies_fields_and_preserves_unknown_blocks(self):
+        block = self.signing_fixture(extra=[(0x12345678, b"opaque-private-fixture")])
+        result = repro.signing_block_snapshot(block)
+        signer = result["blocks"][0]["signers"][0]
+        self.assertEqual(signer["signatures"][0]["id"], 0x0103)
+        self.assertEqual(signer["signatures"][0]["algorithm"], "RSA-PKCS1-v1_5-SHA256")
+        self.assertEqual(signer["certificates"][0]["sha256"], repro.digest(b"fixture-cert"))
+        self.assertEqual(signer["public_key"]["sha256"], repro.digest(b"fixture-key"))
+        self.assertTrue(result["blocks"][1]["all_zero"])
+        self.assertEqual(result["blocks"][2]["kind"], "Unknown")
+        self.assertNotIn("opaque-private-fixture", repro.canonical(result))
+        for algorithm in (0x0101, 0x0201, 0x0301, 0x9999):
+            value = repro.signing_block_snapshot(self.signing_fixture(algorithm=algorithm))
+            self.assertEqual(value["blocks"][0]["signers"][0]["signatures"][0]["id"], algorithm)
+        self.assertEqual(value["blocks"][0]["signers"][0]["signatures"][0]["algorithm"], "Unknown")
+
+    def test_signing_parser_rejects_bounds_duplicates_and_incomplete_records(self):
+        import struct
+        block = self.signing_fixture()
+        for size in range(len(block)):
+            with self.assertRaises(ValueError):
+                repro.signing_block_snapshot(block[:size])
+        invalid = [self.signing_fixture(cert=b""), self.signing_fixture(sig=b""),
+                   self.signing_fixture(key=b""), self.signing_fixture(signature_algorithm=0x0101),
+                   self.signing_fixture(extra=[(0x7109871a, b"duplicate")]),
+                   self.signing_fixture(v2=struct.pack("<I", 0)),
+                   self.signing_fixture(v2=struct.pack("<I", 0xffffffff)),
+                   self.signing_fixture(v2=struct.pack("<I", 0) + b"trailing")]
+        for index, value in ((0, 1), (8, 3), (8, 0xffffffffffffffff)):
+            bad = bytearray(block)
+            struct.pack_into("<Q", bad, index, value)
+            invalid.append(bad)
+        bad = bytearray(block)
+        struct.pack_into("<I", bad, 16, 0x9999)  # No v2 block remains.
+        invalid.append(bad)
+        signer = repro.signing_block_snapshot(block)["blocks"][0]["signers"][0]
+        for field in (signer["signed_data"], signer["public_key"], signer["certificates"][0],
+                      signer["signatures"][0]["value"], signer["digests"][0]["value"]):
+            bad = bytearray(block)
+            struct.pack_into("<I", bad, field["offset"] - 4, 0xffffffff)
+            invalid.append(bad)
+        invalid.append(self.signing_fixture(extra=[(0x10000 + i, b"x") for i in range(63)]))
+        invalid.append(block + bytes(4 * 1024 * 1024))
+        for bad in invalid:
+            with self.assertRaises(ValueError):
+                repro.signing_block_snapshot(bad)
+
+    def test_signing_snapshot_binds_verified_identity_and_reports_mutations(self):
+        self.insert_signing_fixture(self.a, self.signing_fixture())
+        verified = dict(self.sign, certificate_sha256=repro.digest(b"fixture-cert"))
+        original = repro.verified_signing_snapshot(self.a, verified)
+        for bad in (self.sign, dict(verified, schemes={"v2": "false"})):
+            with self.assertRaisesRegex(ValueError, "verified signer"):
+                repro.verified_signing_snapshot(self.a, bad)
+        for kwargs, field in (({"sig": b"changed-signature"}, "signatures"),
+                              ({"key": b"changed-key"}, "public_key"),
+                              ({"cert": b"changed-cert"}, "certificates")):
+            changed = repro.signing_block_snapshot(self.signing_fixture(**kwargs))
+            baseline = repro.signing_block_snapshot(self.signing_fixture())
+            differences = repro.signing_differences(baseline, changed)
+            self.assertTrue(any(field in path for path in differences))
+        self.assertEqual(repro.signing_differences(original, copy.deepcopy(original)), [])
+
+    def test_every_signing_block_difference_still_fails_whole_apk(self):
+        for block in (self.signing_fixture(sig=b"changed-signature"),
+                      self.signing_fixture(extra=[(0x12345678, b"unknown")]),
+                      self.signing_fixture(extra=[(0x504b4453, b"metadata")])):
+            self.write(self.a)
+            self.write(self.b)
+            self.insert_signing_fixture(self.a, self.signing_fixture())
+            self.insert_signing_fixture(self.b, block)
+            result = self.rejected()
+            self.assertEqual(result["changed_entries"], [])
+            self.assertIn("signing_block", result["changed_regions"])
+
+    def test_signature_mutation_control_requires_real_verifier_rejection(self):
+        self.insert_signing_fixture(self.a, self.signing_fixture())
+        verified = dict(self.sign, certificate_sha256=repro.digest(b"fixture-cert"))
+        report = repro.verified_signing_snapshot(self.a, verified)
+        original = self.a.read_bytes()
+        verifier = Path(self.tmp.name) / "verifier-fixture"
+        verifier.write_bytes(b"not executable")
+        with patch.object(repro.sys, "platform", "linux"), patch.dict(repro.os.environ, GITHUB_ACTIONS="true"):
+            for i, (status, text) in enumerate(((1, "DOES NOT VERIFY"), (0, "Verifies"), (2, "failure"), (1, ""))):
+                output = Path(self.tmp.name) / (str(i) + ".apk")
+                completed = repro.subprocess.CompletedProcess([], status, text, "")
+                with patch.object(repro.subprocess, "run", return_value=completed) as run:
+                    if i == 0:
+                        self.assertTrue(repro.signing_mutation_control(self.a, report, verifier, output)["altered_signature_rejected"])
+                    else:
+                        with self.assertRaises(ValueError):
+                            repro.signing_mutation_control(self.a, report, verifier, output)
+                    self.assertEqual(run.call_count, 1)
+                self.assertEqual(self.a.read_bytes(), original)
+                self.assertEqual(repro.byte_differences(original, output.read_bytes())["different_bytes"], 1)
+
     def test_build_failure_is_not_success(self):
         import subprocess
         import sys
