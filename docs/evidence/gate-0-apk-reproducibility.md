@@ -9,14 +9,13 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-All seven observed hosted pairs **failed signed-byte equality**. The latest two
-pairs establish matching native objects, libraries and build IDs after the debug
-mapping correction, plus equal ZIP entries/local records/central directory/EOCD.
-Only APK signing-block bytes still differ. Its exact differing fields and cause
-remain **Unknown**. This continuation adds bounded signing-field diagnostics;
-their new hosted results are **unobserved**. Local fixture success is not an
-independent APK build result. Historical sections below retain the prior
-procedures and negative results, including now-superseded native Unknowns.
+As of the 2026-10-30 continuation, nine observed hosted pairs **failed signed-byte
+equality**. The latest two establish matching native outputs, ZIP entries and v2
+signatures; only the dependency-info signing-block value differs. The mechanism
+producing those differing bytes remains **Unknown**. See the
+[latest observation and policy proposal](#dependency-info-observation-and-policy-proposal).
+Local fixture success is not an independent APK build result. Historical sections
+below retain their prior observations, failed parser runs and now-superseded Unknowns.
 
 The procedure is original PDVA standard-library code in
 [apk-reproducibility.py](../../.github/scripts/apk-reproducibility.py), with
@@ -865,3 +864,112 @@ New hosted results are **pending/unobserved**: one final push to existing PR #50
 one native chat-association verification, then STOP without CI/review polling.
 Gate 0 **Unresolved**; A-G **Not reached**; Windows incident unresolved;
 phone/native-launch readiness **NOT READY — STOP**.
+
+## Dependency-info observation and policy proposal
+
+Continuation: **2026-10-30, America/Fortaleza**. Read-only live preflight confirmed
+main `61c68f87404a1b7e70e0314b73532322ee2de252`, existing PR #50 head
+`b51d59d5c94f610bc04fba8d8808694f2d68e027`, base main and no other open PRs.
+Reviews, comments and review threads were empty. The full eight-file incoming
+diff, regular 100644 modes, workflows, governing requirements, ADRs, security
+policies, existing provenance/dependency records and history were reviewed.
+ADR-0003 was available. Clean tracked main was switched to the existing PR branch;
+51 branches, one worktree, no stashes and 25,971 ignored files were preserved.
+No applicable AGENTS.md was found. GitHub Status reported all systems operational,
+no incidents, snapshot updated `2026-10-30T15:20:37.099Z`.
+
+### Newly observed genuine comparisons
+
+The corrected parser completed on both APKs in each of these exact-head runs:
+
+| Run / job | Complete APK A SHA-256 | Complete APK B SHA-256 |
+|---|---|---|
+| [40989682770](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40989682770) / `123848788775` | `4bf51bbbc1bf71943b8ac2b9385b92f61cf4c3ad0f283fe6710d040d2aa71d15` | `b8ebac980c01676650a3f3ef96e52dc51a4ff047352a41ba4bc8d5cd29107ebc` |
+| [40989678262](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40989678262) / `123848774175` | `39e6d283acc74d26b7fb98d318f3887ac32a279c87221a2732c57828b70e323d` | `2276dd0b020237ba28e4ba37aa5abb3c4cfdfc1f8bdedbb4e2c93627815aa827` |
+
+Both builds in each run use the unchanged SOURCE
+`aa517dfdfe2b72986d67ad65f7f1b34d8494118b`, TREE
+`5965f746c6093c2bb86a99f3b4f361b6c315798c`, independent worktrees and dependency
+homes, with the existing qualified Ubuntu 24.04/JDK/SDK/NDK/CMake inventories.
+Build input inventories match within each pair. All APKs are 81,312 bytes.
+There is no phone/device/OEM runtime result; JNI ABIs are ARM64 and x86_64.
+
+Direct log observations: all native object/unstripped/stripped library hashes
+match within each pair, with retained build IDs and successful mapping controls.
+All ZIP entries, their contents/metadata, local records, central directory and
+EOCD match. External signature verification succeeds; the decoded v2 algorithm
+is `0x0103`, RSA-PKCS1-v1_5-SHA256. The entire v2 block, including signatures,
+signed data, key and certificate, matches within each pair; so does verity padding.
+The development signer differs across runs, not within a pair; no production
+custody conclusion follows.
+
+Both logs report `SIGNING_BLOCK_CHANGED_FIELDS=["/blocks/1/sha256","/sha256"]`.
+Block 1 is dependency-info `0x504b4453`, value offset 77,966, length 185 bytes.
+The enclosing signing block starts at 76,544 and is 4,096 bytes long.
+
+| Run | Dependency-info A SHA-256 | Dependency-info B SHA-256 |
+|---|---|---|
+| `40989682770` | `94668f0b748cfc8f060f3346faf522ea72e859560aa5833549c26b83931d4f4c` | `e9edffdb2afab5c1617a87c738f534df5a07ef8c70fdcf33d614780da1082dbb` |
+| `40989678262` | `e838a26079a859bda2d3ae2a339d12eec6aa51f0ff2daf24ff74e09b7b710700` | `3a30bcbc1a15b434b86e2f55c70484e270496ba90ee3c222372b165f79419819` |
+
+Each run records `signed_bytes_equal=false`, `changed_regions=["signing_block"]`
+and `APK_REPRODUCIBILITY=STOP: APK bytes or signing identity differ`. Actual signer
+identity matches; the generic error is triggered by unequal complete bytes.
+These are two additional **failed compared pairs**, bringing the total to nine;
+the earlier two parser failures remain distinct. Both Android jobs failed honestly.
+
+Positive controls: both genuine independent builds, qualified external verifier,
+native/package correspondence and mapping replay completed. Negative controls:
+both altered-signature copies per run were rejected by the verifier; 29 structural
+comparator tests passed. SDK apksigner version `0.9`, JAR SHA-256
+`3716d9311e55d2b0918a2fd9d54ba9e406c5f6abeea700b287f11259bc163dec`.
+This verifier is distinct from builder apksig 9.4.0.
+
+[Foundation run 40989682762](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/40989682762)
+passed: Linux job `123848788828` logged 149 repository, 29 comparator, 28 receipt,
+45 image and four frame tests, plus its existing hosted native/security controls;
+Windows job `123848789159` logged 45 image and four frame tests. These are observed
+hosted results, not fresh local execution or a passing Android comparison.
+
+### Policy proposal, provenance and limits
+
+The exact field is now established; the encryption/randomness mechanism and
+plaintext correspondence remain **Unknown**. No signing-repetition experiment
+or causal encryption control was performed. Source review and Android's current
+[dependency information documentation](https://developer.android.com/build/dependencies#dependency-info)
+describe separate encrypted metadata and recommend retaining it for Play Console
+SDK/dependency reporting; that upstream description does not independently prove
+the nondeterminism mechanism. Existing source archive/file hashes above remain
+the provenance references; no dependency, source code or proprietary binary is added.
+
+[PROPOSED ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
+recommends retaining host metadata and the unresolved strict claim, compares four
+alternatives, and defines owner decisions, evidence distinctions and falsifiers.
+Only this ADR, the existing research record and necessary governance/evidence
+links change. No signing/build/CI behavior, required acceptance, pinned candidate,
+compiler security setting or guest boundary changes. Failed Android CI **blocks
+merging PR #50 under existing rules**. ADR acceptance is explicitly pending;
+committing or merging documentation cannot supply it.
+
+Reopen implementation only after the explicit owner disposition and separately
+scoped authorization described in the ADR. A new non-metadata difference falsifies
+the scoped attribution for that new pair; qualified controlled evidence is required
+before naming a causal encryption mechanism. No complete signed-byte equality,
+production custody, distribution readiness or security result is established.
+
+Local validation for this documentation revision: foundation validator passed
+(149 files, 92 Markdown files, 54 requirements, three consecutive ADRs); harness
+validator passed; 149 repository tests passed with four platform skips; all 29
+comparator/diagnostic tests passed; whitespace check passed. Foundation validation
+checks local Markdown targets; ADR status/headings, source links, privacy,
+unchanged dependency/license scope and regular file modes were reviewed separately.
+The AOSP v2 page timed out twice through the web reader, then returned HTTP 200
+through a read-only HTTPS fetch; its signing-block ID/value structure was verified.
+No local native compiler, Android build or device runtime was executed. Local
+synthetic controls do not constitute a new genuine signed-APK comparison.
+
+Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows incident unresolved;
+physical native-launch readiness **NOT READY — STOP**. No phone, USB, ADB,
+emulator, guest execution or antivirus bypass. One final documentation commit/push
+to existing PR #50, one native association verification, then STOP; subsequent
+hosted results remain unobserved for owner review.

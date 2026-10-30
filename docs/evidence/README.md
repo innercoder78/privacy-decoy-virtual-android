@@ -1,14 +1,14 @@
 # Evidence index
 
 Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
-Signed APK equality failed in seven observed hosted pairs. The mapped candidate
-now has matching JNI objects/libraries/build IDs and every ZIP entry; only signing
-block bytes differ. The exact field and cause remain Unknown. Bounded signing
-field diagnostics and altered-signature controls are added; new hosted results
-remain unobserved at publication. The first diagnostic runs stopped on an
-unrecognized apksig empty signed-data field; a source-demonstrated parser
-correction and failing-before/passing-after regression are now recorded.
-No prerequisite or gate closes.
+Signed APK equality failed in nine observed hosted pairs. The two latest pairs
+localize the difference to dependency-info block `0x504b4453`; native outputs,
+ZIP entries, v2 signatures and padding match within each pair. The underlying
+encryption/nondeterminism mechanism remains Unknown. Both earlier parser failures
+and their source-demonstrated correction remain recorded.
+[PROPOSED ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
+recommends retaining host metadata and the unresolved strict claim; owner approval
+is pending. Android CI remains failed and blocks PR #50. No prerequisite or gate closes.
 
 Evidence describes exact observations and limitations; it does not redefine
 requirements. Use the terminology and record fields in
