@@ -7,6 +7,12 @@ claim. The [requirements register](requirements.md) is the canonical obligation
 set; topic documents explain those obligations. Evidence records observations
 and cannot silently amend requirements.
 
+Pending decisions include
+[ADR-0003: host APK dependency metadata and reproducibility evidence](decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md).
+The owner approved only Option A on 2026-10-30: retain host dependency metadata,
+the strict signed-byte requirement, failures and unresolved limitations. The full
+ADR remains PROPOSED; B/C/D, signing changes and CI/merge-rule changes are unapproved.
+
 Material changes to product scope, host privileges, guest platform/image policy,
 primary boundary, networking contract, or evidence gates require a new PDVA ADR
 and explicit project-owner approval. A PR merge alone must not be interpreted as

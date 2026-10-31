@@ -1,5 +1,38 @@
 # Evidence index
 
+Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
+Final PR #50 scope: **documentation-only research preservation**, explicitly
+authorized by the owner on 2026-10-31. Experimental implementation is excluded;
+existing code and workflows match main exactly. See the
+[final disposition](gate-0-apk-reproducibility.md#final-documentation-only-preservation--2026-10-31).
+Signed APK equality failed in fifteen observed hosted pairs. Recent pairs
+localize the difference to dependency-info block `0x504b4453`; native outputs,
+ZIP entries, v2 signatures and padding match within each pair. The underlying
+source path now establishes fresh ECIES ephemeral-key and AES-GCM-IV randomness;
+historical plaintext/random values remain Unknown. No supported secure deterministic
+retention mode was found in the reviewed configuration. Both earlier parser failures
+and their source-demonstrated correction remain recorded. Stop forcing byte equality.
+[PROPOSED ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
+records the owner's 2026-10-30 approval of Option A: retain host metadata, the
+strict requirement, failures and unresolved limitations. Full ADR acceptance and
+Options B/C/D remain unapproved. Historical Android reproducibility runs remain
+failed. Final documentation checks cannot establish APK equality or close a gate.
+No merge authorization is granted.
+
+[PROPOSED Option D contract](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#proposed-option-d-contract-additive-research-correspondence)
+historically recommends additive, per-property research reporting with Option A's strict failure
+and merge block intact. The contract, its implementation and any merge-rule change
+remain unapproved; no CI behavior changes. The
+[research-only merge decision](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#research-only-merge-decision-stop-under-current-authority)
+is STOP under A: D2 would need an explicit amendment of A's merge prerequisite,
+independent mandatory controls and visible retention of the failed assertion.
+No exception is approved; production/release obligations remain intact.
+The [D2 enforcement assessment](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#d2-enforcement-design-assessment--2026-10-31)
+maps every Android step and recommends STOP: a simple required-check split cannot
+enforce actual execution or distinguish a completed negative comparison from a
+crash. These unapproved proposals remain historical; D1/D2 research is not reopened
+and no enforcement change is adopted in the final preservation scope.
+
 Evidence describes exact observations and limitations; it does not redefine
 requirements. Use the terminology and record fields in
 [acceptance criteria](../acceptance-evidence-criteria.md).
