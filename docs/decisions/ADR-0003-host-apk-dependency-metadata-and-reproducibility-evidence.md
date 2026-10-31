@@ -310,6 +310,130 @@ technical experimentation only for a new falsifier; unchanged repeat builds do
 not resolve this policy decision. GitHub merge-button availability is not owner
 authority, and a research merge would not advance Gate 0 or production work.
 
+#### D2 enforcement design assessment — 2026-10-31
+
+**Disposition B: STOP.** The smallest candidate is a separation of mandatory
+controls from the still-failing equality assertion, but a required-check list
+alone cannot enforce the requested failure semantics. No qualified independent
+enforcer exists in this repository. This is a concrete rejected minimum and a
+bounded qualification plan, not a claim that every future design is impossible.
+The owner authorized investigation/design only; A, D1/D2 and ADR status are unchanged.
+
+The mapping below covers every step in the existing
+[Android workflow](../../.github/workflows/android-harness.yml), including generated
+runner steps. M1 and M2 are proposed obligation groups, not installed check names.
+Every mapped control remains mandatory independently of equality's result.
+
+| Existing step | Precise obligation and proposed mandatory destination |
+|---|---|
+| Set up job | M1: qualified Ubuntu runner, successful initialization and recorded infrastructure identity; a zero-step run is not evidence. |
+| Check out exact reviewed source | M1: immutable official checkout pin, exact PR head, complete historical source availability, no persisted credentials and no destructive checkout. |
+| Repository and manifest hygiene | M1: foundation roots/links/requirements/binary/privacy rules, manifest authority validation and head whitespace. |
+| Select runner JDK and install pinned Android packages | M1: JDK selection, executable SDK tools, requested platform/build-tools/NDK/CMake and recorded versions/hashes. Package IDs alone do not pin mutable runner bytes; M2 adds exact qualification/inventories. |
+| Build both variants and exercise protocol | M1: debug/release/test APK compilation, JVM protocol tests and debug lint through the existing hash-verified Gradle bootstrap and strict dependency verification. No Android runtime execution is implied. |
+| Cross-build and inspect dormant seccomp bootstrap without executing it | M1: native cross-compilation and static bootstrap controls; preserves the no-execution boundary. |
+| Inspect release APK authority and native inventory | M1: release/debug compiled APK policy, packaged extraction-rule negative controls, expected native inventory/protections and recorded source/tool/APK hashes. |
+| Record offline release artifact correspondence privately | M1: exact-head/artifact-bound journal init/prepare/inspect, native-to-packaged correspondence and private evidence handling. A receipt is not physical readiness. |
+| Exercise independent APK comparison failure controls | M1: all existing comparator/parser/mapping controls; fixture equality and rejected mutations test the tool, not genuine build equality. |
+| Build exact reviewed candidate twice: qualification/build portion | M2: hosted-Linux restriction, exact JDK/package revisions and full tool hashes; pinned SOURCE/TREE; fresh separate worktrees/dependency homes, disabled caches, both successful builds and unchanged tool installation. |
+| Same step: signing/native/provenance portion | M2: external apksigner verification of both originals, bounded parser/certificate binding, altered-signature rejection, APK/ELF inspection, mapped compiler replay and unmapped negative controls, strip/build-ID/packaged-byte consistency, complete matching input inventories and same signer/schemes. |
+| Same step: comparison portion | M2 must independently validate the result binding, same signer and the narrow metadata-only difference scope from both originals. The separate research assertion R still compares complete original signed bytes, rejects ANY difference and exits nonzero. No parser/input/signature exception qualifies as R's expected scientific outcome. |
+| Post checkout / Complete job | M1/M2: verify terminal execution and cleanup outcomes; successful runner finalization cannot override a prior failure. Cancellation or missing terminal evidence blocks. |
+
+Existing `foundation` and `offline-image-windows` also remain required in any
+candidate mapping. Preserve foundation repository/comparator/receipt/image/frame
+tests, harness validation, native wait/assertion controls, modeled bootstrap,
+Linux lifetime/seccomp/revocation controls and whitespace; preserve Windows
+image/frame controls. Their success cannot compensate for any M1/M2 failure.
+
+**Smallest candidate and rejection:** require those two existing jobs plus M1
+and M2; let only R remain visibly failed and non-blocking under a PR-50-only
+owner exception. This needs a future reviewed separation inside the current
+monolithic script, not merely moving its last workflow step. Original APKs must
+stay bound to the same fresh pair across M2/R with identity rechecks; job separation
+adds transfer, retention, signing-material and substitution risks. No artifact
+upload or new dependency is authorized. The existing script cannot currently
+emit independently enforced M2 success and R failure; its common exit 1 also
+represents genuine build/security/parser errors. Classifying that exit or STOP
+message as acceptable, or replaying retained APKs, is rejected.
+
+**Independent platform assessment:** GitHub accepts `success`, `skipped` and
+`neutral` for required checks; a conditional skip can therefore satisfy protection.
+A dependency-skipped job may not block. Filtered workflows instead leave required
+checks pending. Required checks bind to the current head or test-merge commit;
+merge queues need their own event coverage. These are documented semantics,
+not newly tested PDVA enforcement. See
+[required-check troubleshooting](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
+and [conditional jobs](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-jobs-with-conditions),
+reviewed 2026-10-31. Requiring R would block its genuine failure; making R optional
+does not require its execution or distinguish a scientific mismatch from a crash.
+
+| Outcome | Required decision; gap in the minimum candidate |
+|---|---|
+| Mandatory failure, timeout, cancellation or action-required result | Block; never neutralize or retry merely for green. Verify actual protection enforcement, not just a red icon. |
+| Missing, queued, in-progress or Unknown mandatory evidence | Block; no receipt or job name can substitute for completed checks. |
+| Skipped/neutral job or skipped required step inside a successful job | Block despite GitHub's accepted job conclusions; requires independent execution/coverage validation absent from a simple required-check list. |
+| Old head/base, wrong source/tree, wrong run attempt or stale/cross-run artifacts | Block; bind diagnostic head, build candidate, base, workflow identity and both artifact hashes separately. A historical candidate build does not validate current-head code. |
+| R missing, skipped, timed out, cancelled or crashed before a complete comparison | Block; an optional R alone cannot enforce this condition. Generic exit 1 is insufficient. |
+| M1/M2 actually succeed and R completes with only the documented metadata difference | Retain R FAILED. Only a separately approved, qualified D2 policy could permit research preservation; no all-green or reproducible claim. |
+| New content/native/signer/v2/padding difference, or unexpected genuine equality | Stop this narrow exception for review; preserve the actual result. Equality for one pair would not erase previous failures. |
+
+Closing the gaps would require an independent, trusted execution/evidence
+validator with its own substantive controls, plus enforced review of workflow
+integrity. It must not be a wrapper translating R failure into success. Merely
+adding `always()` does not prove coverage or prevent its own skip/cancellation.
+No such validator, trusted source or permissions/adoption decision is qualified.
+An external check producer would add a new trust/maintenance obligation, not a
+free workaround. GitHub supports expected-app binding, unique check names and
+admin protection, but the Actions app identity alone does not identify an immutable
+workflow. See [branch protections](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+Live main has no classic protection or active rulesets; project policy still
+blocks. Future controls must include administrators, prevent direct-push/bypass
+routes and enforce current reviews. A malicious rules administrator remains a
+trust limit. No settings were changed, and no manual merge bypass is proposed.
+
+**Independent qualification plan, not executed:** a reviewer other than the
+implementer must first trace each row to exact code/checks and approve provenance,
+permissions and artifact handling. Before production-repository enforcement,
+use an owner-authorized isolated test setting to demonstrate actual merge denial
+for each injected M1/M2 failure; missing/skipped/neutral checks and steps; timeout,
+cancellation and unavailable runner; wrong SHA/base/attempt/producer; duplicate
+check names, forged receipts, replaced APKs and changed workflow/trigger. Include
+direct push/admin bypass, stale approvals, base updates and a non-#50 PR to prove
+the exception cannot escape its scope. No such setting or test is authorized now.
+Positive controls must demonstrate genuine mandatory execution and authentic
+completed comparison evidence; only the separately approved exception may admit
+a still-red R. Reuse the contract's byte/signature/parser mutations without
+substituting fixtures for independent builds. Verify R remains visibly FAILED
+in the checks UI/API and logs. An enforcer outage must block, not default success.
+This qualification tests new enforcement falsifiers; it is not permission to
+repeat the unchanged APK experiment. Missing proof in any row means STOP.
+
+**Proposed replacement owner text, NOT APPROVED and NOT EFFECTIVE:** "For PR #50
+only, at a separately reviewed final head/base and approved enforcement revision,
+I amend only Option A's equality-before-research-merge prerequisite. Preservation
+may proceed with the complete signed-APK assertion visibly FAILED for the reviewed
+dependency-info-only mismatch, only after every mapped mandatory control actually
+executes successfully, independent qualification proves fail-closed enforcement,
+and the complete accumulated PR receives current independent review. Metadata,
+strict byte comparison, all historical failures and production/security/release
+obligations remain unchanged. No other PR or failed/Unknown mandatory protection
+is excepted. Missing qualification keeps the merge blocked. This approves neither
+the whole ADR nor merging now; implementation scope and enforcement changes need
+separate explicit authorization."
+
+This is the exact proposed conflict with A, not an accepted amendment. It affects
+the already mapped 008/054 governance, 039/040 evidence and 051 validation policy;
+036/037, 041/042, 048, guest 034/035 and existing 050 scope remain intact. Full
+ADR acceptance and D1/D2 remain unapproved. The ten-file accumulated PR includes
+615 lines of comparator/diagnostics, 537 test lines, validator allowlisting,
+workflow history/trigger/control additions and four CMake debug-map lines, as well
+as documentation. Earlier path-mapping/parser evidence supports their bounded
+behavior, not enforcement separation or source-to-binary supply-chain qualification.
+Do not remove the branch-specific trigger to hide failure. Whole-PR review must
+cover these changes, retained security flags, parser bounds and source pins.
+No production adoption, gate advancement or native-launch readiness follows.
+
 ## Acceptance criteria, residual risks and falsifiers
 
 Before any implementation, require all of the following:

@@ -1,7 +1,7 @@
 # Evidence index
 
 Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
-Signed APK equality failed in thirteen observed hosted pairs. Recent pairs
+Signed APK equality failed in fourteen observed hosted pairs. Recent pairs
 localize the difference to dependency-info block `0x504b4453`; native outputs,
 ZIP entries, v2 signatures and padding match within each pair. The underlying
 source path now establishes fresh ECIES ephemeral-key and AES-GCM-IV randomness;
@@ -22,6 +22,10 @@ remain unapproved; no CI behavior changes. The
 is STOP under A: D2 would need an explicit amendment of A's merge prerequisite,
 independent mandatory controls and visible retention of the failed assertion.
 No exception is approved; production/release obligations remain intact.
+The [D2 enforcement assessment](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#d2-enforcement-design-assessment--2026-10-31)
+maps every Android step and recommends STOP: a simple required-check split cannot
+enforce actual execution or distinguish a completed negative comparison from a
+crash. Independent enforcement qualification and owner approval remain missing.
 
 Evidence describes exact observations and limitations; it does not redefine
 requirements. Use the terminology and record fields in

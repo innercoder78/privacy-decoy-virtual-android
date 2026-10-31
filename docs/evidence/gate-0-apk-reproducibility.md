@@ -9,7 +9,7 @@ native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Propos
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-As of the 2026-10-30 research-only merge proposal, thirteen observed hosted pairs
+As of the 2026-10-31 D2 enforcement assessment, fourteen observed hosted pairs
 **failed signed-byte equality**. Recent pairs establish matching native outputs, ZIP entries and v2
 signatures; only the dependency-info signing-block value differs. The mechanism
 uses fresh ephemeral-key and IV randomness in the reviewed implementation; actual
@@ -1377,3 +1377,67 @@ unresolved; physical native-launch readiness **NOT READY — STOP**. No phone, A
 USB, emulator, guest execution or security bypass. Publish one documentation commit
 to existing PR #50, check native association once, then STOP without observing new
 CI, reviews, bots or mergeability.
+
+## D2 enforcement design assessment — 2026-10-31
+
+The sole [concrete assessment in ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#d2-enforcement-design-assessment--2026-10-31)
+maps all Android steps, including mandatory controls inside the final research
+process, and evaluates a minimal split against official GitHub semantics.
+Recommendation B is **STOP**: required contexts alone admit skipped/neutral
+results, and an optional comparison does not enforce completed execution. The
+current process combines security/build/parser failure and equality failure in
+exit 1. Treating that exit as an accepted research outcome is rejected. A future
+trusted execution/evidence validator needs separate design, adoption, independent
+qualification and owner authority; no such enforcement is established here.
+The ADR provides the proposed replacement owner text, failure matrix and adversarial
+qualification plan. It is not D2 approval, changed acceptance criteria or a merge
+waiver. A's current merge prerequisite remains binding.
+
+Live preflight: main/base `61c68f87404a1b7e70e0314b73532322ee2de252`, PR #50 head
+`aaa52498aca577828acda5b6e5dd9e930f14ba15`, thirteen commits, ten accumulated files,
+regular 100644 modes. PR #50 was the only open PR; reviews/comments/threads empty.
+Reviewed accumulated comparator/native/workflow changes, governing requirements,
+ADRs, security/evidence policy, dependency/adoption records and existing exact-source
+encryption evidence. No binaries/dependencies were added or downloaded. Local
+tracked state was clean; 51 branches, one worktree, no stashes and 25,971 ignored
+files preserved. Main protection returned HTTP 404 "Branch not protected"; active
+main rules and repository rulesets were empty. Technical mergeability grants no
+authority. GitHub Status updated `2026-10-31T03:53:04.279Z` reported operational
+systems and no active incidents; this is not a dependency security assessment.
+
+Existing [Android run 41141493558](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41141493558),
+job `124356574428`, attempt 1, pull_request event at that head, completed both
+builds and failed strict equality. APK A SHA-256
+`220b8e5d7eff242256e9b33f07386104c63e985ecfdd84f1e322332338fd5c04`;
+APK B SHA-256 `a7379e60298efc46342c5e2574a11b3f52fd81a6cdbfeadc4d7fc9c24dfbc3b7`.
+Both were 81,312 bytes. No ZIP entries changed; only signing_block differed, with
+signing diagnostic paths `/blocks/1/sha256` and `/sha256`. Both altered-signature
+controls were rejected; 29 comparator tests passed. This is the fourteenth failed
+pair, observed read-only, not a newly initiated experiment. Historical parser
+failures, negative native results, source findings and plaintext Unknowns remain.
+
+[Foundation run 41141493338](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41141493338)
+passed at that head: Linux job `124356574380` logged 149 repository, 29 comparator,
+28 receipt, 45 image and four frame tests; Windows job `124356574046` logged 45 image
+and four frame tests. All earlier Android steps succeeded; none overrides its
+failed comparison. These hosted observations are distinct from local validation.
+
+Official GitHub documentation independently checked on 2026-10-31 is linked in
+the ADR. The assessment is source/API reasoning, not a live enforcement experiment
+or independent implementer review. No merge-denial tests, rule changes, external
+check producer, workflow split or future control implementation was performed.
+The missing qualification is enforcement of execution, identity and negative
+outcomes, not another unchanged APK build. An owner-approved isolated enforcement
+test would be a new falsifier and needs separate authorization.
+
+Local validation: foundation validator (149 files, 92 Markdown files, 54 requirements,
+three ADRs), harness validator and 149 repository tests with four platform skips.
+Reviewed three-document scope, local links/new anchor, PROPOSED status and owner
+wording, requirements, privacy, provenance/licenses, regular modes and whitespace.
+No local comparator, crypto, native compiler, Android build or runtime test.
+No implementation, workflow, trigger, required-check, signing or metadata change.
+
+Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows native-host incident
+unresolved; physical native-launch readiness **NOT READY — STOP**. One reviewed
+documentation publication to existing PR #50 and one native attachment check,
+then STOP without new CI, review, comment, bot or mergeability polling.
