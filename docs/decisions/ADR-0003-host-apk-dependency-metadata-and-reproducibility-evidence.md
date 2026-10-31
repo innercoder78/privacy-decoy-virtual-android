@@ -7,6 +7,27 @@ The owner's explicit instruction in the existing PDVA conversation approves only
 Option A. The remaining proposal stays PROPOSED; documenting, committing or merging
 it does not accept the entire ADR or authorize implementation changes.
 
+## Final preservation disposition — 2026-10-31
+
+The owner explicitly authorized converting PR #50 to documentation-only research
+preservation. The final diff excludes all experimental code, tests, native debug
+mapping, validator additions and workflow changes; existing non-documentation
+files match main `61c68f87404a1b7e70e0314b73532322ee2de252` exactly. The implementation
+remains available at historical commit
+[`18697fd8c32450d96e0c134acb7e9724bd2f65c7`](https://github.com/innercoder78/privacy-decoy-virtual-android/tree/18697fd8c32450d96e0c134acb7e9724bd2f65c7),
+but is **not adopted into main** by this PR.
+
+Option A's recorded approval and all genuine failures remain intact. D1/D2 and
+the rest of this ADR remain PROPOSED/unapproved; their investigation is closed
+at the recorded STOP disposition, not reopened or implemented. No new merge-policy
+exception is adopted. Below, statements about the accumulated code, experimental
+workflow, current failure and merge blocker describe the historical implementation
+proposal before this final scope correction. They do not describe a newly passing
+APK experiment or replace review/check obligations for the final documentation PR.
+The owner's conversion instruction grants no merge, security, release, Gate 0
+or physical-testing authorization. See the
+[final evidence disposition](../evidence/gate-0-apk-reproducibility.md#final-documentation-only-preservation--2026-10-31).
+
 ## Context and verified scope
 
 The [existing PR #50 investigation](../evidence/gate-0-apk-reproducibility.md#dependency-info-observation-and-policy-proposal)
@@ -320,7 +341,7 @@ bounded qualification plan, not a claim that every future design is impossible.
 The owner authorized investigation/design only; A, D1/D2 and ADR status are unchanged.
 
 The mapping below covers every step in the existing
-[Android workflow](../../.github/workflows/android-harness.yml), including generated
+[historical Android workflow](https://github.com/innercoder78/privacy-decoy-virtual-android/blob/18697fd8c32450d96e0c134acb7e9724bd2f65c7/.github/workflows/android-harness.yml), including generated
 runner steps. M1 and M2 are proposed obligation groups, not installed check names.
 Every mapped control remains mandatory independently of equality's result.
 

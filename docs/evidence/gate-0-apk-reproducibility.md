@@ -4,12 +4,19 @@ Date: **2026-10-29, America/Fortaleza**. Scope: PDVA-REQ-036–043, 048,
 050–051 and 054. **Gate 0 Unresolved; Gates A–G Not reached. Physical
 native-launch readiness NOT READY — STOP.** ADR-0001 Accepted; ADR-0002 Proposed.
 
+**Final scope, 2026-10-31:** documentation-only preservation, explicitly authorized
+by the owner. Experimental implementation is not adopted into main; see the
+[final disposition](#final-documentation-only-preservation--2026-10-31).
+All earlier dated implementation, command, workflow and merge-block statements
+are historical observations/proposals at their recorded commits. Their failures
+remain failures; none is converted into a pass by excluding implementation.
+
 ## Question and experiment boundary
 
 Do two fresh builds of the same reviewed Android research source, under the same
 identified tools and development signing identity, produce identical signed APK
 bytes? This record concerns only that bounded artifact-provenance prerequisite.
-As of the 2026-10-31 D2 enforcement assessment, fourteen observed hosted pairs
+As of the 2026-10-31 final preservation review, fifteen observed hosted pairs
 **failed signed-byte equality**. Recent pairs establish matching native outputs, ZIP entries and v2
 signatures; only the dependency-info signing-block value differs. The mechanism
 uses fresh ephemeral-key and IV randomness in the reviewed implementation; actual
@@ -18,9 +25,10 @@ historical plaintext and random values remain Unknown. See the
 Local fixture success is not an independent APK build result. Historical sections
 below retain their prior observations, failed parser runs and now-superseded Unknowns.
 
-The procedure is original PDVA standard-library code in
-[apk-reproducibility.py](../../.github/scripts/apk-reproducibility.py), with
-[disposable unsigned controls](../../.github/scripts/test-apk-reproducibility.py).
+The historical procedure is original PDVA standard-library code in
+[apk-reproducibility.py](https://github.com/innercoder78/privacy-decoy-virtual-android/blob/18697fd8c32450d96e0c134acb7e9724bd2f65c7/.github/scripts/apk-reproducibility.py), with
+[disposable unsigned controls](https://github.com/innercoder78/privacy-decoy-virtual-android/blob/18697fd8c32450d96e0c134acb7e9724bd2f65c7/.github/scripts/test-apk-reproducibility.py).
+These immutable references preserve the implementation without adopting it.
 The candidate changes JNI CMake debug-path options only; no C/Java application
 source, manifest, extraction policy, Persona, dependency version, verification
 metadata, permanent key or production signing policy changes.
@@ -1441,3 +1449,73 @@ Gate 0 **Unresolved**; Gates A-G **Not reached**; Windows native-host incident
 unresolved; physical native-launch readiness **NOT READY — STOP**. One reviewed
 documentation publication to existing PR #50 and one native attachment check,
 then STOP without new CI, review, comment, bot or mergeability polling.
+
+## Final documentation-only preservation — 2026-10-31
+
+**Owner-authorized final disposition:** preserve this complete substantive record
+and ADR-0003, but do not adopt PR #50's experimental implementation. One forward
+corrective revision removes the two PR-added comparator/diagnostic and regression
+scripts and returns the foundation validator, both workflows and JNI CMake file
+to exact main bytes. No commit history is rewritten. Original source, tests,
+workflow and native changes remain inspectable at immutable research commits,
+including final experimental head `18697fd8c32450d96e0c134acb7e9724bd2f65c7`.
+
+The final diff against main contains only ADR-0003, this evidence, its index and
+the existing governance cross-reference recording Option A. No accepted requirement,
+security policy, signing, encryption, dependency metadata or architecture changes.
+Removing the entire unadopted implementation is the owner's explicit scope decision;
+no main-branch check is weakened, suppressed or bypassed, and no historical failed
+check is relabelled. The final PR makes no claim that the removed experiment ran
+or passed on the corrective revision. Applicable documentation/main checks and
+independent review remain necessary; no merge authorization is implied.
+
+Preserved findings include the original native build-ID mismatch and bounded
+debug-path investigation, mapped candidate results, both parser failures and the
+source-demonstrated correction, all independent whole-APK failures, matching
+application/v2 contents in later pairs, and randomized encrypted dependency-info.
+Pinned source/tool identities, license/provenance limits, historical plaintext
+Unknowns, Windows security incident and rejected alternatives/STOP conclusions
+remain. Option A stays approved; D1/D2 and full ADR acceptance remain unapproved.
+The earlier D1/D2 design text is retained as historical research, not reopened.
+No new security, release, reproducibility or Gate 0 qualification is established.
+
+Preflight reverified main/base `61c68f87404a1b7e70e0314b73532322ee2de252` and PR #50
+head `18697fd8c32450d96e0c134acb7e9724bd2f65c7`: fourteen commits, ten files, regular
+100644 modes, only open PR, and no comments/reviews/threads. Reviewed the accumulated
+diff and history, requirements/ADRs, evidence, dependency/adoption provenance and
+local state. Tracked state was clean; 51 branches, one worktree, no stashes and
+25,971 ignored assets were preserved. GitHub Status snapshot updated
+`2026-10-31T03:53:04.279Z` reported operational systems with no active incidents.
+
+Existing [Android run 41166808469](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41166808469),
+job `124436027372`, at that experimental head completed both builds and failed
+strict equality: APK A SHA-256
+`7a7c3765e381b3fdadbdc9fae2f047b86118075020dfeaf47057c2d146683c7f`;
+APK B SHA-256 `de58738397a2a2f316ad2d254d641ac3460aa0be614e48bbb3d104d1af605dbb`.
+Both were 81,312 bytes; signing_block was the only changed region, with diagnostic
+paths `/blocks/1/sha256` and `/sha256`. This is the fifteenth observed failed pair.
+Earlier Android steps and 29 comparator tests succeeded; equality did not.
+[Foundation run 41166808471](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41166808471)
+passed: Linux job `124436027800` logged 149 repository, 29 comparator, 28 receipt,
+45 image and four frame tests; Windows job `124436027624` logged 45 image and four
+frame tests. Read-only log inspection initiated no repeated APK experiment.
+
+Final local validation passed: foundation validator (147 files, 92 Markdown files,
+54 requirements, three ADRs), harness validator and 149 repository tests with four
+platform skips. Initial pre-staging foundation validation rejected the two deleted
+scripts still present in the Git index; staging their intended removals resolved
+that inventory mismatch without changing the validator. Verified the final four-file
+Markdown-only diff, exact main blob bytes for all four returned files, absence of
+both experimental scripts, regular 100644 modes, local link targets/new anchor,
+immutable historical Git targets, privacy and whitespace. Dependencies, binaries,
+licenses, accepted requirements and provenance policy are unchanged. No local
+comparator, APK, crypto, native compiler, enforcement or runtime test was executed.
+Historical dates/source identities remain unchanged; present-tense implementation
+claims are explicitly scoped to their historical revisions above. No unsupported
+date correction or new experiment is inferred from the cleanup date.
+
+Gate 0 **Unresolved**; Gates A-G **Not reached**; physical native-launch readiness
+**NOT READY — STOP**. Windows native-host incident remains unresolved. No phone,
+USB, ADB, emulator, guest execution or security bypass. Publish the reviewed
+correction to existing PR #50, verify native attachment once, then STOP without
+polling new CI, reviews, comments, bots or mergeability.

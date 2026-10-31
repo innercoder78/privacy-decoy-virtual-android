@@ -10,7 +10,7 @@ on:
       - 'docs/source-provenance-policy.md'
       - 'docs/source-reference-catalog.md'
   push:
-    branches: [main, codex/gate0-apk-reproducibility]
+    branches: [main]
     paths:
       - 'android/**'
       - '.github/**'
@@ -32,7 +32,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           clean: false
-          fetch-depth: 0 # Includes the exact reviewed historical source for both builds.
       - name: Repository and manifest hygiene
         run: |
           python3 .github/scripts/validate-foundation.py
@@ -103,7 +102,3 @@ jobs:
             --native "lib/x86_64/libsubstrate.so=$native/x86_64/libsubstrate.so" \
             --native "lib/arm64-v8a/libpdva_launch.so=$native/arm64-v8a/libpdva_launch.so"
           # No journal, APK, signing material or private path upload/log dump.
-      - name: Exercise independent APK comparison failure controls
-        run: python3 .github/scripts/test-apk-reproducibility.py
-      - name: Build exact reviewed candidate twice in isolated output and dependency directories
-        run: python3 .github/scripts/apk-reproducibility.py

@@ -43,7 +43,6 @@ jobs:
           git rev-parse HEAD
           python3 .github/scripts/validate-foundation.py
           python3 .github/scripts/test-repository-validation.py
-          python3 .github/scripts/test-apk-reproducibility.py
           python3 .github/scripts/validate-harness.py
           python3 .github/scripts/test-desktop-readiness.py
           python3 .github/scripts/test-offline-image-inspect.py

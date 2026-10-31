@@ -21,8 +21,6 @@ ROOT_DIRS = {".github", "android", "docs"}
 HISTORY = "docs/reference/privacy-decoy-history/"
 SOURCE_SHA = "5320b3b44b38df4b8f3361ecbcb530386ff195e9"
 ALLOWED_CODE = {
-    ".github/scripts/apk-reproducibility.py",
-    ".github/scripts/test-apk-reproducibility.py",
     ".github/scripts/test-packaged-rules.py",
     ".github/scripts/test-frame-copy.py",
     ".github/scripts/offline-image-inspect.py",
