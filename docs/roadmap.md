@@ -1,19 +1,21 @@
 # Evidence-gated roadmap
 
-Planning baseline: **2026-10-19, America/Fortaleza**, through merged
-[PR #24](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/24),
-canonical main `8ed024150019a0c9d07fc66e2463ced755d589c0`.
+Evidence baseline: **2026-11-03, America/Fortaleza**, through merged
+[PR #51](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/51),
+canonical main `ff39b274e79b25d11e411d868fae7beb389643d5`.
 **Gate 0 is Unresolved; Gates A–G are Not reached.** The
 [gate definitions](feasibility-gates.md), [requirements](requirements.md),
 [governance](governance.md), [evidence criteria](acceptance-evidence-criteria.md)
 and [source policy](source-provenance-policy.md) govern progression. New repository
 evidence overrides this planning snapshot and any PR estimate.
 
-Tony's provisional preference is **approximately 40–60 additional focused PRs
-from the post-PR-24 baseline, including this roadmap PR**. This is a planning
-target, not a deadline, engineering guarantee, approval to weaken requirements,
+Tony's historical 2026-10-19 preference was **approximately 40–60 additional focused
+PRs from the post-PR-24 baseline, including the original roadmap PR #25**. This is
+a planning target, not a deadline, engineering guarantee, approval to weaken requirements,
 or authorization for dependent implementation. Security, efficiency, performance,
 maintainability and functional quality take precedence over the count.
+The range is not restarted at PR #51 and is not an estimate of remaining work.
+PRs #26–51 supply evidence and scoped controls, not completion of product milestones.
 
 ## Current evidence and its limits
 
@@ -34,34 +36,113 @@ runtime-feasibility result. [Containment](evidence/gate-0-worker-containment.md)
 [retained-capability research](evidence/gate-0-capability-revocation.md) remain
 blocking inputs, not implemented security guarantees.
 
-The live preflight found PR #24 merged from head
-`c54e5d6f003f5cc0d6c2a86d167d607d3686c436`, base
-`24ddb82ab1b3a6b4bb4a07b5dcee1a7269700838`, with the merge equal to the baseline
-above; its complete change is three documentation files, 454 additions. No PRs
-were open. Exact-main [foundation run 39300145968](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/39300145968),
-[job 118222904027](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/39300145968/job/118222904027),
-passed with actual receipts for foundation/harness validation, 141 repository
-tests, seven native wait controls and the injected assertion control, four Linux
-lifetime cases/four mutants, four seccomp cases, and ten revocation cases/ten
-semantic mutants with cleanup. Older publication-time pending statements in
-those research records remain historical. Only foundation ran on this exact-main
-push; Android and QEMU path filters did not select this documentation change.
-Zero legacy commit-status contexts do not constitute another pending job.
+### Post-PR-51 decision refresh
+
+**Verified merged findings, not new experiments:**
+
+- [PR #26 firmware closure](evidence/gate-0-android17-uboot.md) resolved the
+  selected U-Boot lineage sufficiently for static analysis, but found test keys,
+  fresh unlocked state and zero-read/no-op-write rollback callbacks in the selected
+  non-OP-TEE path. **STOP unchanged release-trust candidate**; firmware reproduction
+  is not the next experiment. The [Keystore handoff STOP](evidence/gate-0-keystore-boot-handoff.md)
+  separately explains why protected keys and authenticated messages do not compel
+  a hostile worker's emulated CPU/RAM to obey guest boot verification.
+- [PR #44 integrated decision](evidence/gate-0-integrated-feasibility-decision.md)
+  reconciles firmware, backend, Rust, resource, graphics, input, sensor, audio and
+  radio research from PRs #26–43. Reference **R is STOP** as an unchanged
+  ordinary-app full-phone candidate. Hypothesis **H has no assembled coherent
+  configuration**; the actual cross-build lacks required device selections.
+  Separate favorable source rows cannot be combined into an implemented phone.
+- [PR #45 readiness audit](evidence/gate-0-native-launch-readiness-audit.md),
+  [PR #46 process histories](evidence/gate-0-process-history-reconciliation.md)
+  and [PR #47 managed restore](evidence/gate-0-managed-restore-lifetime.md) leave
+  independent enrollment, freshness, whole-scope observation and recovery unresolved.
+  [PR #48 packaged policy](evidence/gate-0-packaged-extraction-rules.md) strengthens
+  offline validation; it is not installed-device or cleanup evidence.
+- [PR #49 one-way reservation](evidence/gate-0-one-way-research-attempt.md)
+  supersedes the audit's old late-marker/clear-on-CLEAN and multi-cycle behavior:
+  reservation now precedes delegated work and never reopens intact state.
+  This is a conditional admission control, not authenticated fresh installation,
+  loss/rollback recovery, independent worker/descendant/resource revocation or an
+  enforcing hostile-worker boundary. Binder death and worker reports remain insufficient.
+- [PR #50 final preservation](evidence/gate-0-apk-reproducibility.md#final-documentation-only-preservation--2026-10-31)
+  retains fifteen failed signed-APK equality pairs, including later pairs whose
+  difference is localized to randomized encrypted dependency metadata. Historical
+  plaintext equality remains **Unknown**. Experimental code, native mapping and
+  workflow changes were not adopted. Approved **Option A** retains metadata,
+  strict whole-signed-APK equality, failures and limitations; D1/D2 remain closed
+  at STOP, unapproved and unimplemented. Do not repeat unchanged builds, suppress
+  metadata, reuse ciphertext or weaken randomness/equality to obtain a pass.
+- [PR #51 authority delta](evidence/gate-0-platform-authority.md#android-17-authority-delta-check--2026-10-31)
+  found no new qualifying ordinary-app authority in its bounded review. The
+  inspected policy is unchanged; NativeService was already assessed and binding
+  updates supply no independent completion certificate. No general survey follows.
+
+**Inference:** these findings do not establish a complete full-phone ordinary-app
+configuration or independently enforcing hostile-worker boundary. They block
+dependent construction without proving universal impossibility. **Unknown:**
+installed execution/JIT, complete protected boot state, coherent guest/backend
+builds, resource fit and independent recovery remain unknown. **Decision:**
+Gate 0 remains Unresolved; Gates A–G Not reached; physical testing remains
+**NOT READY — STOP**, including the trusted native-launch probe.
+
+### Refresh procedure and limits
+
+Read-only live Git/REST preflight verified the baseline above and zero open PRs
+in both connector search and REST. Thus all open heads/bases/diffs/files/checks,
+jobs/logs/reviews/comments/threads form an empty set. Inspected merged history
+through #51, governing requirements/ADRs, linked evidence, dependency/provenance
+records, tracked binary/mode inventory and all three workflows. Local tracked
+state was clean, with one worktree and no stashes; existing branches and ignored
+assets were preserved. Reused the original roadmap branch by fast-forward only.
+No new platform/source survey or artifact qualification was performed.
+
+Exact-main [foundation run 41707870693](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41707870693)
+had successful foundation and Windows offline-image jobs; job/step metadata and
+actual log receipts were inspected. Both check runs succeeded. The legacy status
+endpoint returned `pending` with zero contexts, not an additional running job.
+Android/QEMU workflows were not selected; their absence is not a pass.
 [GitHub Status](https://www.githubstatus.com/api/v2/summary.json) reported All
-Systems Operational at preflight. CI success and source research are not product
-proof or gate decisions.
+Systems Operational with no incidents at preflight. Baseline CI is not this
+change's validation, a security clearance or a technical gate pass.
+
+This refresh changes roadmap sequencing and links existing evidence; it imports
+no source, dependency, binary or private evidence. Existing licenses, provenance
+limits and security-incident/private-backup gaps remain. Local validation and
+unrun checks are recorded below; no private durability is newly attested.
+
+Actual local validation used existing Python 3.11.4 on Windows: foundation
+validation passed (147 files, 92 Markdown files, 54 requirements, three ADRs),
+harness authority validation passed, and the repository suite ran 149 tests:
+145 passed, four existing Windows platform skips. Desktop-readiness (28),
+offline-image (45) and frame-copy (four) tests passed without skips; these are
+offline controls, not Android execution or artifact qualification. Checked all
+46 roadmap local links and anchors, the index backlink, UTF-8/LF, ten retained
+milestones, the complete diff, regular `100644` modes, provenance/privacy and
+whitespace. The index adds only a navigation entry required for preservation.
+Initial sandbox Git networking and a shell file-write attempt were denied;
+approved read-only networking and the patch tool completed the intended work.
+No denied attempt is counted as a successful check.
+
+**Not Run:** Android builds/JVM/lint, APK reconstruction/signing, local native
+or Linux process suites, QEMU/guest/VM/emulator/runtime, phone/ADB, security,
+networking or performance experiments. No new upstream mechanism was tested.
+Foundation applies to this documentation PR; Android/QEMU filters do not.
+New-head hosted checks remain **unobserved at publication**, for independent
+review later. Publish one focused PR, attach natively and verify association once,
+then STOP without polling CI, reviews, comments, bots or mergeability.
 
 ## Provisional allocation, not an implementation queue
 
-These ranges allocate reviewable changes by purpose. Their lower endpoints total
-**40** and upper endpoints total **60**; they are not independent confidence
+These historical ranges allocate reviewable changes by purpose. Their lower
+endpoints total **40** and upper endpoints total **60**; they are not independent confidence
 intervals or a prediction of how many discoveries remain. Count each PR once by
-its primary purpose, even when it helps several gates. The first row includes
-this roadmap PR and any narrowly authorized physical evidence work during Gate 0.
+its primary purpose, even when it helps several gates. The first row included
+PR #25 and any narrowly authorized physical evidence work during Gate 0.
 
 | Work area | Provisional additional PRs | Dependency and intended evidence |
 |---|---|---|
-| Remaining Gate 0 feasibility and planning | 8–12 | Firmware/build/security-input closure, kernel/modules, backend/client and ordinary-app authority/lifecycle falsification; reviewed candidate disposition. Includes this PR. |
+| Remaining Gate 0 feasibility and planning | 8–12 | Firmware/build/security-input closure, kernel/modules, backend/client and ordinary-app authority/lifecycle falsification; reviewed candidate disposition. Included PR #25; not a remaining-work quota. |
 | Conditional Android 17 guest implementation | 6–9 | Only after reviewed Gate 0 pass, explicit engine/architecture decision where needed and scoped adoption review: reproducible guest and complete framework/service/device operation. |
 | Enforcing security boundary and Persona controls | 8–12 | Gate B authority, hostile-worker containment, trusted management, narrow brokers, revocation and surface-specific Real/Decoy/Empty/Deny evidence. |
 | Interactive graphics/input and performance | 6–9 | Matching guest display/input stack, real interaction, lifecycle and declared CPU/RAM/latency/thermal/battery budgets; Gates A/C scope. |
@@ -85,9 +166,9 @@ unrealistic, evidence takes precedence: stop dependent work and revise the plan.
 ## Milestones and dependencies
 
 The milestones below define future acceptance evidence, **not achieved results**.
-No PR number, elapsed count or successful CI run authorizes a successor. Research
-that does not depend on an unresolved fact may continue; implementation must stop
-at that dependency. Every milestone inherits exact-build/source provenance,
+No PR number, elapsed count or successful CI run authorizes a successor. Desktop
+research needs a genuinely new concrete falsifier or independently useful evidence;
+implementation must stop at unresolved dependencies. Every milestone inherits exact-build/source provenance,
 synthetic data, public-data review and the evidence fields in the acceptance
 criteria. A changed engine, image, dependency, host policy or bridge invalidates
 affected evidence until revalidated. **STOP** is immediate for the affected path;
@@ -104,7 +185,7 @@ PDVA ADR, including affected requirements and invalidated evidence.
 - **Acceptance evidence:** reviewed exact source/build/device/backend inventory,
   legitimate execution/authority proof, constraints and remaining A/B questions,
   followed by an explicit scoped Gate 0 disposition under the gate definitions.
-  Resolve the PR #24 blockers below; a tiny Linux boot is insufficient.
+  Resolve the integrated decision blockers below; a tiny Linux boot is insufficient.
 - **Negative/failure controls:** reject unchanged Cuttlefish import with kernel
   vhost despite TCG, unexplained host services, missing signed boot inputs, opaque
   required firmware, nonsecure reference keys treated as product security, and
@@ -119,39 +200,53 @@ PDVA ADR, including affected requirements and invalidated evidence.
 - **Does not prove:** full guest boot, usability, enforced production isolation,
   VPN behavior, Play compatibility or qualified device support.
 
-PR #24 specifically leaves a **real but unadopted userspace-vsock mechanism**:
-QEMU's USER backend and the pinned Rust backend exist, but the reference QEMU
-launcher still selects kernel vhost and the Rust build is host-targeted. All
-retained Android backend/client, FD-sharing, syscall, SELinux and lifetime
-contracts remain unresolved. The kernel lead resolves to
-`3ec022196c4e9d5c1434599cdda63f622dd6f586`; it does not close exact config,
-toolchain, module sources/ABI or reproducible binary correspondence. ARM64's
-guest-local KeyMint/Gatekeeper defaults are explicitly nonsecure reference
-services, not an acceptable-security result. Ordinary-app execution and lifecycle
-authority are still unverified. The authoritative details and immutable pins
-remain in [PR #24's assessment](evidence/gate-0-android17-boot-hal.md) and
-[source ledger](evidence/gate-0-android17-boot-hal-sources.md).
+**Smallest outstanding owner decision:** Tony must explicitly choose the project
+response to the integrated STOP findings: retain the present requirements with
+dependent work stopped, or commission a concrete NARROW/REDESIGN proposal for
+applicable ADR review. This refresh does not make that choice. STOP/NARROW/REDESIGN
+as a project disposition requires Tony's explicit approval and applicable ADR
+review; immediate experiment safety stops remain in force while awaiting it.
+Option A is already approved and is not an outstanding decision. Neither
+ADR-0002 nor ADR-0003 is accepted by this refresh.
 
-**Next focused desktop technical experiment:** investigate the selected QEMU
-ARM64 firmware lineage, `bootloader_qemu_aarch64` / `qemu_aarch64/u-boot.bin`,
-at the recorded Cuttlefish-prebuilts revision. Seek an immutable mapping to exact
-U-Boot source, patches, configuration, toolchain and build inputs; trace
-`bootcmd_android`, the final DTB and the actual boot/init_boot/vendor_boot,
-persistent bootconfig/vbmeta, AVB and signed-partition dependency contract.
-Positive evidence must correspond to that selected firmware, not a similarly
-named crosvm binary. A different configuration, unavailable mandatory input or
-unsupported boot contract falsifies that path; missing records remain Unknown.
-Do not omit AVB, encryption or DTB dependencies to make a demo boot. Keep
-firmware-dependent construction stopped until closure. This priority can change
-only when newer evidence supersedes it; this roadmap runs no firmware experiment.
+**Next permitted desktop proof, only if a new input exists:** identify one exact
+missing edge in the integrated decision, the new immutable source/configuration
+or authoritative enforcement delta, ordinary production access, enforcing owner
+outside hostile worker authority where required, and a bounded test with expected
+accept/reject/Unknown outcomes. Check provenance, dependencies, affected
+requirements and prior counterexamples first. An independently useful evidence-only
+check may proceed without adopting a mechanism; dependent implementation or material
+changes need their own authorization and applicable ADR review. No qualifying new
+mechanism is supplied here, so there is no scheduled technical experiment.
 
-### 2. First narrow physical experiment: isolated native-launch authority
+For recovery, the missing proof is an independently grounded current-attempt
+inventory and scope-complete closure witness through manager-death/INIT and
+state-loss/restore cuts, accounting for workers, descendants and delegated
+resources; disclosed copies need separate treatment. Any admission with earlier
+unaccounted authority falsifies it. PR #49's marker, a UUID, process-history query
+or Binder death cannot supply it. For boot trust, a concrete independent authority
+must enforce fresh boot decisions and crash/rollback-safe state transitions;
+a message that the hostile CPU can ignore falsifies that proposal. Complete H
+also needs one corresponding build/device/backend graph, not another inventory.
+Use the linked evidence's exact reopening conditions; do not repeat firmware,
+Rust correspondence, platform surveys or unchanged APK experiments merely to
+consume PRs. Without a new falsifier or independently useful evidence, keep
+technical work stopped pending the owner decision.
+
+### 2. Blocked conditional physical proof: isolated native-launch authority
 
 - **Goal:** answer the prepared [native-launch control's](evidence/gate-0-isolated-native-launch.md#next-bounded-physical-experiment)
   precise stock-phone question: can an ordinary release-equivalent app's isolated
   service execute the fixed packaged ARM64 dynamic PIE with the specified identity
   and direct-child cleanup? Desktop evidence cannot settle installed OEM policy.
-- **Predecessor:** Tony's separate explicit authorization before any phone use,
+- **Predecessor:** physical readiness remains **NOT READY — STOP**. First require
+  reviewed independent enrollment/freshness and scope-complete observation/recovery
+  for the exact bind/INIT/LAUNCH path, durable failure evidence and no retry over
+  uncertainty; PR #49 alone does not meet these conditions. Separately require
+  vendor/qualified security disposition and qualified artifact/environment
+  provenance under the unresolved host incident, exact source-to-APK/build/signing
+  qualification consistent with Option A (PR #50 supplies no reproducibility pass),
+  and Tony's separate explicit authorization before any phone use. Also require
   reviewed exact source/package hashes and build provenance, existing
   [integration prerequisites](evidence/gate-0-qemu-worker-integration.md#single-smallest-next-experiment-and-stop-conditions)
   and applicable [security-incident prerequisites](evidence/gate-0-native-host-antivirus.md).
@@ -178,8 +273,8 @@ only when newer evidence supersedes it; this roadmap runs no firmware experiment
 - **Does not prove:** Gate 0 pass, TCG execution, Linux/Android guest boot,
   post-compromise containment, full resource revocation or acceptable performance.
 
-Prefer useful desktop work first, currently the firmware question above. Do not
-delay a necessary falsifying physical experiment merely to consume PRs. A later
+Desktop continuation follows milestone 1's reopening conditions. No physical
+experiment may bypass the readiness blockers to generate logs. A later
 physical task must provide novice-friendly **Windows 10 and Samsung** instructions:
 ordinary installation, exact variant/hash checks, normal launch, outcome reading,
 stop/lockout handling and rollback/uninstallation. Development-only ADB may be
@@ -320,7 +415,7 @@ and private local paths out of public GitHub. No phone use is authorized here.
 
 - **Goal:** provide a deliberately bounded private cohort with an installable,
   interactive, integrated PDVA build and reproducible tests of its declared scope.
-  This is the 40–60 planning target, distinct from the first demonstration.
+  This was the historical 40–60 planning target, distinct from the first demonstration.
 - **Predecessor:** reviewed exact-scope acceptance from milestones 3–7, including
   applicable A/B/C/D/F evidence and all mandatory protections for the offered
   functions; Tony's explicit physical/private-test authorization. Unresolved
@@ -393,7 +488,9 @@ and private local paths out of public GitHub. No phone use is authorized here.
 
 [ADR-0001](decisions/ADR-0001-full-interactive-virtual-android-direction.md) remains
 **Accepted**. [ADR-0002](decisions/ADR-0002-signed-environment-delivery-and-compatibility.md)
-remains **Proposed**, pending Tony's explicit final-text decision. This roadmap
+remains **Proposed**, pending Tony's explicit final-text decision.
+[ADR-0003](decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
+also remains **PROPOSED**; only Option A is approved. This roadmap
 does not select an engine, accept an architecture, alter requirements or approve
 any dependent implementation. Each future proposal needs its own scope, adoption,
 evidence and owner decisions where governance requires them.
