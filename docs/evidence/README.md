@@ -1,5 +1,9 @@
 # Evidence index
 
+[Post-PR-51 roadmap refresh](../roadmap.md#post-pr-51-decision-refresh),
+2026-11-03: reconciles merged STOP findings and conditional next-proof prerequisites;
+no new technical experiment or gate pass. Physical testing remains NOT READY — STOP.
+
 [Android 17 authority delta check, 2026-10-31](gate-0-platform-authority.md#android-17-authority-delta-check--2026-10-31):
 **no new qualifying ordinary-app execution authority found; bounded research STOP**.
 Release refs and executable-memory policy match merged evidence; NativeService
