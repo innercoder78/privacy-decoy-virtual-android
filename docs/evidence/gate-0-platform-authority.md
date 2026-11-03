@@ -171,3 +171,173 @@ Neither record selects an engine or supplies execution evidence. No VM is
 implemented or run here. **Overall Gate 0: Unresolved.**
 The scoped negative platform routes do not eliminate pure user-space emulation or
 all other legitimate mechanisms. PDVA feasibility is not established or disproven.
+
+## Android 17 authority delta check — 2026-10-31
+
+**Result: no new qualifying ordinary-app execution authority found; STOP this
+bounded source investigation. Gate 0 Unresolved; Gates A–G Not reached.
+Physical-test readiness: NOT READY — STOP.** This is a delta against merged
+PDVA evidence, not a claim that Android 17 adds no APIs or that software emulation
+is impossible. No implementation, dependency, requirement or security boundary changes.
+
+### Baseline and procedure
+
+Codex Desktop local mode, Windows x86_64, America/Fortaleza. Live GitHub branch
+and commit queries agreed with clean local main
+`12a7549464239aeb07f01bdae84f607f4641a504`. The paginated open-PR collection was
+empty: no open heads, diffs, reviews, threads or checks remained to inspect.
+Exact-main [foundation run 41169122616](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41169122616)
+reported completed successful `foundation` and `offline-image-windows` checks;
+their logs were not reread and are not fresh local test evidence. Legacy status
+had zero contexts; its aggregate pending value is not another check.
+[GitHub Status](https://www.githubstatus.com/api/v2/summary.json) reported all
+systems operational, updated `2026-10-31T17:09:41.552Z`. One worktree, no stashes,
+existing branches and ignored build/tool/source assets were inventoried and
+preserved. No applicable workspace/ancestor AGENTS.md was found.
+
+Before selecting sources, reviewed the roadmap, requirements, gates, governance,
+ADRs, provenance/dependency records and relevant history, plus this record,
+[userspace sources](gate-0-userspace-vmm-sources.md),
+[strict TCG memory](gate-0-tcg-executable-memory.md),
+[integrated decision](gate-0-integrated-feasibility-decision.md),
+[lifetime](gate-0-android-lifetime-authority.md),
+[recovery](gate-0-diagnostic-recovery.md),
+[native launch](gate-0-isolated-native-launch.md),
+[readiness audit](gate-0-native-launch-readiness-audit.md) and
+[Memory Limiter](gate-0-android17-memory-limiter.md). ADR-0001 remains Accepted;
+ADR-0002/0003 remain Proposed, with only ADR-0003 Option A approved. PR #50's
+research-preservation disposition is retained without reopening its experiment.
+
+Used the selected official Google Android CLI skill with installed version
+1.1.16717390 as previously verified by the owner; version was not remeasured.
+After inspecting documented effects, per-command sandbox approvals covered
+`android --no-metrics docs search --help` and documentation searches for
+`Android 17 API 37 memfd_class executable memory isolatedProcess` and
+`Android 17 nativeService executable memory`. The latter returned memory-budget,
+Android 17 summary/behavior and memory-management pages, not an authority proof.
+Search ranking is not evidence of absence. No init, installation, SDK change,
+credentials, device, ADB, emulator or cloud service operation was performed.
+
+Read the official [features](https://developer.android.com/about/versions/17/features),
+[all-app changes](https://developer.android.com/about/versions/17/behavior-changes-all),
+[target-37 changes](https://developer.android.com/about/versions/17/behavior-changes-17),
+[release notes](https://source.android.com/docs/whatsnew/android-17-release) and
+[36→37 API diff](https://developer.android.com/sdk/api_diff/37/changes/changes-summary),
+following only relevant native-memory, process and binding entries. Live pages
+were retrieved on this date; no immutable website revision is claimed. The API
+diff labels itself generated `2026.03.25 19:47`; it is not proof about every later
+37.x feature. Current reference pages can include later minor-version APIs.
+
+Fresh official Gitiles `+refs?format=JSON` reads returned only
+`android-17.0.0_r1` among Android 17 tags in each of the following projects.
+Both that tag's peeled commit and `android17-release` matched prior evidence:
+
+| Project | Unchanged immutable release commit |
+|---|---|
+| platform/system/sepolicy | `e066568e98d86db31a9346d30977f3632fa7073c` |
+| platform/frameworks/base | `94b4c163b7dfe5ce3607f7bb8456f9573f7de57d` |
+| platform/packages/modules/Virtualization | `22f1c9ee92b146e10c8f5e71338618f77ab1631e` |
+
+These are per-project reference identities, not an installed OEM image or complete
+release manifest. SELinux main also remains `4571ddd9440721fec583c906a337de949a77749e`.
+Retrieved the following release files with Gitiles `?format=TEXT`, base64-decoded
+in memory without newline conversion, inspected relevant rules and calculated
+SHA-256. All four match the existing [containment ledger](gate-0-worker-containment-sources.md).
+
+| File at the SELinux commit above | Fresh decoded-byte SHA-256 |
+|---|---|
+| [public/te_macros](https://android.googlesource.com/platform/system/sepolicy/+/e066568e98d86db31a9346d30977f3632fa7073c/public/te_macros) | `9825ba9b9bd742070683f21ad636e930ec24c73e3ec9dcb22b85e2dcb9b0367d` |
+| [private/app.te](https://android.googlesource.com/platform/system/sepolicy/+/e066568e98d86db31a9346d30977f3632fa7073c/private/app.te) | `6a18ae176e35cf19ab022cc75887a5c77aae55f00e8a1ebddd7ebd75aea64525` |
+| [private/isolated_app.te](https://android.googlesource.com/platform/system/sepolicy/+/e066568e98d86db31a9346d30977f3632fa7073c/private/isolated_app.te) | `a088dfeaf2dabbfcd4327c01549096c88db22687c2fceb51c797ede552bb2d51` |
+| [private/isolated_app_all.te](https://android.googlesource.com/platform/system/sepolicy/+/e066568e98d86db31a9346d30977f3632fa7073c/private/isolated_app_all.te) | `e65adb199d7fc26cd716f4e376f6068edcd3c350647f121e8d5937fa9bca4ad9` |
+
+### Candidate deltas and falsifiable disposition
+
+**Official claim:** [policy compatibility, Android 17 shared memory](https://source.android.com/docs/security/features/selinux/compatibility#shared-memory-changes-for-android-17)
+requires `memfd_class` on launching devices meeting both vendor API 202604+
+and android16-6.12+ kernel conditions. It labels memfds with the allocating
+process context and uses `memfd_file`, enabling finer policy distinctions.
+Enabling it is an OEM policy/image operation, not an app permission or SDK switch.
+
+**Source observation:** `app_domain` already grants execute/getattr/map/read/write
+on `appdomain:memfd_file` alongside executable app tmpfs; `app.te` grants
+appdomain self-process `execmem`; `isolated_app` invokes `app_domain`.
+**Inference:** this is an already assessed mapping route under platform policy,
+not a newly discovered JIT entitlement. Neither the macro nor separate RW/RX
+aliases contains hostile native code after worker compromise. Installed kernel,
+seccomp, SELinux, FD authority and exact allocator behavior remain independent.
+
+| Screened mechanism | Production access/API and constraints | Delta disposition / falsifier |
+|---|---|---|
+| memfd/JIT policy migration | Ordinary app/isolated domain only within actual kernel/SELinux/seccomp policy; no new runtime permission. OEM enables the class under the conditions above. ARM64 instruction-cache/BTI, 4/16-KiB pages, executable memfd and strict split-wx still need exact-build proof. No new lifecycle or distribution entitlement. | Same pinned rule and hash already assessed. A changed applicable execute rule or kernel enforcement contract affecting the selected allocator would reopen this comparison; a policy label alone does not. |
+| API 37 [NativeService](https://developer.android.com/ndk/reference/group/native-service) | Already assessed ordinary isolated native-service entry path, `android:nativeService` with `isolatedProcess`; API 37 host and packaged ABI-compatible native entry required. No ART-dependent API assumption; documented NDK subset applies. No extra JIT/device rights, persistence or tree-cleanup receipt; packaged-code provenance/distribution review remains required. | New relative to older Android, **not new to PDVA evidence**. No changed native authority contract found. Successful native loading alone would not qualify TCG or the complete guest. |
+| API 37 [Context binding updates](https://developer.android.com/reference/android/content/Context#updateServiceBindings(java.util.Collection%3Candroid.content.Context.UpdateBindingParams%3E)) | Public ordinary-client APIs on existing bindings: rebind with permitted flags or batch rebind/unbind; no additional special permission is documented for these operations. Existing service access controls apply. No new native ABI/JIT/kernel device access or distribution privilege. | Official contract permits changes to enumerated importance-related flags; batch behavior is ordered rebind/unbind. **Inference:** it supplies no independent descendant-empty/resource-revocation receipt or survival guarantee. A documented identity-bound completion guarantee would falsify this exclusion. Server-side implementation correspondence was not freshly established. |
+
+The focused API diff also adds [Os.dladdr](https://developer.android.com/sdk/api_diff/37/changes/android.system.Os),
+[Process.isPrivateComputeCoreUid](https://developer.android.com/sdk/api_diff/37/changes/android.os.Process),
+[ANR listeners](https://developer.android.com/sdk/api_diff/37/changes/android.app.ActivityManager)
+and [ANR information](https://developer.android.com/sdk/api_diff/37/changes/android.app.ApplicationExitInfo).
+These entries establish no executable-memory grant or whole-worker completion
+contract. [PccSandboxManager](https://developer.android.com/reference/android/app/privatecompute/PccSandboxManager)
+describes PCC interaction/migration and identity queries, not ordinary-app custom
+guest authority; its later-version egress API requires a valid PCC sandbox.
+No PCC access class, platform trust or restricted AVF permission is conferred
+merely by a public query or service name. No new candidate is adopted.
+
+### Limits, remaining blockers and next proof
+
+**Unknown:** OEM applicability, installed execution/JIT behavior, useful memory
+and performance budgets, distribution acceptance, and complete adversarial
+containment. Existing memory-limit and process-death constraints remain; neither
+profiling nor binding-priority updates supplies exemptions. Restricted AVF/custom
+VM routes retain their recorded exclusions. This bounded negative is not an
+exhaustive search of every Android branch or a universal impossibility proof.
+
+The integrated decision is unchanged: reference R is STOP; software hypothesis H
+has no coherent qualified build/device/backend graph. Full boot/services,
+interactive graphics/input/audio, protected boot state, provenance and resource
+budgets remain blocked. Management/Persona secrets must remain outside hostile
+guest/worker authority; independent enrollment, descendant termination,
+retained-FD/mapping revocation and recovery remain unresolved. More native code
+or a cooperative service callback cannot establish that boundary.
+
+Reopen only for a concrete authoritative permission/API/enforcement delta with
+ordinary production access and a falsifiable effect on an identified missing
+edge. The existing narrow installed native-launch proof remains conditional on
+its unchanged readiness prerequisites and separate authorization; it is **not
+ready or authorized here**, and a positive result would not prove JIT or a guest.
+No repeated build, model, native experiment or general survey follows this result.
+
+Retrieval limits: sandboxed Git network access failed; approved read-only GitHub
+queries succeeded. Web Gitiles rendering failed; approved PowerShell TEXT reads
+succeeded for the four policy files. An initial Python retrieval never ran
+because PATH resolved to an unavailable launcher. A fresh pinned `Context.java`
+TEXT request returned HTTP 503; no hash or source finding is claimed from it.
+Binding conclusions above rely on the official public contract, not a fabricated
+implementation observation. Existing immutable framework evidence is retained.
+
+Publication resumed on **2026-11-03** without repeating source research. Live
+main remained the same SHA; open PRs and all-state PRs for the intended branch
+were empty. Both exact-main checks still reported success. The source findings
+and website retrieval dates above remain October 31 observations.
+
+**Actual local validation:** existing NDK-bundled Python 3.11.4 ran foundation
+validation (147 files, 92 Markdown files, 54 requirements, three ADRs), harness
+authority validation, 149 repository tests (145 passed, four existing Windows
+skips), and four frame-copy tests successfully. Desktop-readiness and offline-image
+tests were started, but completion output was unavailable after interruption;
+their sessions/processes no longer existed on resume. Results are **unverified**,
+not passes. No previous ignored files were removed. Final foundation validation,
+local-link/anchor, UTF-8, full two-file diff, regular `100644` modes, privacy,
+provenance/license scope and whitespace were checked before commit.
+**Not Run:** Linux native/process suites, Android builds/runtime, JIT mappings,
+guest/VM/QEMU execution, devices, performance or physical security tests.
+
+Only this dated
+addendum and its index entry are changed. References and brief original analysis
+import no implementation or binary; existing file-level licenses, dependencies
+and adoption obligations remain unchanged. Public-data review excludes private
+paths, credentials and device/Persona data. New-head hosted CI is unobserved;
+foundation applies, Android/QEMU workflows are path-filtered, not passing results.
+Publish exactly one PR, attach natively, verify association once, then STOP
+without polling checks, reviews, bots or mergeability.

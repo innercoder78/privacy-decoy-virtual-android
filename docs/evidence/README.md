@@ -1,5 +1,12 @@
 # Evidence index
 
+[Android 17 authority delta check, 2026-10-31](gate-0-platform-authority.md#android-17-authority-delta-check--2026-10-31):
+**no new qualifying ordinary-app execution authority found; bounded research STOP**.
+Release refs and executable-memory policy match merged evidence; NativeService
+was already assessed, and public binding updates supply no cleanup certificate.
+Gate 0 remains Unresolved; Gates A–G Not reached; physical-test readiness
+**NOT READY — STOP**. No implementation or PR #50 research is reopened.
+
 Independent build investigation: [research APK reproducibility](gate-0-apk-reproducibility.md).
 Final PR #50 scope: **documentation-only research preservation**, explicitly
 authorized by the owner on 2026-10-31. Experimental implementation is excluded;
