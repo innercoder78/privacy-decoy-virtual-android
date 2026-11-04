@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 
 /** One-way research guard, conditional on intact fresh app data; not recovery authority. */
 final class ResearchAttempt {
@@ -22,8 +23,22 @@ final class ResearchAttempt {
             // Any old preference directory is evidence, including false, malformed,
             // empty, backup-only, or unreadable uncertain_child data. Never load/repair it.
             try (DirectoryStream<Path> entries = Files.newDirectoryStream(data)) {
-                for (Path entry : entries)
+                for (Path entry : entries) {
                     if (entry.getFileName().toString().equals("shared_prefs")) return false;
+                    String name = entry.getFileName().toString();
+                    // installd creates cache/code_cache even before an attempt. Only
+                    // empty directories are supported; other state is ambiguous, not
+                    // proof of a prior attempt. Never whitelist arbitrary cache contents.
+                    if (!name.equals("files") && !name.equals("cache") && !name.equals("code_cache"))
+                        return false;
+                    if (!Files.readAttributes(entry, BasicFileAttributes.class,
+                            LinkOption.NOFOLLOW_LINKS).isDirectory()) return false;
+                    if (!name.equals("files")) {
+                        try (DirectoryStream<Path> cache = Files.newDirectoryStream(entry)) {
+                            if (cache.iterator().hasNext()) return false;
+                        }
+                    }
+                }
             }
             try (DirectoryStream<Path> entries = Files.newDirectoryStream(files)) {
                 if (entries.iterator().hasNext()) return false;

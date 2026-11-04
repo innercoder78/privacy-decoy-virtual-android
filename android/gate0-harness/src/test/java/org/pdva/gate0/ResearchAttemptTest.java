@@ -28,6 +28,51 @@ public final class ResearchAttemptTest {
         }
     }
     public static void run() throws Exception {
+        // Source-supported empty installd directories are not prior-attempt evidence.
+        for (String[] names : new String[][]{{"cache"}, {"code_cache"}, {"cache", "code_cache"}}) {
+            try (Fixture f = new Fixture()) {
+                for (String name : names) Files.createDirectory(f.data.resolve(name));
+                check(new ResearchAttempt().reserve(f.data, f.files, SYNC));
+                check(Files.readString(f.marker()).equals("RESERVED\n"));
+                for (String name : names) {
+                    try (var entries = Files.newDirectoryStream(f.data.resolve(name))) {
+                        check(!entries.iterator().hasNext());
+                    }
+                }
+                check(!new ResearchAttempt().reserve(f.data, f.files, SYNC));
+            }
+        }
+        // Names and empty directories do not authenticate history. Unsupported state
+        // is conservatively denied, even when it might have a benign explanation.
+        for (String name : new String[]{"unexpected", "databases", "no_backup", "cache", "code_cache"}) {
+            for (String kind : new String[]{"empty", "residue", "nested", "wrong-type"}) {
+                if (kind.equals("empty") && (name.equals("cache") || name.equals("code_cache"))) continue;
+                try (Fixture f = new Fixture()) {
+                    Path entry = f.data.resolve(name), evidence = entry;
+                    if (kind.equals("wrong-type")) Files.writeString(entry, "prior attempt");
+                    else {
+                        Files.createDirectory(entry);
+                        if (kind.equals("residue")) evidence = Files.writeString(entry.resolve("prior-attempt"), "prior attempt");
+                        if (kind.equals("nested")) evidence = Files.createDirectory(entry.resolve("nested"));
+                    }
+                    ResearchAttempt guard = new ResearchAttempt();
+                    AtomicInteger syncs = new AtomicInteger(), delegations = new AtomicInteger();
+                    if (guard.reserve(f.data, f.files, p -> syncs.incrementAndGet())) delegations.incrementAndGet();
+                    check(delegations.get() == 0);
+                    check(syncs.get() == 0);
+                    check(!Files.exists(f.marker()));
+                    check(Files.exists(evidence));
+                    if (kind.equals("residue") || kind.equals("wrong-type"))
+                        check(Files.readString(evidence).equals("prior attempt"));
+                    check(!new ResearchAttempt().reserve(f.data, f.files, SYNC));
+                    // Fixture-only removal tests the permanent process latch, not recovery.
+                    if (!evidence.equals(entry)) Files.delete(evidence);
+                    Files.delete(entry);
+                    check(!guard.reserve(f.data, f.files, SYNC));
+                    check(!Files.exists(f.marker()));
+                }
+            }
+        }
         try (Fixture f = new Fixture()) {
             ResearchAttempt guard = new ResearchAttempt();
             AtomicInteger syncs = new AtomicInteger();
