@@ -1,5 +1,10 @@
 # Evidence index
 
+[First-attempt residual-state admission](gate-0-first-attempt-residual-admission.md),
+2026-11-04: real JVM filesystem witness reproduces unchecked sibling residue;
+conservative empty-directory predicate with regression controls. Freshness and
+OEM layout remain conditional/Unknown; physical readiness **NOT READY — STOP**.
+
 [First physical-test owner procedure](gate-0-first-physical-test-procedure.md),
 2026-11-03: prerequisite owners/evidence/falsifiers, GO/NO-GO decision and conditional
 Windows 10/Samsung steps for the trusted ARM64 native-launch control.
