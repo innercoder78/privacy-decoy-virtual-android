@@ -34,6 +34,55 @@ startup = load("startup-order-research")
 revocation = load("revocation-research")
 
 
+class ResearchAttemptMutationRunnerTests(unittest.TestCase):
+    """Runner outcome checks use modeled subprocess results, not Linux evidence."""
+    runner = load("test-research-attempt-mutation")
+
+    def expected_failure(self):
+        trace = [self.runner.TRACE[0]] + [
+            f"\tat org.pdva.gate0.{owner}.{method}({owner}.java:100)"
+            for owner, method in [("ResearchAttemptTest", "rejectedAlias"),
+                                  ("ResearchAttemptTest", "symlinks"),
+                                  ("ResearchAttemptTest", "run"), ("ProtocolTest", "main")]]
+        return subprocess.CompletedProcess([], 1, self.runner.GUARD_PASS + "\n", "\n".join(trace) + "\n")
+
+    def test_mutation_changes_only_the_unique_lookup(self):
+        for newline in (b"\n", b"\r\n"):
+            lookup = self.runner.LOOKUP.replace(b"\n", newline)
+            source = b"prefix" + newline + lookup + newline + b"suffix"
+            self.assertEqual(self.runner.mutate(source),
+                             b"prefix" + newline + self.runner.FOLLOWING_LOOKUP + newline + b"suffix")
+            for bad in (b"no lookup", source + lookup, source + b"LinkOption.NOFOLLOW_LINKS"):
+                with self.assertRaises(RuntimeError):
+                    self.runner.mutate(bad)
+
+    def test_only_precise_mutant_failure_is_accepted(self):
+        good = self.expected_failure()
+        self.runner.require_mutant_rejection(good)
+        for code, out, err in [(0, good.stdout, good.stderr), (-9, good.stdout, good.stderr),
+                               (1, "", good.stderr), (1, good.stdout, ""),
+                               (1, good.stdout, good.stderr.replace("AssertionError", "IOException")),
+                               (1, good.stdout, good.stderr.replace("symlinks", "unrelated")),
+                               (1, good.stdout, good.stderr + "Suppressed: fixture cleanup failed\n")]:
+            with self.subTest(code=code, err=err), self.assertRaises(RuntimeError):
+                self.runner.require_mutant_rejection(subprocess.CompletedProcess([], code, out, err))
+
+    def test_compile_timeout_and_normal_failure_cannot_pass(self):
+        compiled = subprocess.CompletedProcess([], 0)
+        normal = subprocess.CompletedProcess([], 0, "\n".join(self.runner.NORMAL_OUTPUT) + "\n", "")
+        for effects, exception, calls in [
+            ([subprocess.CalledProcessError(1, "javac")], subprocess.CalledProcessError, 1),
+            ([compiled, self.expected_failure()], subprocess.CalledProcessError, 2),
+            ([compiled, subprocess.TimeoutExpired("java", 30)], subprocess.TimeoutExpired, 2),
+            ([compiled, normal, subprocess.CalledProcessError(1, "javac")], subprocess.CalledProcessError, 3),
+            ([compiled, normal, compiled, subprocess.TimeoutExpired("java", 30)], subprocess.TimeoutExpired, 4),
+        ]:
+            with mock.patch.object(self.runner.subprocess, "run", side_effect=effects) as run:
+                with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(exception):
+                    self.runner.main()
+                self.assertEqual(run.call_count, calls)
+
+
 class ResearchAttemptSourceTests(unittest.TestCase):
     """Deliberately narrow source contracts, not an Android scheduler or Java parser."""
     root = SCRIPTS.parents[1] / "android/gate0-harness/src"
