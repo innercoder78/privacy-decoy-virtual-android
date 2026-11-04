@@ -7,10 +7,10 @@ Scope: PDVA-REQ-010–013, 036–043, 048, 051 and 054.
 
 ## Disposition
 
-**Normal Linux symlink rejection verified at `2f1301606cad0fe4e69351f5daf7c3bc48c5ccef`;
-the NOFOLLOW_LINKS mutation execution remains Unknown/STOP.** The continuation
-below records exact-head CI evidence and adds the mandatory mutation runner.
-Production code and all 15 existing Java fixtures are unchanged by this follow-up.
+**Normal Linux symlink rejection and the `NOFOLLOW_LINKS` mutation control
+passed at `b76cd2b094122c4314f5ec3c7cc333c9f58a2b4f`.** The dated addendum below
+records the observed CI results. The earlier Windows and pre-CI outcomes remain
+part of the historical record.
 
 **Original Windows finding:** Real
 Windows directory junctions exposed a narrow admission gap: the installed JDK
@@ -90,7 +90,7 @@ in a disposable source copy remove the `NOFOLLOW_LINKS` argument from the entry
 attribute lookup. Following an empty directory link then admits the attempt and
 must fail the `filesystem alias admitted` assertion. File/residual/dangling cases
 also exercise denial but are not alone proof that no-follow handling matters.
-**This symlink mutant has not executed successfully here; its result is Unknown.**
+**At initial publication, execution of this symlink mutant was Unknown.**
 
 ## Actual junction controls and reproduction
 
@@ -200,7 +200,7 @@ JDK SHA-256 identities match the [previous guard record](gate-0-first-attempt-re
 java `1977f302375adbb920d41dac65c7e22eb9c2ed8e1e8d6258964154ff16f14406`,
 javac `9c71eee841aeebb723bfc2cceca7d72c6c1988fb679402f4123aa4d0e86aa549`.
 
-## Continuation: exact-head Linux verification and mandatory mutation control
+## Historical continuation: normal Linux verification and mutation runner
 
 On 2026-11-04, the owner authorized continuation of **existing PR #55 only**,
 including the smallest additional Ubuntu CI control, one final commit/push, then
@@ -267,7 +267,7 @@ Original source bytes are rechecked in `finally`; successful cleanup and that
 preservation check precede the only mutant-success message:
 `PASS: NOFOLLOW_LINKS mutant rejected by filesystem alias admitted`.
 
-### Continuation validation and remaining STOP
+### Continuation validation and pre-CI STOP
 
 The three new Python tests passed locally, covering unique/exact LF and CRLF
 mutation, precise versus invalid modeled subprocess outcomes, and mandatory
@@ -289,13 +289,42 @@ compilations are verified locally; Linux mutant execution is still unverified.
 No local Linux execution environment was used; no VM,
 guest, device, ADB, installation or security-setting change was attempted.
 
-**Mutation result at this update: Unknown/STOP, pending actual Ubuntu execution.**
+**Mutation result at that update was Unknown/STOP, pending Ubuntu execution.**
 The one authorized final push will schedule the existing workflow with the new
 mandatory step. New-head CI results are not known before that push, and polling
 after publication/attachment is prohibited. Independent follow-up must confirm
 exact new-head successful normal build/lint/JVM results and the precise runner
 success message; earlier head results cannot establish this new runner executed.
 No additional production defect was demonstrated in this continuation.
+
+## 2026-11-04 addendum: Linux mutation result verified
+
+PR #55's tested commit was `b76cd2b094122c4314f5ec3c7cc333c9f58a2b4f` against
+main `1a49bc2f495cee543d505b6d2ae8846ef467a1a6`. Android run `41910493740`,
+job `126856439228`, checked out that exact commit on Ubuntu 24.04 image
+`20261101.360` with Temurin `17.0.21+9` (x86-64). Both the normal Gradle JVM
+suite and the runner's isolated unmodified suite passed 217 guard assertions,
+all 15 real Linux symlink cases, and 71 protocol/report assertions. The debug,
+release and instrumentation APK builds, `lintDebug`, and five packaged-policy
+tests passed. [Android job log](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41910493740/job/126856439228)
+
+At 17:52:49 America/Fortaleza, the disposable mutant with only the entry
+lookup's `NOFOLLOW_LINKS` argument removed produced
+`java.lang.AssertionError: filesystem alias admitted` at
+`ResearchAttemptTest.rejectedAlias:95`, followed by `symlinks:75`, `run:259`
+and `ProtocolTest.main:13`. The runner accepted the required exit and trace
+and printed `PASS: NOFOLLOW_LINKS mutant rejected by filesystem alias admitted`.
+The first fixture links `files` to a separate empty directory. This result
+confirms that the committed test detects the weakened lookup on Linux.
+[Mutation step log](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41910493740/job/126856439228#step:6:1)
+
+Foundation run `41910493756` also checked out the tested commit. Its Ubuntu
+foundation job `126856439606` and Windows image-controls job `126856439839`
+passed. The historical Windows JVM symlink attempts remain unsupported.
+The verification covers the scoped desktop filesystem fixtures and mutation
+control. Independent freshness, worker cleanup, recovery and physical Android
+execution remain unresolved. **Gate 0 remains Unresolved. Physical readiness
+remains NOT READY — STOP.** [Foundation run](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41910493756)
 
 ## Preservation and exclusions (initial publication and continuation)
 

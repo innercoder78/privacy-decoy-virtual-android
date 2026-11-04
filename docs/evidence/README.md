@@ -1,9 +1,9 @@
 # Evidence index
 
 [First-attempt filesystem links](gate-0-first-attempt-links.md), 2026-11-04:
-real Windows junction admission reproduced and narrowly rejected; three mutant
-controls fail as required. All 15 normal Linux symlink cases verified at `2f13016`;
-mandatory no-follow mutation runner added, execution remains Unknown/STOP.
+real Windows junction admission reproduced and narrowly rejected. All 15 Linux
+symlink cases and the `NOFOLLOW_LINKS` mutation control passed at `b76cd2b`.
+Physical readiness remains **NOT READY — STOP**.
 
 [First-attempt residual-state admission](gate-0-first-attempt-residual-admission.md),
 2026-11-04: real JVM filesystem witness reproduces unchecked sibling residue;
