@@ -7,7 +7,12 @@ Scope: PDVA-REQ-010–013, 036–043, 048, 051 and 054.
 
 ## Disposition
 
-**Partial direct observation; symlink objective remains Unknown/STOP.** Real
+**Normal Linux symlink rejection verified at `2f1301606cad0fe4e69351f5daf7c3bc48c5ccef`;
+the NOFOLLOW_LINKS mutation execution remains Unknown/STOP.** The continuation
+below records exact-head CI evidence and adds the mandatory mutation runner.
+Production code and all 15 existing Java fixtures are unchanged by this follow-up.
+
+**Original Windows finding:** Real
 Windows directory junctions exposed a narrow admission gap: the installed JDK
 reports a junction as both `isDirectory()` and `isOther()` under
 `NOFOLLOW_LINKS`. PR #54 tested only the first flag. Junctions substituted for
@@ -23,7 +28,7 @@ copy made all three cases fail with `AssertionError: filesystem alias admitted`.
 Compilation errors and unsupported fixture creation did not count as successful
 negative controls. No other production behavior is changed.
 
-**Actual symbolic-link execution is NOT verified.** Java creation failed with
+**Original Windows symbolic-link execution was unsupported.** Java creation failed with
 the Windows required-privilege error, both within and outside the sandbox.
 No privileges or security settings were changed. The final JVM run compiles,
 passes the existing 217 guard assertions, then exits nonzero at the first real
@@ -60,13 +65,13 @@ filesystem metadata or historical identity. No timestamp-based authority is used
 [ResearchAttemptTest](../../android/gate0-harness/src/test/java/org/pdva/gate0/ResearchAttemptTest.java)
 adds 15 cases: each of the three allowed names against five target shapes.
 
-| Target | Fixture construction | Actual local result |
-|---|---|---|
-| Empty directory outside the admission fixture | Separate disposable fixture's empty `files` | First creation unsupported; later cases not reached |
-| Directory with synthetic residual evidence | Separate fixture, `evidence` containing `prior attempt` | Not reached |
-| Regular file | Separate fixture, synthetic evidence bytes | Not reached |
-| Dangling path | Nonexistent child of separate disposable fixture | Not reached |
-| Internal directory alias | `files` points to empty `cache`; cache names point to empty `files` | Not reached |
+| Target | Fixture construction | Original Windows result | Linux at `2f13016` |
+|---|---|---|---|
+| Empty directory outside the admission fixture | Separate disposable fixture's empty `files` | First creation unsupported; later cases not reached | Three names passed |
+| Directory with synthetic residual evidence | Separate fixture, `evidence` containing `prior attempt` | Not reached | Three names passed |
+| Regular file | Separate fixture, synthetic evidence bytes | Not reached | Three names passed |
+| Dangling path | Nonexistent child of separate disposable fixture | Not reached | Three names passed |
+| Internal directory alias | `files` points to empty `cache`; cache names point to empty `files` | Not reached | Three names passed |
 
 No target is real application/private data. Snapshots explicitly avoid traversing
 symbolic links and `other` entries; external targets are inspected through their
@@ -142,7 +147,7 @@ remove it, compile with the unchanged tests/driver, and require nonzero Java exi
 with the specific `java.lang.AssertionError: filesystem alias admitted` diagnostic.
 Do not accept compilation failure, timeout, fixture error or another exception.
 
-## Validation, Linux gap and preflight
+## Initial publication validation, Linux gap and preflight (historical)
 
 - Direct `javac -Xlint:all` for the six JVM sources: passed without diagnostics.
   Full final JVM execution: **failed/unsupported at symlink creation**, after
@@ -157,11 +162,11 @@ Do not accept compilation failure, timeout, fixture error or another exception.
   under the existing Windows host qualification limitation. No native Windows
   research executable, phone, ADB, emulator, VM, guest or APK installation ran.
 
-The unchanged [Android workflow](../../.github/workflows/android-harness.yml)
+At initial publication, the unchanged [Android workflow](../../.github/workflows/android-harness.yml)
 uses Ubuntu 24.04 and runs the existing `:gate0-harness:protocolTest` task, which
 already includes this test file. Creating this PR matches its Android path filter.
 It has PR/main-push triggers, no workflow dispatch. New-head Linux execution,
-the 15-case symlink matrix and the symlink mutant remain **UNOBSERVED / Unknown / STOP**.
+the 15-case symlink matrix and the symlink mutant were **UNOBSERVED / Unknown / STOP**.
 Publication is not execution evidence. The instruction to stop after native PR
 attachment precludes polling to collect a new-head result; no workflow is changed
 to work around that instruction. Reopening requires independent exact-head Linux
@@ -195,12 +200,112 @@ JDK SHA-256 identities match the [previous guard record](gate-0-first-attempt-re
 java `1977f302375adbb920d41dac65c7e22eb9c2ed8e1e8d6258964154ff16f14406`,
 javac `9c71eee841aeebb723bfc2cceca7d72c6c1988fb679402f4123aa4d0e86aa549`.
 
-## Preservation and exclusions
+## Continuation: exact-head Linux verification and mandatory mutation control
+
+On 2026-11-04, the owner authorized continuation of **existing PR #55 only**,
+including the smallest additional Ubuntu CI control, one final commit/push, then
+attachment verification and STOP. The live main remained
+`1a49bc2f495cee543d505b6d2ae8846ef467a1a6`; PR #55's exact head remained
+`2f1301606cad0fe4e69351f5daf7c3bc48c5ccef`. It was the only open PR in search
+and REST collections. Complete diff/files/modes/commit, check metadata and all
+three jobs' actual logs were inspected. Comments, reviews and threads were empty.
+
+**Direct CI-log observation:** [Android run 41871456921](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41871456921),
+job `126719350567`, checked out that exact head on Ubuntu 24.04 runner image
+`20261025.353`, Temurin **17.0.21+9**. The 16:51:38 UTC output explicitly reports
+217 guard assertions, 15 real symlink cases, and 71 protocol/report assertions
+passed. Build of debug/release/instrumentation APKs and `lintDebug` completed
+successfully. Packaged-policy tests: five passed; the malformed-APK negative
+control's `Unknown chunk type` diagnostic did not represent a failed job.
+
+[Foundation run 41871456198](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/41871456198)
+also checked out that exact head. Foundation job `126719347391` (Ubuntu image
+`20261101.360`) and Windows job `126719346644` passed. Repository, receipt, image,
+frame-copy and existing Linux controls remain separately scoped evidence.
+These logs establish normal Linux fixture execution, **not mutant detection**.
+QEMU remained filtered. [GitHub Status](https://www.githubstatus.com/api/v2/summary.json)
+reported all systems operational, no incidents (summary updated 18:36:25 UTC).
+The earlier outage and unsupported Windows attempts above remain historical facts.
+
+### Executable control and acceptance rule
+
+The new original PDVA standard-library script
+[test-research-attempt-mutation.py](../../.github/scripts/test-research-attempt-mutation.py)
+runs in a mandatory step of the existing Ubuntu Android job **after** the unchanged
+build/lint/normal JVM step. Existing native/package/policy validations remain
+mandatory. No continue-on-error, skip, suppressed assertion, dependency, permission,
+signing, runtime architecture or production/test-Java change is introduced.
+The foundation allowlist adds exactly this text script; its binary restrictions
+are unchanged. Three runner regression methods join the existing repository suite.
+
+Run `python3 .github/scripts/test-research-attempt-mutation.py` with JDK 17 selected
+through `JAVA_HOME` (as the existing CI step does). It copies the six applicable
+production/test Java files byte-for-byte into a new temporary normal directory,
+compiles with `javac -Xlint:all`, and requires successful execution plus all three
+normal-suite completion lines and empty stderr. A failing normal test aborts
+before mutant compilation and cannot become expected-failure success.
+
+Then a separate temporary directory receives the same sources/tests, except that
+the single uniquely matched `Files.readAttributes(entry, BasicFileAttributes.class,
+LinkOption.NOFOLLOW_LINKS)` call is changed to its following-links overload.
+The replacement preserves every byte outside that lookup, including line endings;
+missing/duplicate anchors fail. Neither `isOther()` rejection nor tests are changed.
+Both compilations must succeed independently (60-second timeout); each JVM run has
+a 30-second timeout and its own test-owned `java.io.tmpdir`.
+
+The unchanged `ProtocolTest` entry point executes the existing guard controls then
+the symlink matrix. Its first case is `files` linked to a separately owned empty
+directory. Source inspection predicts admission by the mutant and rejection by
+the existing shared oracle. **This prediction is not an executed mutant result.**
+The runner requires exit **1**, exactly the existing 217-assertion completion line
+on stdout, and the exact uncaught `java.lang.AssertionError: filesystem alias admitted`
+header followed only by the expected `rejectedAlias → symlinks → run → ProtocolTest.main`
+stack frames. Other exits, missing output, fixture/privilege errors, cleanup errors,
+timeouts, compilation failures and unrelated exceptions fail the runner.
+Only after exact validation does the runner print the observed mutant stack trace.
+Original source bytes are rechecked in `finally`; successful cleanup and that
+preservation check precede the only mutant-success message:
+`PASS: NOFOLLOW_LINKS mutant rejected by filesystem alias admitted`.
+
+### Continuation validation and remaining STOP
+
+The three new Python tests passed locally, covering unique/exact LF and CRLF
+mutation, precise versus invalid modeled subprocess outcomes, and mandatory
+failure propagation for normal execution, compilation and timeouts. These are
+**modeled runner tests**, not real Linux symlink/mutant evidence. The full repository
+suite passed **148 of 152 tests, four existing Windows skips**. Foundation and
+harness validators passed. Production and applicable Java tests are byte-identical
+to the verified `2f13016` source. Full Gradle/APK/lint runs were not repeated locally.
+
+Actual local invocation of the new runner compiled the normal sources but failed
+with nonzero normal-JVM exit on Windows; it did not reach mutant compilation or
+print mutant success. The earlier required-privilege symlink failure remains an
+unsupported Windows result. A separate disposable local check compiled the actual
+mutant with unchanged tests successfully, then observed exit 1 after the 217 guard
+assertions and a `FileSystemException` at `createSymbolicLink`. The real runner's
+result classifier rejected that outcome; it was **not** the required admission
+assertion and is not a successful mutation control. Both original and mutant
+compilations are verified locally; Linux mutant execution is still unverified.
+No local Linux execution environment was used; no VM,
+guest, device, ADB, installation or security-setting change was attempted.
+
+**Mutation result at this update: Unknown/STOP, pending actual Ubuntu execution.**
+The one authorized final push will schedule the existing workflow with the new
+mandatory step. New-head CI results are not known before that push, and polling
+after publication/attachment is prohibited. Independent follow-up must confirm
+exact new-head successful normal build/lint/JVM results and the precise runner
+success message; earlier head results cannot establish this new runner executed.
+No additional production defect was demonstrated in this continuation.
+
+## Preservation and exclusions (initial publication and continuation)
 
 Original PDVA Java/test/documentation only; no copied upstream implementation,
 license change, runtime dependency, binary, permission, native code, manifest,
-build pin or workflow modification. Four intended regular text files (100644)
-receive full diff, whitespace, local-link and public-data review before commit.
+build pin modification. The initial four regular text files (100644) received
+full diff, whitespace, local-link and public-data review before commit. The
+continuation adds only the documented mandatory CI step, original Python runner,
+runner regression tests, exact source allowlist entry and evidence/index updates;
+the same complete-diff/privacy/mode/link checks apply.
 No credentials, signing assets, private paths, incident samples or raw private
 logs are published. No applicable AGENTS.md was found. Original tracked checkout
 was clean, one worktree, no stashes; existing branches and ignored assets remain.
