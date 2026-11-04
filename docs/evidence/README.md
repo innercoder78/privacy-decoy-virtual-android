@@ -1,5 +1,10 @@
 # Evidence index
 
+[First physical-test owner procedure](gate-0-first-physical-test-procedure.md),
+2026-11-03: prerequisite owners/evidence/falsifiers, GO/NO-GO decision and conditional
+Windows 10/Samsung steps for the trusted ARM64 native-launch control.
+**NOT READY — STOP; no device operation authorized.**
+
 [Post-PR-51 roadmap refresh](../roadmap.md#post-pr-51-decision-refresh),
 2026-11-03: reconciles merged STOP findings and conditional next-proof prerequisites;
 no new technical experiment or gate pass. Physical testing remains NOT READY — STOP.
