@@ -31,8 +31,11 @@ final class ResearchAttempt {
                     // proof of a prior attempt. Never whitelist arbitrary cache contents.
                     if (!name.equals("files") && !name.equals("cache") && !name.equals("code_cache"))
                         return false;
-                    if (!Files.readAttributes(entry, BasicFileAttributes.class,
-                            LinkOption.NOFOLLOW_LINKS).isDirectory()) return false;
+                    BasicFileAttributes attributes = Files.readAttributes(entry, BasicFileAttributes.class,
+                            LinkOption.NOFOLLOW_LINKS);
+                    // Some providers classify directory aliases as both directory and
+                    // other (observed for Windows junctions). Neither is trusted here.
+                    if (!attributes.isDirectory() || attributes.isSymbolicLink() || attributes.isOther()) return false;
                     if (!name.equals("files")) {
                         try (DirectoryStream<Path> cache = Files.newDirectoryStream(entry)) {
                             if (cache.iterator().hasNext()) return false;

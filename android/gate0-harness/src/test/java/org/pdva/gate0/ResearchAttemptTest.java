@@ -4,6 +4,11 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.HexFormat;
+import java.util.ArrayDeque;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -26,6 +31,78 @@ public final class ResearchAttemptTest {
                 for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
             }
         }
+    }
+    // Never follow links while recording evidence or cleaning fixtures. Targets are
+    // separately owned disposable fixtures, never application/private directories.
+    private static Map<String, String> snapshot(Path root) throws IOException {
+        Map<String, String> result = new TreeMap<>();
+        ArrayDeque<Path> pending = new ArrayDeque<>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            Path path = pending.remove();
+            BasicFileAttributes a = Files.readAttributes(path, BasicFileAttributes.class,
+                    LinkOption.NOFOLLOW_LINKS);
+            String value = a.isSymbolicLink() ? "link:" + Files.readSymbolicLink(path) :
+                    a.isOther() ? "other" : a.isDirectory() ? "directory" :
+                    a.isRegularFile() ? "file:" + HexFormat.of().formatHex(Files.readAllBytes(path)) : "unknown";
+            result.put(root.relativize(path).toString(), value);
+            if (a.isDirectory() && !a.isSymbolicLink() && !a.isOther()) {
+                try (DirectoryStream<Path> entries = Files.newDirectoryStream(path)) {
+                    for (Path entry : entries) pending.add(entry);
+                }
+            }
+        }
+        return result;
+    }
+    private static void symlinks() throws Exception {
+        int cases = 0;
+        for (String name : new String[]{"files", "cache", "code_cache"}) {
+            for (String kind : new String[]{"empty-directory", "residual-directory", "file", "dangling", "internal-alias"}) {
+                try (Fixture f = new Fixture(); Fixture outside = new Fixture()) {
+                    Path link = f.data.resolve(name);
+                    if (name.equals("files")) Files.delete(f.files); // Empty, fixture-owned directory only.
+                    Path target = outside.files;
+                    if (kind.equals("residual-directory")) Files.writeString(target.resolve("evidence"), "prior attempt");
+                    if (kind.equals("file")) target = Files.writeString(outside.data.resolve("evidence"), "prior attempt");
+                    if (kind.equals("dangling")) target = outside.data.resolve("missing");
+                    if (kind.equals("internal-alias")) {
+                        target = name.equals("files") ? Files.createDirectory(f.data.resolve("cache")) : f.files;
+                    }
+                    // Creation failure is a failing/unsupported run, never a skipped pass.
+                    Files.createSymbolicLink(link, target);
+                    check(Files.isSymbolicLink(link));
+                    Map<String, String> external = snapshot(outside.data);
+                    ResearchAttempt guard = rejectedAlias(f.data, f.files, outside.data);
+                    Files.delete(link); // Delete link itself, never its target.
+                    if (name.equals("files")) Files.createDirectory(f.files);
+                    check(!guard.reserve(f.data, f.files, p -> { throw new AssertionError("sync after denial"); }));
+                    check(!Files.exists(f.marker(), LinkOption.NOFOLLOW_LINKS));
+                    check(external.equals(snapshot(outside.data)));
+                    cases++;
+                }
+            }
+        }
+        System.out.println("Real symlink cases passed: " + cases + " (no concurrent-mutation claim)");
+    }
+    // Shared oracle for real symlinks and externally constructed disposable junctions.
+    // Call only with test-owned fixtures; this helper does not delete or repair them.
+    static ResearchAttempt rejectedAlias(Path data, Path files, Path outside) throws IOException {
+        Map<String, String> original = snapshot(data), external = snapshot(outside);
+        ResearchAttempt guard = new ResearchAttempt();
+        AtomicInteger syncs = new AtomicInteger(), delegations = new AtomicInteger();
+        boolean admitted = guard.reserve(data, files, p -> syncs.incrementAndGet());
+        if (admitted) delegations.incrementAndGet();
+        if (admitted) throw new AssertionError("filesystem alias admitted");
+        check(delegations.get() == 0);
+        check(syncs.get() == 0);
+        check(!Files.exists(files.resolve(ResearchAttempt.MARKER), LinkOption.NOFOLLOW_LINKS));
+        check(original.equals(snapshot(data)));
+        check(external.equals(snapshot(outside)));
+        check(!new ResearchAttempt().reserve(data, files, p -> syncs.incrementAndGet()));
+        check(syncs.get() == 0);
+        check(original.equals(snapshot(data)));
+        check(external.equals(snapshot(outside)));
+        return guard;
     }
     public static void run() throws Exception {
         // Source-supported empty installd directories are not prior-attempt evidence.
@@ -179,5 +256,6 @@ public final class ResearchAttemptTest {
             check(!new ResearchAttempt().reserve(f.data, f.files, SYNC));
         }
         System.out.println("Research-attempt checks passed: " + checks + " (no Android durability claim)");
+        symlinks();
     }
 }

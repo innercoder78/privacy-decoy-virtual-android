@@ -1,5 +1,9 @@
 # Evidence index
 
+[First-attempt filesystem links](gate-0-first-attempt-links.md), 2026-11-04:
+real Windows junction admission reproduced and narrowly rejected; three mutant
+controls fail as required. Real symlinks remain Unknown/STOP pending Linux evidence.
+
 [First-attempt residual-state admission](gate-0-first-attempt-residual-admission.md),
 2026-11-04: real JVM filesystem witness reproduces unchecked sibling residue;
 conservative empty-directory predicate with regression controls. Freshness and
