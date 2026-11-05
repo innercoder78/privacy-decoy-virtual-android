@@ -1,5 +1,11 @@
 # Evidence index
 
+[Independent Linux build qualification](gate-0-independent-linux-build.md), 2026-11-05:
+existing hosted receipts do not qualify immutable inputs, Windows-independent
+administration or private signing custody. Concrete acquisition/control obligations
+recorded; **route NOT QUALIFIED / companion artifact NO-GO**. Strict signed-byte
+policy and all fifteen failures retained; no build or physical operation.
+
 [Java-only memory feasibility](gate-0-java-memory-feasibility.md), 2026-11-04:
 public SDK and API-37 stub inspection identify a bounded memfd RW/RX admission
 candidate without generated-code execution. Applicable build-environment trust
