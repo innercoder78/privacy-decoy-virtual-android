@@ -1,5 +1,11 @@
 # Evidence index
 
+[Java-only memory feasibility](gate-0-java-memory-feasibility.md), 2026-11-04:
+public SDK and API-37 stub inspection identify a bounded memfd RW/RX admission
+candidate without generated-code execution. Applicable build-environment trust
+is unqualified; **companion artifact NO-GO / not built**. No physical experiment
+prepared, no gate pass, and the original execution lock remains unchanged.
+
 [Research execution lock](gate-0-research-execution-lock.md), 2026-11-04:
 the displayed STOP did not block the launcher-to-worker path. Both modes now
 fail closed in management before Session construction; the launcher has no
