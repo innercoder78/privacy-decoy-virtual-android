@@ -1,5 +1,11 @@
 # Evidence index
 
+[Ambient Gradle configuration](gate-0-gradle-ambient-configuration.md), 2026-11-05:
+synthetic verified distribution admits external startup configuration at the
+mocked launch boundary; 9.6.0 source confirms user-home initialization processing.
+**STOP: no correction implemented** without a qualified configuration/cache
+admission baseline. No real Gradle/Android execution or provenance qualification.
+
 [Extracted Gradle integrity](gate-0-gradle-installed-integrity.md), 2026-11-05:
 verified ZIP-derived manifest checked before initial use and every reuse;
 20 offline controls include cached-directory mutation detection and preservation
