@@ -1,5 +1,11 @@
 # Evidence index
 
+[Research execution lock](gate-0-research-execution-lock.md), 2026-11-04:
+the displayed STOP did not block the launcher-to-worker path. Both modes now
+fail closed in management before Session construction; the launcher has no
+execution actions. Desktop denial/mutation evidence is not Android runtime proof.
+Physical readiness remains **NOT READY — STOP**.
+
 [First-attempt filesystem links](gate-0-first-attempt-links.md), 2026-11-04:
 real Windows junction admission reproduced and narrowly rejected. All 15 Linux
 symlink cases and the `NOFOLLOW_LINKS` mutation control passed at `b76cd2b`.

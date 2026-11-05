@@ -26,6 +26,13 @@ First admission is conditional on intact fresh app data, not authenticated
 freshness. See the [guard evidence](../docs/evidence/gate-0-one-way-research-attempt.md).
 Physical native-launch readiness remains **NOT READY — STOP**.
 
+**Current execution lock:** the [management-layer correction](../docs/evidence/gate-0-research-execution-lock.md)
+rejects both modes before Session construction, reservation, resources or binding
+in debug and release. The launcher is information-only. The execution path above
+is retained research code, inaccessible through the current management entry.
+There is no runtime enable switch. A separately reviewed, owner-approved code
+change after readiness requirements are satisfied is required for future execution.
+
 ## Build
 
 Use Python 3.11+, JDK 17, and an Android SDK installed from Google. Set
@@ -43,6 +50,7 @@ python android/build.py :gate0-harness:assembleDebug :gate0-harness:assembleRele
 python .github/scripts/validate-foundation.py
 python .github/scripts/test-repository-validation.py
 python .github/scripts/validate-harness.py
+python .github/scripts/test-execution-lock.py --android-jar <SDK>/platforms/android-37.0/android.jar
 git diff --check
 ```
 
@@ -140,15 +148,17 @@ will identify future physical-device tasks separately.
 
 The former multi-cycle and death/rebind procedure is withdrawn by the
 [one-way guard correction](../docs/evidence/gate-0-one-way-research-attempt.md).
-The two research buttons select either a normal attempt or a self-death attempt;
-both consume the same one-shot reservation. There is no automatic second session,
-rebind, reset, or recovery. Stop and Activity backgrounding request cancellation,
-including before a queued attempt starts. Clipboard export remains explicit and
-bounded. Any future physical procedure requires separate authorization and the
-unresolved independent enrollment, cleanup, incident and artifact prerequisites.
+The former two research buttons and their callbacks have been removed by the
+execution lock. Neither ordinary nor self-death requests can consume the retained
+one-shot reservation. There is no enable, rebind, reset or recovery action.
+Any future physical procedure requires separate authorization and the unresolved
+independent enrollment, cleanup, incident and artifact prerequisites.
 
-Development instrumentation is compiled in CI and now makes at most one guarded
-Session call, then exercises Activity recreation/rotation/background hooks without
-starting another Session. It is not a physical acceptance result or a way around
-previous/ambiguous state. The original protocol negative controls and native probes
-remain; no device execution is authorized by this text.
+Development instrumentation is compiled in CI. Its original probe and lifecycle
+assertions remain, with its sole Session call routed through the locked entry.
+It would report failure on the execution denial before reaching those assertions;
+it is not a passing lock test and is not run in this change. The new desktop lock
+suite executes the real management entry against SDK stubs, including both modes,
+repetition, fresh JVM processes and disposable lock mutants. Static UI/call-site
+checks cover removal of lifecycle activation paths; actual Android recreation,
+restart and probe outcomes remain Unknown. No device execution is authorized.

@@ -21,6 +21,8 @@ ROOT_DIRS = {".github", "android", "docs"}
 HISTORY = "docs/reference/privacy-decoy-history/"
 SOURCE_SHA = "5320b3b44b38df4b8f3361ecbcb530386ff195e9"
 ALLOWED_CODE = {
+    ".github/scripts/test-execution-lock.py",
+    "android/gate0-harness/src/test/java/org/pdva/gate0/ExecutionLockTest.java",
     ".github/scripts/test-research-attempt-mutation.py",
     ".github/scripts/test-packaged-rules.py",
     ".github/scripts/test-frame-copy.py",

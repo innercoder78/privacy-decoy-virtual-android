@@ -22,7 +22,17 @@ final class Session {
     private boolean connectionSeen; // Callbacks use the main executor; never adopt a replacement endpoint.
     private boolean bindAttempted;
     private final Binder owner = new Binder(); // No application operations implemented.
-    Session(Context context) { this.context = context.getApplicationContext(); }
+    private Session(Context context) { this.context = context.getApplicationContext(); }
+    /** Operational lock only, not worker containment or authenticated authorization. */
+    static String run(Context context, boolean simulateDeath) {
+        rejectResearchExecution();
+        return new Session(context).run(simulateDeath);
+    }
+    private static void rejectResearchExecution() {
+        // No runtime switch. Reopening requires a separately reviewed, owner-approved change
+        // after the physical readiness prerequisites have been satisfied.
+        throw new SecurityException("research_execution_disabled");
+    }
     void cancel() { cancelled = true; }
     interface Writer { void write(Parcel data); }
     interface Cleanup { void run() throws Exception; }
@@ -104,7 +114,7 @@ final class Session {
         try (FileOutputStream out = new FileOutputStream(f, false)) { out.write(bytes); }
     }
 
-    String run(boolean simulateDeath) {
+    private String run(boolean simulateDeath) {
         Report report = new Report(epoch, Build.VERSION.SDK_INT);
         if (cancelled) {
             report.add("experiment_completion", "not_started", "cancelled", 0, "UNKNOWN",

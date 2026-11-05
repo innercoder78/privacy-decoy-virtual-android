@@ -4,6 +4,11 @@ Prepared **2026-11-03, America/Fortaleza**, against main
 `074e3e83a67f656ad5b94edcd445f3761f1e340d`, tree
 `b52d86d03c181ba44c49cf9a07cd8c6bccac2c62`.
 **NOT READY — STOP. This is offline preparation, not permission to test.**
+**2026-11-04 correction:** the [research execution lock](gate-0-research-execution-lock.md)
+removes the buttons described below and denies both modes before reservation.
+This historical conditional procedure cannot enable the current APK. Future
+execution requires a separately reviewed, owner-approved code change after the
+readiness prerequisites are satisfied; no current activation mechanism exists.
 Gate 0 remains **Unresolved**; Gates A–G **Not reached**.
 Scope: PDVA-REQ-002–003, 008–015, 036–045, 047–048 and 054.
 
