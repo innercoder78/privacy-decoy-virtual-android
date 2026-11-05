@@ -1,5 +1,11 @@
 # Evidence index
 
+[Extracted Gradle integrity](gate-0-gradle-installed-integrity.md), 2026-11-05:
+verified ZIP-derived manifest checked before initial use and every reuse;
+20 offline controls include cached-directory mutation detection and preservation
+of invalid installations. Point-in-time integrity only; independent build/signing
+qualification and Java diagnostic NO-GO remain unchanged.
+
 [Independent Linux build qualification](gate-0-independent-linux-build.md), 2026-11-05:
 existing hosted receipts do not qualify immutable inputs, Windows-independent
 administration or private signing custody. Concrete acquisition/control obligations

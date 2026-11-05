@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Official hash-pinned Gradle bootstrap; no wrapper JAR or third-party Python modules."""
 import hashlib
+import io
 import os
 from pathlib import Path
+import re
+import shutil
+import stat
 import subprocess
 import sys
 import urllib.request
@@ -12,31 +16,158 @@ ROOT = Path(__file__).resolve().parent
 VERSION = "9.6.0"
 SHA256 = "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01"
 
+
+def checked_stat(path, directory=False):
+    value = path.lstat()
+    if (stat.S_ISLNK(value.st_mode)
+            or getattr(value, "st_file_attributes", 0) & 0x400
+            or not (stat.S_ISDIR(value.st_mode) if directory else stat.S_ISREG(value.st_mode))
+            or (not directory and value.st_nlink != 1)):
+        raise RuntimeError("Unsafe distribution filesystem type")
+    return value
+
+
+def check_parents(path):
+    for parent in reversed(path.absolute().parents):
+        checked_stat(parent, directory=True)
+
+
+def read_regular(path):
+    check_parents(path)
+    before = checked_stat(path)
+    flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+             | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(os.open(path, flags), "rb") as stream:
+        opened = os.fstat(stream.fileno())
+        if (not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1
+                or (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino)):
+            raise RuntimeError("Distribution file changed during validation")
+        data = stream.read()
+        after = os.fstat(stream.fileno())
+    def identity(value):
+        # Windows path stat synthesizes executable bits from .bat/.exe suffixes;
+        # descriptor stat does not. Compare the actual type there.
+        mode = stat.S_IFMT(value.st_mode) if os.name == "nt" else value.st_mode
+        return (value.st_dev, value.st_ino, mode, value.st_nlink,
+                value.st_size, value.st_mtime_ns)
+    final = path.lstat()
+    if (identity(before) != identity(after) or identity(final) != identity(after)
+            or before.st_ctime_ns != final.st_ctime_ns
+            or opened.st_ctime_ns != after.st_ctime_ns):
+        raise RuntimeError("Distribution file changed during validation")
+    return data
+
+
+def distribution_manifest(z):
+    """Reject ambiguous Windows/Linux names and types before creating anything."""
+    root = "gradle-" + VERSION
+    entries, directories, files, aliases = set(), set(), {}, {}
+    for entry in z.infolist():
+        name = entry.filename[:-1] if entry.is_dir() else entry.filename
+        parts = name.split("/")
+        if (entry.orig_filename != entry.filename or parts[0] != root
+                or any(not re.fullmatch(r"[A-Za-z0-9_.+-]+", part)
+                       or part in (".", "..") or part.endswith(".")
+                       or part.split(".")[0].upper() in
+                       {"CON", "PRN", "AUX", "NUL", *[f"COM{i}" for i in range(10)],
+                        *[f"LPT{i}" for i in range(10)]} for part in parts)):
+            raise RuntimeError("Unsafe distribution path")
+        kind = stat.S_IFMT(entry.external_attr >> 16)
+        if (kind not in (0, stat.S_IFDIR if entry.is_dir() else stat.S_IFREG)
+                or entry.flag_bits & 1 or (entry.is_dir() and entry.file_size)):
+            raise RuntimeError("Unsafe distribution archive type")
+        if name in entries:
+            raise RuntimeError("Conflicting distribution entries")
+        entries.add(name)
+        for i in range(1, len(parts) + 1):
+            prefix = "/".join(parts[:i])
+            if aliases.setdefault(prefix.casefold(), prefix) != prefix:
+                raise RuntimeError("Conflicting distribution entries")
+        directories.update("/".join(parts[:i]) for i in range(1, len(parts)))
+        if entry.is_dir():
+            directories.add(name)
+            z.read(entry)  # Also validate directory CRC/local header.
+        else:
+            data = z.read(entry)  # CRC, truncation and local-header checks.
+            files[name] = (len(data), hashlib.sha256(data).digest(), entry)
+    if directories & files.keys() or root not in directories:
+        raise RuntimeError("Conflicting distribution entries")
+    for command in ("bin/gradle", "bin/gradle.bat"):
+        if root + "/" + command not in files:
+            raise RuntimeError("Missing distribution launcher")
+    return directories, files
+
+
+def validate_installation(store, home, directories, files):
+    check_parents(home)
+    found_dirs, found_files = set(), set()
+
+    def visit(directory):
+        checked_stat(directory, directory=True)
+        found_dirs.add(directory.relative_to(store).as_posix())
+        for path in sorted(directory.iterdir()):
+            name = path.relative_to(store).as_posix()
+            if name in directories:
+                visit(path)
+            elif name in files:
+                data = read_regular(path)
+                if (len(data), hashlib.sha256(data).digest()) != files[name][:2]:
+                    raise RuntimeError("Installed distribution content mismatch")
+                found_files.add(name)
+            else:
+                raise RuntimeError("Unexpected installed distribution entry")
+
+    visit(home)
+    if found_dirs != directories or found_files != files.keys():
+        raise RuntimeError("Missing installed distribution entry")
+
+
+def prepare_distribution(archive, store):
+    # Hash and parse the SAME immutable snapshot, not a subsequently reopened ZIP.
+    data = read_regular(archive)
+    if hashlib.sha256(data).hexdigest() != SHA256:
+        raise RuntimeError("Gradle distribution checksum mismatch")
+    home = store / ("gradle-" + VERSION)
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        directories, files = distribution_manifest(z)
+        if not os.path.lexists(home):
+            check_parents(home)
+            # Exclusive creation: failures leave all evidence; never repair/reuse
+            # a partial installation or overwrite a competing creator's files.
+            for name in sorted(directories, key=lambda value: (value.count("/"), value)):
+                target = store / name
+                check_parents(target)
+                target.mkdir()
+            for name, (_, _, entry) in sorted(files.items()):
+                target = store / name
+                check_parents(target)
+                with target.open("xb") as output, z.open(entry) as source:
+                    shutil.copyfileobj(source, output)
+            if os.name != "nt":
+                (home / "bin" / "gradle").chmod(0o755)
+        validate_installation(store, home, directories, files)
+    return home
+
+
 def main():
     store = ROOT / "build" / "gradle-distribution"
-    store.mkdir(parents=True, exist_ok=True)
+    for directory in [*reversed(store.absolute().parents), store]:
+        if not os.path.lexists(directory):
+            directory.mkdir()
+        checked_stat(directory, directory=True)
     archive = store / ("gradle-" + VERSION + "-bin.zip")
-    if not archive.exists():
+    check_parents(archive)
+    if not os.path.lexists(archive):
         temporary = archive.with_suffix(".download")
-        urllib.request.urlretrieve("https://services.gradle.org/distributions/" + archive.name, temporary)
-        with temporary.open("rb") as stream:
-            if hashlib.file_digest(stream, "sha256").hexdigest() != SHA256:
-                raise RuntimeError("Gradle distribution checksum mismatch")
-        temporary.replace(archive)
-    with archive.open("rb") as stream:
-        if hashlib.file_digest(stream, "sha256").hexdigest() != SHA256:
+        with temporary.open("xb") as output:
+            with urllib.request.urlopen("https://services.gradle.org/distributions/" + archive.name) as source:
+                shutil.copyfileobj(source, output)
+        if hashlib.sha256(read_regular(temporary)).hexdigest() != SHA256:
             raise RuntimeError("Gradle distribution checksum mismatch")
-    home = store / ("gradle-" + VERSION)
-    if not home.is_dir():
-        with zipfile.ZipFile(archive) as z:
-            for entry in z.infolist():
-                target = (store / entry.filename).resolve()
-                if not target.is_relative_to(store.resolve()):
-                    raise RuntimeError("Unsafe distribution path")
-            z.extractall(store)
+        with archive.open("xb") as output, temporary.open("rb") as source:
+            shutil.copyfileobj(source, output)
+    home = prepare_distribution(archive, store)
     command = home / "bin" / ("gradle.bat" if os.name == "nt" else "gradle")
-    if os.name != "nt":
-        command.chmod(0o755)
     return subprocess.call([str(command), "-p", str(ROOT), "--no-daemon", *sys.argv[1:]])
 
 if __name__ == "__main__":
