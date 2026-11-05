@@ -137,11 +137,17 @@ class ResearchAttemptSourceTests(unittest.TestCase):
         self.assertIn("finally { android.system.Os.close(fd); }", session)
         self.assertIn("if (connectionSeen || bindingClosed || cancelled)", session)
         self.assertIn("bindingClosed = true;", run)
-        self.assertEqual(ui.count("new Session("), 1)
-        self.assertEqual(ui.count("session.run("), 1)
+        self.assertNotRegex(ui, r"Session|WorkerService|NativeProbe|Button|setOnClickListener|Executor|onNewIntent")
+        self.assertIn("output.setText(R.string.initial_status)", ui)
+        self.assertIn("private Session(Context context)", session)
+        self.assertIn("private String run(boolean simulateDeath)", session)
+        self.assertRegex(session, r"static String run\(Context context, boolean simulateDeath\)\s*\{\s*"
+                                 r"rejectResearchExecution\(\);\s*return new Session\(context\).run\(simulateDeath\);\s*\}")
+        self.assertRegex(session, r'private static void rejectResearchExecution\(\)\s*\{\s*'
+                                 r'throw new SecurityException\("research_execution_disabled"\);\s*\}')
         self.assertNotRegex(ui, r"\bfor\s*\(|\bwhile\s*\(|abortCycles|run\(5|run\(2|rebind|fresh epoch")
-        self.assertEqual(instrumentation.count("new Session("), 1)
-        self.assertNotRegex(instrumentation[:instrumentation.index("new Session(")], r"\bfor\s*\(|\bwhile\s*\(")
+        self.assertEqual(instrumentation.count("Session.run("), 1)
+        self.assertNotRegex(instrumentation[:instrumentation.index("Session.run(")], r"\bfor\s*\(|\bwhile\s*\(")
         self.assertNotRegex(instrumentation, r"run\(true\)|restart_epoch")
 
     def test_current_source_order_and_irreversible_admission(self):
@@ -158,14 +164,18 @@ class ResearchAttemptSourceTests(unittest.TestCase):
             (0, "if (connectionSeen || bindingClosed || cancelled)", "if (false)"),
             (0, "if (cancelled && code != Protocol.STOP) throw new InterruptedException();", ""),
             (0, 'cleanup(report, "unbind_request", () -> context.unbindService(connection))', "context.unbindService(connection)"),
-            (1, "report = \"[\" + session.run(death)", "for (int i = 0; i < 5; i++) report = \"[\" + session.run(death)"),
+            (1, "super.onCreate(state);", "super.onCreate(state); Session.run(this, false);"),
+            (0, "rejectResearchExecution();", ""),
+            (0, "private Session(Context context)", "Session(Context context)"),
+            (0, "private String run(boolean simulateDeath)", "String run(boolean simulateDeath)"),
+            (0, 'throw new SecurityException("research_execution_disabled");', 'return;'),
             (2, 'equals("shared_prefs")) return false;', 'equals("shared_prefs")) return true;'),
             (2, "if (entries.iterator().hasNext()) return false;", ""),
             (2, "StandardOpenOption.CREATE_NEW", "StandardOpenOption.CREATE"),
             (2, "out.force(true);", ""),
             (2, "sync.sync(data);", ""),
             (2, "catch (Exception failure)", "catch (IOException failure)"),
-            (3, "Intent launch =", "new Session(getTargetContext()).run(true); Intent launch ="),
+            (3, "Intent launch =", "Session.run(getTargetContext(), true); Intent launch ="),
         ]
         for index, before, after in mutations:
             with self.subTest(mutant=before):
@@ -179,8 +189,7 @@ class ResearchAttemptSourceTests(unittest.TestCase):
         sources = {str(p.relative_to(self.root)).replace("\\", "/"): p.read_text(encoding="utf-8")
                    for p in self.root.rglob("*.java")}
         callers = {p for p, text in sources.items() if "new Session(" in text}
-        self.assertEqual(callers, {"main/java/org/pdva/gate0/MainActivity.java",
-                                  "androidTest/java/org/pdva/gate0/HarnessInstrumentation.java"})
+        self.assertEqual(callers, {"main/java/org/pdva/gate0/Session.java"})
         binders = {p for p, text in sources.items() if re.search(r"\.bind(?:Isolated)?Service\(", text)}
         self.assertEqual(binders, {"main/java/org/pdva/gate0/Session.java"})
         session = self.sources()[0]

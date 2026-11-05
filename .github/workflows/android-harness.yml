@@ -68,6 +68,8 @@ jobs:
           python3 android/build.py :gate0-harness:assembleDebug :gate0-harness:assembleRelease :gate0-harness:assembleDebugAndroidTest :gate0-harness:protocolTest :gate0-harness:lintDebug
       - name: Require real symlink rejection of the no-follow mutant
         run: python3 .github/scripts/test-research-attempt-mutation.py
+      - name: Require management execution denial and lock mutation detection
+        run: python3 .github/scripts/test-execution-lock.py --android-jar "$ANDROID_HOME/platforms/android-37.0/android.jar"
       - name: Cross-build and inspect dormant seccomp bootstrap without executing it
         run: python3 .github/scripts/android-seccomp-bootstrap.py --ndk "$ANDROID_HOME/ndk/28.2.13676358"
       - name: Inspect release APK authority and native inventory
