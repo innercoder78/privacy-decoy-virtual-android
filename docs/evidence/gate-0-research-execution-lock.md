@@ -131,7 +131,7 @@ variables; machine-specific paths and raw logs remain private.
 | Existing `protocolTest` and no-follow mutation runner | **Failed locally**: 217 reservation assertions pass, then real `Files.createSymbolicLink` throws Windows missing-privilege `FileSystemException`. The 15 symlink cases and subsequent 71 protocol/report assertions do not complete here; mutation runner refuses this baseline failure. No skip, weakened assertion, elevated symlink privilege or modified test is used. Base Linux results remain separate. |
 | Desktop readiness / offline-image / frame-copy suites | 28 / 45 / 4 tests passed. Synthetic fixtures do not establish a physical result. |
 | Both APK packaged authority/native/extraction validators | Passed for the exact new APK bytes below, including release non-debuggable and the existing three-entry native inventory. |
-| Packaged-policy mutation suite | Initial full run: four tests pass; journal completion test rejects uncommitted Android source as required. Full rerun against committed source is required before publication; no validator bypass is used. |
+| Packaged-policy mutation suite | All five tests passed in the full committed-source rerun, including genuine compiled policy/reference/payload mutations and journal completion/failure. Initial full run passed four tests and correctly rejected the dirty source in the journal test; no validator bypass was used. |
 | Compiled debug/release DEX inspection | APK analyzer disassembly shows the first entry instruction invokes unconditional rejection before `new Session`; rejection throws, constructor and body remain private. Both Activities contain only constructor/onCreate, with no Session/worker/native/button callback reference. Static inspection only. |
 | Dormant ARM64 bootstrap cross-build/inspection | Passed 10,280 BPF vectors and five semantic mutants, no ELF constructors/entry, exact imports/exports and existing hardening checks. Android output not loaded or executed. |
 | Native Windows research controls and Linux process suites on this host | **Not run** under the explicit execution prohibition and host constraints. Unchanged Linux CI remains applicable; no VM/emulator substitute used. |
@@ -141,6 +141,12 @@ normal verified dependency resolution then built the APKs. Initial sandboxed
 desktop fixture creation stalled in `tempfile.mkdtemp` (bounded diagnostic and
 interruption retained); unchanged suites passed outside that sandbox. These
 infrastructure attempts are not recast as passing runs.
+
+The complete packaged suite passed against implementation commit
+`40d14f45a2532aefe9d7da2be4526631e90f8c38`; the final follow-up only records that
+observation in this evidence file. A preliminary packaged invocation interrupted
+before completion supplies no result. Malformed-resource diagnostics in the
+completed suite are expected negative-control observations, not ignored failures.
 
 Exact inspected debug APK SHA-256:
 `2051e4cc82bc8d83439f9a22df6243b0ef1c3057566bbd9fd2fb39f29d42c021`.
