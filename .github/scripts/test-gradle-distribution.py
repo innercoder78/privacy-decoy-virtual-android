@@ -274,6 +274,82 @@ class DistributionTests(unittest.TestCase):
                                     "^Gradle dependency verification override refused$"):
             b.main()
 
+    def strict_launch(self):
+        # Command construction only: no Python imitation of Gradle precedence.
+        with patch.object(b.subprocess, "call", return_value=17) as launch:
+            self.assertEqual(b.main(), 17)
+            launch.assert_called_once()
+            command = launch.call_args.args[0]
+            self.assertEqual(command[6:7], ["--dependency-verification=strict"],
+                             "trusted STRICT option missing before caller arguments")
+            self.assertEqual(command.count("--dependency-verification=strict"), 1)
+            self.assertEqual(command[7:], b.sys.argv[1:])
+            self.assertEqual(launch.call_args.kwargs["env"], dict(os.environ))
+
+    def test_strict_option_before_all_caller_arguments(self):
+        for args in ([], ["help"], ["--", "help"], ["help", "--", "otherTask"],
+                     ["help", "-Pfixture=Foff", "-Dfixture=lenient", "--offline"],
+                     [":gate0-harness:assembleDebug", ":gate0-harness:assembleRelease",
+                      ":gate0-harness:assembleDebugAndroidTest",
+                      ":gate0-harness:protocolTest", ":gate0-harness:lintDebug"]):
+            with self.subTest(args=args), patch.object(b.sys, "argv", ["build.py", *args]):
+                self.strict_launch()
+
+    def test_property_files_preserved_with_strict_launch(self):
+        # Synthetic installation properties belong to the pinned synthetic ZIP;
+        # adding them after extraction would correctly fail distribution integrity.
+        metadata = self.root / "gradle/verification-metadata.xml"
+        metadata.parent.mkdir()
+        metadata.write_bytes((ROOT / "android/gradle/verification-metadata.xml").read_bytes())
+        private = self.root / "user-home/caches/private-fixture"
+        private.parent.mkdir(parents=True)
+        private.write_bytes(b"synthetic private evidence; not a credential")
+        for location in ("project", "user", "installation"):
+            for mode in ("off", "lenient", "strict"):
+                with self.subTest(location=location, mode=mode):
+                    # Separate synthetic distributions, never modify a real installation.
+                    with tempfile.TemporaryDirectory() as directory:
+                        root = Path(directory)
+                        user = root / "user-home"
+                        user.mkdir()
+                        store = root / "build/gradle-distribution"
+                        store.mkdir(parents=True)
+                        archive = store / (PREFIX + "-bin.zip")
+                        data = ("org.gradle.dependency.verification=" + mode + "\n").encode()
+                        with zipfile.ZipFile(archive, "w") as z:
+                            z.writestr(PREFIX + "/", b"")
+                            for name, payload in self.payloads.items():
+                                z.writestr(PREFIX + "/" + name, payload)
+                            if location == "installation":
+                                z.writestr(PREFIX + "/gradle.properties", data)
+                        if location != "installation":
+                            (user if location == "user" else root).joinpath(
+                                "gradle.properties").write_bytes(data)
+                        with patch.object(b, "ROOT", root), \
+                                patch.object(b, "SHA256", hashlib.sha256(archive.read_bytes()).hexdigest()), \
+                                patch.dict(os.environ, {"GRADLE_USER_HOME": str(user)}, clear=True):
+                            b.prepare_distribution(archive, store)
+                            files = [*root.rglob("*"), metadata, private]
+                            before = {p: (p.read_bytes(), p.stat().st_mtime_ns)
+                                      for p in files if p.is_file()}
+                            self.strict_launch()
+                            self.assertEqual(before, {p: (p.read_bytes(), p.stat().st_mtime_ns)
+                                                      for p in before})
+
+    def test_trusted_strict_option_removal_mutation(self):
+        source = (ROOT / "android/build.py").read_text(encoding="utf-8")
+        token = '"--dependency-verification=strict",'
+        self.assertEqual(source.count(token), 1)
+        namespace = dict(vars(b))
+        exec(compile(source.replace(token, "", 1), "strict-removal-mutant", "exec"), namespace)
+        # Only main is replaced; patched fixture globals and all guards are retained.
+        mutant = type(b.main)(namespace["main"].__code__, vars(b))
+        self.strict_launch()
+        with patch.object(b, "main", mutant):
+            with self.assertRaisesRegex(AssertionError, "trusted STRICT option missing"):
+                self.strict_launch()
+        self.strict_launch()
+
     def verification_preserved(self, args=(), env=None):
         # Invented private state plus the actual tracked verification XML.
         metadata = self.root / "gradle/verification-metadata.xml"

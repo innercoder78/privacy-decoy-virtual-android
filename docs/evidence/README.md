@@ -1,5 +1,10 @@
 # Evidence index
 
+[Fixed Gradle STRICT precedence](gate-0-gradle-strict-precedence.md), 2026-11-06:
+trusted CLI mode precedes all caller tokens; pinned source applies it after
+property-file modes. Offline preservation and option-removal mutation passed;
+real Gradle enforcement remains NOT RUN, not established by mocked launches.
+
 [Gradle verification-policy guard](gate-0-gradle-verification-policy.md), 2026-11-06:
 explicit mode overrides, metadata writing and verification key operations refused
 before distribution work; reserved caller properties denied. Synthetic positives,
