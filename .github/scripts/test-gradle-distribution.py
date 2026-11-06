@@ -8,6 +8,7 @@ from pathlib import Path
 import stat
 import subprocess
 import tempfile
+import traceback
 import unittest
 from unittest.mock import patch
 import warnings
@@ -25,6 +26,12 @@ class DistributionTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        # Never inspect the real user's Gradle home or inherit injected JVM options.
+        for fixture_patch in (
+                patch.dict(os.environ, {"GRADLE_USER_HOME": str(self.root / "user-home")}, clear=True),
+                patch.object(b.sys, "argv", ["build.py", "help"])):
+            fixture_patch.start()
+            self.addCleanup(fixture_patch.stop)
         self.store = self.root / "build/gradle-distribution"
         self.store.mkdir(parents=True)
         self.archive = self.store / (PREFIX + "-bin.zip")
@@ -261,6 +268,129 @@ class DistributionTests(unittest.TestCase):
                         b.main()
                 execute.assert_called_once()
         self.assertEqual((self.home / "bin/gradle").read_bytes(), b"modified launcher")
+
+    def test_startup_supported_tasks_and_selectors(self):
+        tasks = [":gate0-harness:assembleDebug", ":gate0-harness:assembleRelease",
+                 ":gate0-harness:assembleDebugAndroidTest", ":gate0-harness:protocolTest",
+                 ":gate0-harness:lintDebug", "--offline", "--stacktrace", "-i",
+                 "-Pfixture=true", "-Dfile.encoding=UTF-8", "--no-daemon",
+                 "-help", "-profile", "-xcompileIgnored", "-project-cache-dir=fixture",
+                 "-Dorg.gradle.java.home=fixture-jdk"]
+        env = {"JAVA_HOME": str(self.root / "jdk"), "ANDROID_HOME": str(self.root / "sdk"),
+               "ANDROID_SDK_ROOT": str(self.root / "sdk"), "JAVA_OPTS": "",
+               "ORG_GRADLE_PROJECT_fixture": "true"}
+        with patch.dict(os.environ, env), patch.object(b.sys, "argv", ["build.py", *tasks]), \
+                patch.object(b.subprocess, "call", return_value=17) as launch:
+            self.assertEqual(b.main(), 17)
+            self.assertEqual(launch.call_args.args[0][-len(tasks):], tasks)
+            self.assertEqual(launch.call_args.kwargs["env"], dict(os.environ))
+            self.assertEqual(launch.call_args.args[0][4:6],
+                             ["-g", str(self.root / "user-home")])
+
+    def test_startup_default_home_is_bound(self):
+        with patch.dict(os.environ, {}, clear=True), patch.object(Path, "home", return_value=self.root), \
+                patch.object(b.subprocess, "call", return_value=17) as launch:
+            self.assertEqual(b.main(), 17)
+            self.assertEqual(launch.call_args.args[0][4:6], ["-g", str(self.root / ".gradle")])
+            self.assertFalse((self.root / ".gradle").exists())
+
+    def test_startup_argument_forms(self):
+        cases = [["--init-script", "fixture"], ["-I", "fixture"], ["-Ifixture"],
+                 ["-I=fixture"], ["--I=fixture"], ["-init-script", "fixture"],
+                 ["--init-script=fixture"], ["--init-s"], ["-qI"],
+                 ["--", "--init-script=fixture"], ["-I"], ["--init-script="],
+                 ["--gradle-user-home", "fixture"], ["-gfixture"], ["--g=fixture"],
+                 ["-gradle-user-home", "fixture"], ["-pfixture"], ["--project-dir=fixture"],
+                 ["--include-build=fixture"], ["-include-build", "fixture"],
+                 ["--system-prop"], ["--system-prop", "-I"], ['"-I"', "fixture"]]
+        for key in ("gradle.user.home", "user.home", "user.dir", "gradle.home", "org.gradle.jvmargs"):
+            for option in ("-D", "--system-prop", "-system-prop", "--D", "-P", "--project-prop"):
+                cases.extend([[option, key + "=fixture"], [option + "=" + key + "=fixture"]])
+            cases.append(["-D" + key + "=fixture"])
+        for args in cases:
+            with self.subTest(args=args), patch.object(b.sys, "argv", ["build.py", "help", *args]):
+                self.rejected("Gradle startup configuration")
+        self.assertFalse(self.home.exists())
+
+    def test_startup_environment_forms(self):
+        for name in ("JAVA_OPTS", "GRADLE_OPTS", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS",
+                     "_JAVA_OPTIONS", "ORG_GRADLE_PROJECT_org.gradle.jvmargs",
+                     "ORG_GRADLE_PROJECT_systemProp.gradle.user.home"):
+            for value in ("-Dpdva.fixture=true", " ", "@fixture", '"'):
+                with self.subTest(name=name, value=value), patch.dict(os.environ, {name: value}):
+                    self.rejected("Gradle startup configuration")
+
+    def test_startup_home_ambiguity_and_errors(self):
+        for value in ("", ".", "relative", str(self.root / ".." / "other")):
+            with self.subTest(value=value), patch.dict(os.environ, {"GRADLE_USER_HOME": value}):
+                self.rejected("Gradle startup configuration")
+        with patch.object(Path, "lstat", side_effect=PermissionError("PRIVATE FIXTURE")):
+            self.rejected("^Unreviewed or ambiguous Gradle startup configuration$")
+            try:
+                b.main()
+            except RuntimeError as error:
+                self.assertNotIn("PRIVATE FIXTURE", "".join(traceback.format_exception(error)))
+
+    def test_startup_automatic_entries_preserved(self):
+        user = self.root / "user-home"
+        user.mkdir()
+        (user / "gradle.properties").write_bytes(b"synthetic private properties")
+        (user / "caches").mkdir()
+        (user / "caches/fixture").write_bytes(b"synthetic cache")
+        for name in ("init.gradle", "init.gradle.kts", "init.gradle.dcl", "init.d"):
+            for directory in (False, True):
+                entry = user / name
+                entry.mkdir() if directory else entry.write_bytes(b"synthetic init; never executed")
+                before = {p.relative_to(user): (p.stat().st_mtime_ns,
+                          p.read_bytes() if p.is_file() else None) for p in user.rglob("*")}
+                with patch.object(Path, "iterdir", side_effect=AssertionError("No home enumeration")):
+                    self.rejected("Gradle startup configuration")
+                self.assertEqual(before, {p.relative_to(user): (p.stat().st_mtime_ns,
+                                 p.read_bytes() if p.is_file() else None) for p in user.rglob("*")})
+                entry.rmdir() if directory else entry.unlink()
+        self.accepted()
+
+    def test_startup_home_link_rejected(self):
+        user = self.root / "user-home"
+        outside = self.root / "outside"
+        outside.mkdir()
+        if os.name == "nt":
+            result = subprocess.run(["cmd", "/c", "mklink", "/J", str(user), str(outside)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        else:
+            user.symlink_to(outside, target_is_directory=True)
+        try:
+            self.rejected("Gradle startup configuration")
+            self.assertEqual(list(outside.iterdir()), [])
+        finally:
+            user.rmdir() if os.name == "nt" else user.unlink()
+
+    def test_pr60_startup_regression_and_guard_removal(self):
+        external = self.root / "external-home"
+        external.mkdir()
+        init = external / "init.gradle"
+        init.write_text("println 'PDVA_SYNTHETIC_INIT'\n", encoding="utf-8")
+        (external / "gradle.properties").write_text(
+            "org.gradle.jvmargs=-Dpdva.fixture=true\n", encoding="utf-8")
+        env = {"GRADLE_USER_HOME": str(external), "ORG_GRADLE_PROJECT_pdvaFixture": "true"}
+        for name in ("GRADLE_OPTS", "JAVA_OPTS", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"):
+            env[name] = "-Dpdva.fixture=true"
+        before = {p.name: p.read_bytes() for p in external.iterdir()}
+        with patch.dict(os.environ, env, clear=True), patch.object(
+                b.sys, "argv", ["build.py", "help", "--init-script", str(init)]):
+            self.rejected("Gradle startup configuration")
+            # Remove only the guard: the exact rejection assertion must fail,
+            # with a mocked launch observed, not an unrelated test exception.
+            with patch.object(b, "admit_startup", return_value=None), \
+                    patch.object(b.subprocess, "call", return_value=17) as launch:
+                with self.assertRaisesRegex(AssertionError, "RuntimeError not raised"):
+                    with self.assertRaisesRegex(RuntimeError, "Gradle startup configuration"):
+                        b.main()
+                launch.assert_called_once()
+                self.assertEqual(launch.call_args.args[0][-2:], ["--init-script", str(init)])
+                self.assertEqual(launch.call_args.kwargs["env"], dict(os.environ))
+        self.assertEqual(before, {p.name: p.read_bytes() for p in external.iterdir()})
 
 
 if __name__ == "__main__":

@@ -59,6 +59,18 @@ It uses only the standard library, places the distribution under ignored
 `android/build/`, and avoids committing a wrapper JAR. It requires network on
 first use. Do not use Gradle's verification-metadata write mode in normal builds.
 
+The bootstrap refuses explicit init scripts, caller project/home overrides,
+included builds, selected startup-property overrides and nonempty JVM-option
+environment variables before downloading or launching Gradle. It accepts an
+absolute `GRADLE_USER_HOME`, otherwise uses Python's user home plus `.gradle`,
+and explicitly binds Gradle to that checked location. Any `init.gradle`,
+`init.gradle.kts`, `init.gradle.dcl` or `init.d` entry there (even empty) causes
+refusal without reading its contents. Linked/ambiguous homes are also refused.
+It never deletes, repairs or relocates that state. `JAVA_HOME`, `ANDROID_HOME`,
+ordinary project properties and the documented build tasks remain supported.
+See the [bounded startup protection](../docs/evidence/gate-0-gradle-startup-protection.md)
+for exact forms, compatibility limits and inputs that remain unqualified.
+
 Outputs are local and ignored:
 
 - Release-equivalent APK: `gate0-harness/build/outputs/apk/release/gate0-harness-release.apk`.
