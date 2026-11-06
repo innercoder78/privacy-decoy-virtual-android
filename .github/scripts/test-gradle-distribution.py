@@ -269,6 +269,120 @@ class DistributionTests(unittest.TestCase):
                 execute.assert_called_once()
         self.assertEqual((self.home / "bin/gradle").read_bytes(), b"modified launcher")
 
+    def verification_rejected(self):
+        with self.assertRaisesRegex(RuntimeError,
+                                    "^Gradle dependency verification override refused$"):
+            b.main()
+
+    def verification_preserved(self, args=(), env=None):
+        # Invented private state plus the actual tracked verification XML.
+        metadata = self.root / "gradle/verification-metadata.xml"
+        metadata.parent.mkdir(exist_ok=True)
+        metadata.write_bytes((ROOT / "android/gradle/verification-metadata.xml").read_bytes())
+        private = self.root / "user-home/caches/private-fixture"
+        private.parent.mkdir(parents=True, exist_ok=True)
+        private.write_bytes(b"synthetic private evidence; never a real credential")
+        before = {p.relative_to(self.root): (p.read_bytes(), p.stat().st_mtime_ns)
+                  for p in self.root.rglob("*") if p.is_file()}
+        with patch.object(b.sys, "argv", ["build.py", "help", *args]), \
+                patch.dict(os.environ, env or {}), \
+                patch.object(b.subprocess, "call") as launch, \
+                patch.object(b, "prepare_distribution") as prepare, \
+                patch.object(b.urllib.request, "urlopen") as download:
+            self.verification_rejected()
+            launch.assert_not_called()
+            prepare.assert_not_called()
+            download.assert_not_called()
+        self.assertEqual(before, {p.relative_to(self.root): (p.read_bytes(), p.stat().st_mtime_ns)
+                                 for p in self.root.rglob("*") if p.is_file()})
+        self.assertFalse(self.home.exists())
+
+    def test_verification_mode_forms(self):
+        for value in ("off", "lenient", "strict", "OFF", "", "invalid-private-fixture"):
+            for option in ("--dependency-verification", "-dependency-verification", "-F", "--F"):
+                for args in ([option, value], [option + "=" + value]):
+                    # Empty standalone arguments are also forbidden by the old guard,
+                    # but the mode option must be refused before consuming its value.
+                    with self.subTest(args=args):
+                        self.verification_preserved(args)
+            with self.subTest(attached=value):
+                self.verification_preserved(["-F" + value])
+
+    def test_verification_mutation_options(self):
+        for option in ("--write-verification-metadata", "-write-verification-metadata", "-M", "--M"):
+            for args in ([option, "sha256"], [option + "=sha256"], [option], [option + "="]):
+                with self.subTest(args=args):
+                    self.verification_preserved(args)
+        for args in (["-Msha256,pgp"], ["--refresh-keys"], ["-refresh-keys"],
+                     ["--export-keys"], ["-export-keys"], ["--export-keys=false"]):
+            with self.subTest(args=args):
+                self.verification_preserved(args)
+
+    def test_verification_ambiguous_and_missing_forms(self):
+        for args in (["-F"], ["--dependency-verification"], ["--F"], ["-qF", "off"],
+                     ["-qMsha256"], ["-UFoff"], ["-iFM"], ["--dependency-ver"],
+                     ["--write-verification"], ["--refresh-k"], ["--export-k"],
+                     ["--", "-Foff"], ["-F", "--offline"]):
+            with self.subTest(args=args):
+                self.verification_preserved(args)
+
+    def test_verification_reserved_properties(self):
+        reserved = "org.gradle.dependency.verification"
+        for key in (reserved, reserved.upper(), "systemProp." + reserved,
+                    "org.gradle.project." + reserved):
+            for value in ("off", "lenient", "strict", ""):
+                for option in ("-D", "--D", "--system-prop", "-system-prop",
+                               "-P", "--P", "--project-prop", "-project-prop"):
+                    for args in ([option, key + "=" + value], [option + "=" + key + "=" + value]):
+                        with self.subTest(args=args):
+                            self.verification_preserved(args)
+                for option in ("-D", "-P"):
+                    with self.subTest(option=option, key=key, value=value):
+                        self.verification_preserved([option + key + "=" + value])
+                with self.subTest(environment=key, value=value):
+                    self.verification_preserved(env={"ORG_GRADLE_PROJECT_" + key: value})
+            self.verification_preserved(["-D" + key])
+
+    def test_verification_guard_removal(self):
+        # Same exact rejection assertion, removing ONLY the new policy helper.
+        with patch.object(b.sys, "argv", ["build.py", "help", "-Foff"]):
+            self.verification_rejected()
+            with patch.object(b, "admit_verification_input", return_value=None), \
+                    patch.object(b.subprocess, "call", return_value=17) as launch:
+                with self.assertRaisesRegex(AssertionError, "RuntimeError not raised"):
+                    self.verification_rejected()
+                launch.assert_called_once()
+                self.assertEqual(launch.call_args.args[0][-1], "-Foff")
+            self.verification_rejected()
+
+    def test_verification_before_store_creation_and_private_error(self):
+        absent = self.root / "not-created"
+        with patch.object(b, "ROOT", absent), \
+                patch.object(b.sys, "argv", ["build.py", "--dependency-verification=PRIVATE_FIXTURE"]), \
+                patch.object(b.subprocess, "call") as launch, \
+                patch.object(b, "prepare_distribution") as prepare, \
+                patch.object(b.urllib.request, "urlopen") as download:
+            try:
+                b.main()
+            except RuntimeError as error:
+                self.assertEqual(str(error), "Gradle dependency verification override refused")
+                self.assertNotIn("PRIVATE_FIXTURE", "".join(traceback.format_exception(error)))
+            else:
+                self.fail("Expected verification refusal")
+            launch.assert_not_called()
+            prepare.assert_not_called()
+            download.assert_not_called()
+        self.assertFalse(absent.exists())
+
+    def test_verification_ordinary_values_and_tasks(self):
+        for args in (["help"], [":gate0-harness:assembleDebug"],
+                     [":gate0-harness:assembleRelease"], [":gate0-harness:assembleDebugAndroidTest"],
+                     [":gate0-harness:protocolTest"], [":gate0-harness:lintDebug"],
+                     ["help", "-Pfixture=Foff", "-Dfixture=Msha256", "-xFetchMetadata",
+                      "--refresh-dependencies", "-U", "--offline", "--stacktrace"]):
+            with self.subTest(args=args), patch.object(b.sys, "argv", ["build.py", *args]):
+                self.accepted()
+
     def test_startup_supported_tasks_and_selectors(self):
         tasks = [":gate0-harness:assembleDebug", ":gate0-harness:assembleRelease",
                  ":gate0-harness:assembleDebugAndroidTest", ":gate0-harness:protocolTest",
