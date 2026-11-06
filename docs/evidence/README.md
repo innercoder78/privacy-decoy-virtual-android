@@ -1,5 +1,11 @@
 # Evidence index
 
+[Gradle verification-policy guard](gate-0-gradle-verification-policy.md), 2026-11-06:
+explicit mode overrides, metadata writing and verification key operations refused
+before distribution work; reserved caller properties denied. Synthetic positives,
+preservation negatives and targeted guard-removal mutation; property files, caches,
+direct Gradle and host qualification remain outside the bounded claim.
+
 [Bounded Gradle startup protection](gate-0-gradle-startup-protection.md), 2026-11-06:
 PR #60 witness reproduced on current main, then rejected before launch; explicit
 init/startup overrides and injected JVM environment denied, known user-home init

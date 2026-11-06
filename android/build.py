@@ -149,6 +149,29 @@ def prepare_distribution(archive, store):
     return home
 
 
+def admit_verification_input(argument=None, property_key=None):
+    """Reserve verification policy for reviewed source, not caller overrides."""
+    reserved = "org.gradle.dependency.verification"
+    if property_key is not None:
+        key = property_key.casefold()
+        prohibited = key in {reserved, "systemprop." + reserved,
+                            "org.gradle.project." + reserved}
+    else:
+        option = argument.lstrip("-").split("=", 1)[0]
+        names = {"dependency-verification", "write-verification-metadata",
+                 "refresh-keys", "export-keys"}
+        prohibited = (option in {"F", "M"} or option in names
+                      or (len(option) > 1 and any(n.startswith(option) for n in names)))
+        if not argument.startswith("--"):
+            # Attached short values are supported. Clusters containing these
+            # argument-taking aliases are ambiguous and refused conservatively.
+            # D/P/x consume attached values; do not search inside those values.
+            prohibited |= (option.startswith(("F", "M"))
+                           or re.match(r"[qwidsSmtavh?VU]+[FM]", option) is not None)
+    if prohibited:
+        raise RuntimeError("Gradle dependency verification override refused") from None
+
+
 def admit_startup(arguments, environment, user_home):
     """Bound known startup inputs, not configuration/cache or tool provenance."""
     def reject():
@@ -164,6 +187,7 @@ def admit_startup(arguments, environment, user_home):
         # Windows environment keys are case-insensitive; refuse case ambiguity
         # for these few reserved keys on both hosts.
         key = value.split("=", 1)[0].casefold()
+        admit_verification_input(property_key=key)
         if not key or key in properties or key.removeprefix("systemprop.") in properties:
             reject()
 
@@ -188,6 +212,7 @@ def admit_startup(arguments, environment, user_home):
             continue
         if not argument.startswith("-"):
             continue
+        admit_verification_input(argument=argument)
         option, separator, value = argument.lstrip("-").partition("=")
         # Gradle accepts single-dash long names and double-dash short names.
         # Reject truncated long spellings too, without relying on Gradle errors.

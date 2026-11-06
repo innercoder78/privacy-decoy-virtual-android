@@ -58,6 +58,11 @@ The Python bootstrap downloads official Gradle 9.6.0 and checks its pinned SHA-2
 It uses only the standard library, places the distribution under ignored
 `android/build/`, and avoids committing a wrapper JAR. It requires network on
 first use. Do not use Gradle's verification-metadata write mode in normal builds.
+The bootstrap enforces this: explicit dependency-verification mode selection
+(including `strict`), metadata writing, key refresh/export and reserved verification
+property overrides are refused before distribution work. See the
+[verification-policy guard evidence](../docs/evidence/gate-0-gradle-verification-policy.md)
+for supported aliases, conservative refusals and the remaining property/cache limits.
 
 The bootstrap refuses explicit init scripts, caller project/home overrides,
 included builds, selected startup-property overrides and nonempty JVM-option
