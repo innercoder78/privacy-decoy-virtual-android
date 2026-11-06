@@ -92,9 +92,23 @@ and production metadata are checked again after the complete matrix.
 
 ## Observations and input identities
 
-**Pre-PR hosted runtime: pending at the implementation commit.** No runtime pass
-is inferred from local Python validation. The evidence will be updated from the
-single bounded branch run before PR publication, including failures or nonexecution.
+**Actual Gradle precedence and checksum enforcement observed: ten controls passed.**
+The completed [branch run 42303663835, attempt 1](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42303663835)
+tested exact source `25d88eb85fa29734b81c0db626ebdf2f1deea365` via `push` using
+`.github/workflows/android-harness.yml`. Job
+[128187497529](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42303663835/job/128187497529)
+and every step completed successfully. The full completed job log was retrieved
+and the ten individual JSON receipts inspected, not inferred from the green badge.
+An earlier log fetch while the job was still running returned BlobNotFound; it
+supplied no evidence and was replaced by the completed log retrieval.
+
+The fixture ran **19:20:09–19:21:10 America/Fortaleza** (22:20:09–22:21:10 UTC)
+on 2026-11-06. All receipts report Gradle **9.6.0**, Java **17.0.21**, vendor
+**Eclipse Adoptium**, offline **true**. Setup reports **Temurin 17.0.21+9**,
+Ubuntu **24.04.5**, runner image **ubuntu-24.04 / 20261101.360.1**, Actions runner
+**2.338.2**, provisioner **20261028.624**. These are hosted observations, not
+independently authenticated provisioning claims. The final evidence-only commit
+does not change the runner, workflow or validator tested at that source.
 
 Setup attempt [42303476607](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42303476607)
 at `3c87f39c7204bb9e2312965effaa9816e0fae187` was cancelled before the runtime
@@ -102,24 +116,48 @@ step: source review found the verbose-report selector requires a project propert
 (`-P`), not a JVM system property (`-D`). This was a fixture diagnostic correction,
 not an enforcement-policy change or an observed Gradle result. The corrected
 commit is used for the actual matrix; the cancelled attempt is not a pass.
+The completed job metadata confirms cancellation during the ordinary build and
+the runtime step **skipped**; no fixture invocation occurred in that attempt.
 
-| Real control | Expected result; observation pending |
+| Real control | Actual observation |
 |---|---|
-| Correct JAR/POM, STRICT | Resolve exact JAR bytes |
-| Incorrect JAR checksum, STRICT | Checksum-specific rejection |
-| Project OFF + trusted STRICT / token removed | STRICT rejection / OFF resolution |
-| Project LENIENT + trusted STRICT / token removed | STRICT rejection / LENIENT warning and resolution |
-| Disposable user-home OFF + trusted STRICT / token removed | STRICT rejection / OFF resolution |
-| Disposable user-home LENIENT + trusted STRICT / token removed | STRICT rejection / LENIENT warning and resolution |
+| Correct JAR/POM, STRICT | STRICT, exit 0; exact JAR hash resolved |
+| Incorrect JAR checksum, STRICT | STRICT, exit 1; checksum-specific rejection |
+| Project OFF + trusted STRICT / token removed | STRICT, exit 1 / OFF, exit 0 and exact JAR hash |
+| Project LENIENT + trusted STRICT / token removed | STRICT, exit 1 / LENIENT, exit 0, mismatch diagnostic and exact JAR hash |
+| Disposable user-home OFF + trusted STRICT / token removed | STRICT, exit 1 / OFF, exit 0 and exact JAR hash |
+| Disposable user-home LENIENT + trusted STRICT / token removed | STRICT, exit 1 / LENIENT, exit 0, mismatch diagnostic and exact JAR hash |
 | Installation-level property files | **NOT RUN**: modifying the installed distribution would violate its integrity boundary |
+
+All five STRICT negative receipts contain the actual
+`org.gradle.api.internal.artifacts.verification.exceptions.DependencyVerificationException`
+and `resolved: false`. Before emitting each result the runner validated the
+exception stack plus expected/actual checksum details in console and HTML reports.
+The one good control and four option-removal controls resolved the same JAR hash.
+The final marker confirms ten controls and unchanged installation/production XML.
+Raw HTML, generated binaries and receipts were not uploaded or committed; the
+runner's checks and public-safe structured log entries are the retained evidence.
+Their authenticity remains within GitHub-hosted execution trust, not independent
+custody. No mock result is classified as a runtime control.
 
 Gradle distribution ZIP SHA-256:
 `bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01`.
 Production verification XML SHA-256 remains
 `4a5cd035a8b79f7a78beba61d7261b72454fd72554d4cdb210f0598898ef697a`.
-The runner emits fixture JAR/POM, runner/Groovy source, Java launcher and JDK release
-file hashes, with runtime JDK version/vendor receipts. Hosted runner image and
-exact tested commit/run/attempt must be bound separately from job metadata/logs.
+Observed SHA-256 input identities from that run:
+
+| Input | SHA-256 |
+|---|---|
+| Generated resource JAR | `1cef7661ff63a175ff1f2ad6dfc8813ded0321b5e17031f24ff1a0c404348be1` |
+| Generated POM | `96450aa435ac1f4ff90faedff9be5ddbbfdb831dabb13280ef17565d3944c162` |
+| Runtime runner source (committed LF bytes) | `cd417a13ac6b0102cd4a2dede30d90be33bccbec98c5e4fb9a71c490b4a4e0af` |
+| Generated Groovy build source | `2b47e2e4bc154d7144e64ffba7a987152d350e3832bccfddb506acf7d8c72cd8` |
+| Selected Java launcher | `a2195ae9f8a91b82f53df7e1d1b9a650937ebbabbf67d0240c6378b4fbd9990b` |
+| Selected JDK release file | `9568390645661374febde48f3c7a019f21cb116d6e4c627de29c119aa7bd0efc` |
+
+Incorrect expected JAR checksum in all negative cases: 64 zeroes. The source
+contains the complete deterministic JAR/POM recipe, project, property files and
+metadata template. No production dependency metadata or binary was changed.
 
 ## Preflight, provenance and limitations
 
@@ -143,12 +181,22 @@ coordinate is invented and disposable, not an adopted Maven dependency. All base
 tracked files use regular `100644` modes. The validator allowlist adds only the
 exact new runner path; other validation and workflow checks remain intact.
 
+Local Windows x64 CPython **3.12.14**, standard library only: all **38** existing
+bootstrap tests passed, including PR #63's option-removal mutation; repository
+regressions **148 passed / four existing Windows skips** (152 total). Harness
+manifest validation and runner syntax compilation passed. Foundation validation
+passed with **164 files, 104 Markdown files, 54 requirements and three ADRs**.
+Full five-file diff, modes, links, whitespace, rights, provenance, dependency
+preservation and public-data hygiene were reviewed. The production bootstrap,
+verification XML, existing bootstrap suite and foundation workflow are byte-for-byte
+unchanged in the diff. No local Gradle/Android/JVM execution is claimed.
+
 Existing distribution/startup/verification protections and PR #63's command and
 option-removal tests remain intact. PR #56's unconditional research execution lock,
 ADR-0003 Option A, metadata, strict whole-signed-APK equality and all fifteen
 historical failures remain unchanged. No Gate advances.
 
-Hosted success would establish only this fixture behavior in that recorded run.
+Hosted success establishes only this fixture behavior in that recorded run.
 Same-user races, host/JDK/shell trust, mutable runner provisioning, general Gradle
 configuration/cache authentication, independent administrative custody and secure
 signing remain unqualified. Offline dependency resolution is not independently
