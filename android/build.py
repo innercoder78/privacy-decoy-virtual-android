@@ -149,7 +149,101 @@ def prepare_distribution(archive, store):
     return home
 
 
+def admit_startup(arguments, environment, user_home):
+    """Bound known startup inputs, not configuration/cache or tool provenance."""
+    def reject():
+        # Never echo caller values, private paths or filesystem exception details.
+        raise RuntimeError("Unreviewed or ambiguous Gradle startup configuration") from None
+
+    injected = {"JAVA_OPTS", "GRADLE_OPTS", "JAVA_TOOL_OPTIONS",
+                "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"}
+    properties = {"gradle.user.home", "user.home", "user.dir", "gradle.home",
+                  "org.gradle.jvmargs"}
+
+    def check_property(value):
+        # Windows environment keys are case-insensitive; refuse case ambiguity
+        # for these few reserved keys on both hosts.
+        key = value.split("=", 1)[0].casefold()
+        if not key or key in properties or key.removeprefix("systemprop.") in properties:
+            reject()
+
+    for name, value in environment.items():
+        if name in injected and value:
+            reject()
+        if name.startswith("ORG_GRADLE_PROJECT_"):
+            check_property(name[len("ORG_GRADLE_PROJECT_"):])
+
+    prohibited = {"init-script", "gradle-user-home", "project-dir", "include-build"}
+    property_options = {"system-prop", "project-prop", "D", "P"}
+    pending_property = False
+    for argument in arguments:
+        if (not argument or any(c in argument for c in '\"\r\n\x00')
+                or (os.name == "nt" and any(c in argument for c in "%!^&|<>"))):
+            reject()
+        if pending_property:
+            if argument.startswith("-"):
+                reject()
+            check_property(argument)
+            pending_property = False
+            continue
+        if not argument.startswith("-"):
+            continue
+        option, separator, value = argument.lstrip("-").partition("=")
+        # Gradle accepts single-dash long names and double-dash short names.
+        # Reject truncated long spellings too, without relying on Gradle errors.
+        if (option in {"I", "g", "p"} or option in prohibited
+                or (len(option) > 1 and any(p.startswith(option) for p in prohibited))):
+            reject()
+        if option in property_options:
+            if separator:
+                check_property(value)
+            else:
+                pending_property = True
+        elif argument.startswith(("-D", "-P")) and not argument.startswith("--"):
+            check_property(argument[2:])
+        elif not argument.startswith("--"):
+            # Attached short values and clusters must not conceal a prohibited alias.
+            # These registered long options win over their first short letter;
+            # -x consumes its attached value as an excluded task name.
+            if option in {"profile", "parallel", "priority", "project-cache-dir"}:
+                continue
+            if (option.startswith(("I", "g", "p"))
+                    or re.match(r"[qwidsSmtavh?V]+[Igp]", option)):
+                reject()
+        elif option and any(p.startswith(option) for p in property_options):
+            reject()
+    if pending_property:
+        reject()
+
+    try:
+        if (not user_home.is_absolute() or ".." in user_home.parts
+                or not environment.get("GRADLE_USER_HOME", "default")
+                or any(c in str(user_home) for c in '\"\r\n\x00')
+                or (os.name == "nt" and any(c in str(user_home) for c in "%!^&|<>"))):
+            reject()
+        # Metadata only: no home listing, script/property reads, cache inspection,
+        # creation, repair or deletion. Refuse even an empty init.d entry.
+        for directory in [*reversed(user_home.parents), user_home]:
+            try:
+                checked_stat(directory, directory=True)
+            except FileNotFoundError:
+                continue
+        for name in ("init.gradle", "init.gradle.kts", "init.gradle.dcl", "init.d"):
+            try:
+                (user_home / name).lstat()
+            except FileNotFoundError:
+                continue
+            reject()
+    except (OSError, ValueError, RuntimeError):
+        reject()
+
+
 def main():
+    arguments = sys.argv[1:]
+    environment = dict(os.environ)
+    user_home = (Path(environment["GRADLE_USER_HOME"]) if "GRADLE_USER_HOME" in environment
+                 else Path.home() / ".gradle")
+    admit_startup(arguments, environment, user_home)
     store = ROOT / "build" / "gradle-distribution"
     for directory in [*reversed(store.absolute().parents), store]:
         if not os.path.lexists(directory):
@@ -168,7 +262,8 @@ def main():
             shutil.copyfileobj(source, output)
     home = prepare_distribution(archive, store)
     command = home / "bin" / ("gradle.bat" if os.name == "nt" else "gradle")
-    return subprocess.call([str(command), "-p", str(ROOT), "--no-daemon", *sys.argv[1:]])
+    return subprocess.call([str(command), "-p", str(ROOT), "--no-daemon",
+                            "-g", str(user_home), *arguments], env=environment)
 
 if __name__ == "__main__":
     sys.exit(main())

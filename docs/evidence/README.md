@@ -1,5 +1,11 @@
 # Evidence index
 
+[Bounded Gradle startup protection](gate-0-gradle-startup-protection.md), 2026-11-06:
+PR #60 witness reproduced on current main, then rejected before launch; explicit
+init/startup overrides and injected JVM environment denied, known user-home init
+entries refused without reading contents. Offline guard-removal mutation observes
+the unsafe mocked launch. Configuration/cache/toolchain provenance remains open.
+
 [Ambient Gradle configuration](gate-0-gradle-ambient-configuration.md), 2026-11-05:
 synthetic verified distribution admits external startup configuration at the
 mocked launch boundary; 9.6.0 source confirms user-home initialization processing.
