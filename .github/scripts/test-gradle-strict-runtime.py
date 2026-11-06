@@ -172,7 +172,7 @@ def main():
                        "-g", str(user), STRICT, "--offline", "--console=plain", "--stacktrace",
                        "--no-build-cache", "--no-configuration-cache", "--max-workers=1",
                        "-Duser.home=" + str(home), "-Djava.io.tmpdir=" + str(case / "tmp"),
-                       "-Dorg.gradle.dependency.verification.console=verbose", "resolveFixture"]
+                       "-Porg.gradle.dependency.verification.console=verbose", "resolveFixture"]
             for strict in ([True, False] if location else [True]):
                 invocation = command if strict else [arg for arg in command if arg != STRICT]
                 receipt_path = project / "receipt.json"

@@ -96,6 +96,13 @@ and production metadata are checked again after the complete matrix.
 is inferred from local Python validation. The evidence will be updated from the
 single bounded branch run before PR publication, including failures or nonexecution.
 
+Setup attempt [42303476607](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42303476607)
+at `3c87f39c7204bb9e2312965effaa9816e0fae187` was cancelled before the runtime
+step: source review found the verbose-report selector requires a project property
+(`-P`), not a JVM system property (`-D`). This was a fixture diagnostic correction,
+not an enforcement-policy change or an observed Gradle result. The corrected
+commit is used for the actual matrix; the cancelled attempt is not a pass.
+
 | Real control | Expected result; observation pending |
 |---|---|
 | Correct JAR/POM, STRICT | Resolve exact JAR bytes |
