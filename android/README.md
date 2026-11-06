@@ -63,6 +63,11 @@ The bootstrap enforces this: explicit dependency-verification mode selection
 property overrides are refused before distribution work. See the
 [verification-policy guard evidence](../docs/evidence/gate-0-gradle-verification-policy.md)
 for supported aliases, conservative refusals and the remaining property/cache limits.
+The bootstrap also supplies a fixed `--dependency-verification=strict` before
+caller arguments, overriding OFF/LENIENT mode values from Gradle property files
+under the pinned source contract. See the [STRICT precedence evidence](../docs/evidence/gate-0-gradle-strict-precedence.md)
+for the distinction between source inspection, mocked launch tests and unrun real
+Gradle enforcement. This does not authenticate property files or caches.
 
 The bootstrap refuses explicit init scripts, caller project/home overrides,
 included builds, selected startup-property overrides and nonempty JVM-option

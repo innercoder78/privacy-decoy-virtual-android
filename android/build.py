@@ -287,8 +287,11 @@ def main():
             shutil.copyfileobj(source, output)
     home = prepare_distribution(archive, store)
     command = home / "bin" / ("gradle.bat" if os.name == "nt" else "gradle")
+    # CLI build options override property files. Keep this trusted selection
+    # before all caller tokens, especially tasks and the end-of-options marker.
     return subprocess.call([str(command), "-p", str(ROOT), "--no-daemon",
-                            "-g", str(user_home), *arguments], env=environment)
+                            "-g", str(user_home), "--dependency-verification=strict",
+                            *arguments], env=environment)
 
 if __name__ == "__main__":
     sys.exit(main())
