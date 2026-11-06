@@ -1,5 +1,11 @@
 # Evidence index
 
+[Real offline Gradle STRICT experiment](gate-0-gradle-strict-runtime.md), 2026-11-06:
+ten real local-Maven controls observed in the existing Linux Android workflow:
+STRICT accepts correct bytes, rejects incorrect checksums despite project/user-home
+OFF/LENIENT files, and option removal restores weakened resolution. Exact source,
+run and input identities recorded; no environment/signing/phone qualification.
+
 [Fixed Gradle STRICT precedence](gate-0-gradle-strict-precedence.md), 2026-11-06:
 trusted CLI mode precedes all caller tokens; pinned source applies it after
 property-file modes. Offline preservation and option-removal mutation passed;
