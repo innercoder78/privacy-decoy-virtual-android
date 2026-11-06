@@ -10,8 +10,7 @@ on:
       - 'docs/source-provenance-policy.md'
       - 'docs/source-reference-catalog.md'
   push:
-    # Bounded pre-publication runtime evidence on this task branch.
-    branches: [main, codex/verify-gradle-strict-runtime]
+    branches: [main]
     paths:
       - 'android/**'
       - '.github/**'

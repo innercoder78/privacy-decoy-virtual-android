@@ -15,9 +15,10 @@ after its unchanged build step installed the pinned Gradle distribution. It only
 validates the existing ZIP and installed tree with PR #59's implementation; it
 does not call download/extraction/preparation or change installed files.
 
-The branch-specific push trigger permits one pre-PR experiment on
-`codex/verify-gradle-strict-runtime`. Existing main and PR coverage remains, with
-the runtime step mandatory wherever this workflow applies. Foundation does not
+The temporary push trigger for `codex/verify-gradle-strict-runtime` enabled the
+pre-publication experiment recorded below. The workflow now triggers on pushes
+to `main` and on pull requests under the existing path filters, with the runtime
+step mandatory wherever the workflow applies. Foundation does not
 gain Gradle/Android execution; QEMU workflow paths do not match. Failure propagates
 normally, with no optional check, skip-success conversion, upload or merge-rule
 change. The existing 25-minute job bound remains; the fixture step has a 12-minute
