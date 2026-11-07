@@ -209,6 +209,12 @@ review; immediate experiment safety stops remain in force while awaiting it.
 Option A is already approved and is not an outstanding decision. Neither
 ADR-0002 nor ADR-0003 is accepted by this refresh.
 
+[PROPOSED ADR-0004](decisions/ADR-0004-gate-0-owner-disposition.md) presents those
+two unselected choices against merged evidence through PR #64. Its reconciliation
+retains the integrated STOP, independent build/signing NO-GO and PR #56 execution
+lock; the ten real Gradle controls do not establish virtualization feasibility.
+No implementation or physical testing is newly authorized.
+
 **Next permitted desktop proof, only if a new input exists:** identify one exact
 missing edge in the integrated decision, the new immutable source/configuration
 or authoritative enforcement delta, ordinary production access, enforcing owner

@@ -1,5 +1,11 @@
 # Evidence index
 
+[Proposed Gate 0 owner disposition](../decisions/ADR-0004-gate-0-owner-disposition.md),
+2026-11-07, through merged PR #64: retain full-phone requirements with dependent
+implementation stopped, or commission a separately reviewed NARROW/REDESIGN
+proposal. Neither choice selected; bounded Gradle findings do not change Gate 0,
+independent build/signing NO-GO or physical STOP. ADR-0004 remains PROPOSED.
+
 [Real offline Gradle STRICT experiment](gate-0-gradle-strict-runtime.md), 2026-11-06:
 ten real local-Maven controls observed in the existing Linux Android workflow:
 STRICT accepts correct bytes, rejects incorrect checksums despite project/user-home
