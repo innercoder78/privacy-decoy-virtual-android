@@ -46,6 +46,7 @@ jobs:
           python3 .github/scripts/validate-foundation.py
           python3 .github/scripts/test-repository-validation.py
           python3 .github/scripts/validate-harness.py
+          python3 .github/scripts/test-memory-diagnostic.py
           python3 .github/scripts/test-desktop-readiness.py
           python3 .github/scripts/test-offline-image-inspect.py
           python3 .github/scripts/test-frame-copy.py

@@ -1,5 +1,10 @@
 # Evidence index
 
+[Separate Java memory diagnostic](gate-0-java-memory-diagnostic.md), 2026-11-07:
+one-page public-SDK memfd RW/RX source, one-action admission, independent cleanup,
+sanitized results, JVM/source/package controls and a conditional novice procedure.
+Installation remains blocked on independent artifact qualification; no gate advances.
+
 [Accepted Gate 0 owner disposition](../decisions/ADR-0004-gate-0-owner-disposition.md),
 2026-11-07: Tony explicitly selected Option A in the current project conversation.
 Retain the full interactive Android 17 virtual-phone and ordinary stock nonrooted

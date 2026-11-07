@@ -21,6 +21,15 @@ ROOT_DIRS = {".github", "android", "docs"}
 HISTORY = "docs/reference/privacy-decoy-history/"
 SOURCE_SHA = "5320b3b44b38df4b8f3361ecbcb530386ff195e9"
 ALLOWED_CODE = {
+    ".github/scripts/test-memory-diagnostic.py",
+    "android/memory-diagnostic/build.gradle",
+    "android/memory-diagnostic/src/main/AndroidManifest.xml",
+    "android/memory-diagnostic/src/main/res/xml/data_extraction_rules.xml",
+    "android/memory-diagnostic/src/main/java/org/pdva/memorydiagnostic/Experiment.java",
+    "android/memory-diagnostic/src/main/java/org/pdva/memorydiagnostic/Attempt.java",
+    "android/memory-diagnostic/src/main/java/org/pdva/memorydiagnostic/AndroidOps.java",
+    "android/memory-diagnostic/src/main/java/org/pdva/memorydiagnostic/MainActivity.java",
+    "android/memory-diagnostic/src/test/java/org/pdva/memorydiagnostic/ExperimentTest.java",
     ".github/scripts/test-gradle-strict-runtime.py",
     ".github/scripts/test-gradle-distribution.py",
     ".github/scripts/test-execution-lock.py",
