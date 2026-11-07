@@ -200,20 +200,18 @@ PDVA ADR, including affected requirements and invalidated evidence.
 - **Does not prove:** full guest boot, usability, enforced production isolation,
   VPN behavior, Play compatibility or qualified device support.
 
-**Smallest outstanding owner decision:** Tony must explicitly choose the project
-response to the integrated STOP findings: retain the present requirements with
-dependent work stopped, or commission a concrete NARROW/REDESIGN proposal for
-applicable ADR review. This refresh does not make that choice. STOP/NARROW/REDESIGN
-as a project disposition requires Tony's explicit approval and applicable ADR
-review; immediate experiment safety stops remain in force while awaiting it.
-Option A is already approved and is not an outstanding decision. Neither
-ADR-0002 nor ADR-0003 is accepted by this refresh.
-
-[PROPOSED ADR-0004](decisions/ADR-0004-gate-0-owner-disposition.md) presents those
-two unselected choices against merged evidence through PR #64. Its reconciliation
-retains the integrated STOP, independent build/signing NO-GO and PR #56 execution
-lock; the ten real Gradle controls do not establish virtualization feasibility.
-No implementation or physical testing is newly authorized.
+**Owner decision recorded, 2026-11-07:** Tony explicitly selected **Option A** in
+the current project conversation; [ADR-0004](decisions/ADR-0004-gate-0-owner-disposition.md)
+is **ACCEPTED**. Retain the full interactive Android 17 virtual-phone requirements
+and ordinary stock nonrooted host-app requirement. Keep dependent implementation
+stopped until genuinely new qualifying Gate 0 evidence and applicable approvals
+exist. Do not commission a redesign. Option B remains an unselected historical
+alternative, not an approved workstream. The initial guest stays normally unrooted.
+ADR-0001 remains Accepted; ADR-0002 and ADR-0003 remain Proposed, with ADR-0003's
+separately approved Option A unchanged. The integrated STOP, independent
+build/signing NO-GO and PR #56 unconditional execution lock remain. Gate 0 is
+Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP. No
+implementation or physical testing is newly authorized.
 
 **Next permitted desktop proof, only if a new input exists:** identify one exact
 missing edge in the integrated decision, the new immutable source/configuration
@@ -237,7 +235,7 @@ also needs one corresponding build/device/backend graph, not another inventory.
 Use the linked evidence's exact reopening conditions; do not repeat firmware,
 Rust correspondence, platform surveys or unchanged APK experiments merely to
 consume PRs. Without a new falsifier or independently useful evidence, keep
-technical work stopped pending the owner decision.
+technical work stopped under the approved Option A disposition.
 
 ### 2. Blocked conditional physical proof: isolated native-launch authority
 
