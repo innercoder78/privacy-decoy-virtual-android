@@ -1,21 +1,30 @@
 # ADR-0004: Gate 0 owner disposition
 
-**Status: PROPOSED. Date: 2026-11-07, America/Fortaleza. Owner: Tony.**
-**Choice: not selected. Approval/date: pending Tony's explicit decision.**
-Publication or merge does not select either choice, accept another ADR, pass a
+**Status: ACCEPTED. Date: 2026-11-07, America/Fortaleza. Owner: Tony.**
+**Owner selection: Option A. Approval date: 2026-11-07.**
+**Authority: Tony's explicit selection in the current project conversation.**
+This records the owner decision only; it does not accept another ADR, pass a
 gate or authorize implementation. **Gate 0 remains Unresolved; Gates A–G remain
 Not reached; physical testing remains NOT READY — STOP.**
 
-## Decision requested
+## Approved disposition
 
-Choose **A: retain the full-phone requirements with dependent implementation
-stopped**, or **B: commission a separately reviewed NARROW/REDESIGN proposal**.
-B commissions a proposal, not its adoption. Until an explicit decision is recorded,
-the existing requirements and immediate execution/implementation stops apply.
+Tony selected **Option A: retain the full interactive Android 17 virtual-phone
+requirements and ordinary stock nonrooted host-app requirement. Keep dependent
+implementation stopped until genuinely new qualifying Gate 0 evidence and
+applicable approvals exist. Do not commission a redesign.**
+
+**Option B is an unselected historical alternative, not an approved workstream.**
+Its proposal scope below is retained for history; no proposal is commissioned.
 These choice labels are local to ADR-0004; ADR-0003's already approved Option A
 is a separate, preserved decision.
 
-This frames the [roadmap's outstanding owner question](../roadmap.md), using
+The initial guest remains **normally unrooted** under PDVA-REQ-004 and ADR-0001.
+Distinguishing guest root from host root does not authorize enabling guest root.
+No new authority, privilege, permission, architecture or implementation approval
+is granted; requirements and security policy remain unchanged.
+
+This records the [roadmap's owner disposition](../roadmap.md), using
 the [integrated assessment](../evidence/gate-0-integrated-feasibility-decision.md)
 and subsequent merged evidence. It does not replace that assessment, the
 [gate criteria](../feasibility-gates.md), or the
@@ -35,7 +44,7 @@ QEMU/TCG software-only mechanisms, not a selected or assembled configuration.
 | [#44 integrated assessment](../evidence/gate-0-integrated-feasibility-decision.md); [#51 authority delta](../evidence/gate-0-platform-authority.md) | Candidate-specific STOP for unchanged reference R: required host kernel-vhost authority is not established for ordinary apps; separate interaction/trust failures remain. The actual cross-built artifact lacks required device selections. Software-only H remains an unassembled hypothesis, not a failed test of every possible alternative. #51 found no qualifying new authority in its bounded review. |
 | [#49 reservation](../evidence/gate-0-one-way-research-attempt.md); [#54 residual admission](../evidence/gate-0-first-attempt-residual-admission.md); [#55 links](../evidence/gate-0-first-attempt-links.md) | Observed, bounded admission corrections supersede old late-marker/reopen and filesystem-admission behavior. They do not establish authenticated freshness, independent enrollment, crash/restore recovery or revocation of surviving authority. Desktop filesystem results are not Android lifecycle results. |
 | [#50 signed-APK preservation](../evidence/gate-0-apk-reproducibility.md) | Fifteen historical strict signed-byte equality failures remain failures. Later pairs localize differences to encrypted dependency metadata; historical plaintext equality remains Unknown. ADR-0003 Option A preserves metadata and strict equality; D1/D2 remain closed at STOP. |
-| [#52 roadmap](../roadmap.md); [#53 physical procedure](../evidence/gate-0-first-physical-test-procedure.md); [#56 execution lock](../evidence/gate-0-research-execution-lock.md) | Owner disposition remains outstanding. The old conditional procedure is not an activation route: #56 unconditionally denies research execution before Session construction/reservation. Its trusted-management accident-prevention control is not hostile-worker containment. |
+| [#52 roadmap](../roadmap.md); [#53 physical procedure](../evidence/gate-0-first-physical-test-procedure.md); [#56 execution lock](../evidence/gate-0-research-execution-lock.md) | Owner disposition is now recorded as Option A above; the technical stops remain. The old conditional procedure is not an activation route: #56 unconditionally denies research execution before Session construction/reservation. Its trusted-management accident-prevention control is not hostile-worker containment. |
 | [#57 Java memory candidate](../evidence/gate-0-java-memory-feasibility.md); [#58 independent build](../evidence/gate-0-independent-linux-build.md) | Public SDK mapping surface is a candidate, not physical mapping/execution evidence. Companion artifact remains NO-GO; independently administered provisioning, authenticated tool/input acquisition, signing/verifier custody and strict signed-byte qualification remain missing. |
 | [#59 installed integrity](../evidence/gate-0-gradle-installed-integrity.md); [#60 ambient configuration](../evidence/gate-0-gradle-ambient-configuration.md); [#61 startup guard](../evidence/gate-0-gradle-startup-protection.md) | #59 corrects #58's specific unchecked extracted-Gradle reuse gap; #61 supersedes #60's no-correction statement only for its bounded startup subset. Whole configuration/cache/host/JDK trust and independent custody remain unqualified. Historical findings are not erased or represented as still-unfixed identical defects. |
 | [#62 verification guard](../evidence/gate-0-gradle-verification-policy.md); [#63 fixed STRICT](../evidence/gate-0-gradle-strict-precedence.md); [#64 real runtime controls](../evidence/gate-0-gradle-strict-runtime.md) | Explicit override guards and fixed CLI selection now have ten real hosted Gradle 9.6.0 controls: correct bytes resolve; bad checksums fail despite project/user-home OFF/LENIENT; removing the trusted token restores weakened resolution. This supersedes #63's runtime NOT RUN for that fixture scope only. Installation-property mutation was not run. No APK equality, independent build/signing qualification or Android virtualization result follows. |
@@ -58,6 +67,9 @@ No universal impossibility, new platform failure or new security claim is made.
 
 ## Owner choices and authorization boundaries
 
+Option A is selected. The B column records only the unselected historical
+alternative and its conditional boundaries; none of its work is authorized.
+
 | Decision axis | A — retain requirements and stop dependent implementation | B — commission a NARROW/REDESIGN proposal |
 |---|---|---|
 | What Tony chooses | Keep the complete ordinary-app phone contract and accept the continuing stop while no new qualifying evidence exists. | Assign a proposal author/reviewer to present a concrete changed product/architecture contract for a later explicit decision. No replacement is chosen now. |
@@ -65,7 +77,7 @@ No universal impossibility, new platform failure or new security claim is made.
 | Prohibited | Dependent complete-guest/production implementation, adopting unchanged R, treating H as assembled, or reopening blocked execution/build/signing/physical experiments. Repeated surveys or Gradle hardening merely for PR count are not next work. | Implementing the redesign, changing requirements or unlocking execution before separate approval. App virtualization, hooks, profiles, a headless VM or a simulated phone cannot silently become the product or satisfy the original full-phone requirement. |
 | Evidence required to proceed | New evidence addressing the actual missing edge and its prior counterexamples, followed by scoped review/authorization. A Gate 0 pass still needs the existing gate criteria; dependent adoption and later gates retain their own prerequisites. Physical/build readiness remains separately blocking. | A coherent proposal showing exactly which obligations change, why the new scope is feasible enough to investigate, the independent enforcement owner, provenance and what prior evidence no longer applies. Tony must explicitly approve final changes through ADR review before implementation; evidence gates must then be re-evaluated for that approved scope. |
 | Decisive falsifiers | Any applicable contradiction in the five-blocker table; missing evidence remains blocking Unknown. Failure of one candidate does not prove the entire product impossible. | A proposal that still requires unavailable authority, hides a removed product goal, retains an unsupported boundary claim, lacks corresponding source, relies on cooperative hostile code, or weakens a mandatory protection to claim progress is not approvable as satisfying the existing contract. |
-| Next authorized owner action | Record explicit A selection/date and acknowledge the unchanged stop; identify a reviewer only when a genuinely new qualifying input is available. This is not an instruction to manufacture another experiment. | Record explicit B commissioning scope/date, proposal owner and reviewer. Require a separately reviewed final proposal and explicit acceptance/amendment decisions; commissioning alone authorizes no adoption. |
+| Owner disposition / further prerequisites | A selection/date is recorded above with the unchanged stop; identify a reviewer only when a genuinely new qualifying input is available. This is not an instruction to manufacture another experiment. | Unselected; no commissioning scope, proposal owner or reviewer is authorized. Any future commissioning would need its own explicit decision, separately reviewed final proposal and explicit acceptance/amendment decisions; commissioning alone would authorize no adoption. |
 | Requirements / ADRs affected | All [PDVA-REQ-001–054](../requirements.md) remain intact, especially 001–015, 034–045 and 054. ADR-0001 stays Accepted; ADR-0002/0003 stay PROPOSED with only ADR-0003 Option A approved. | No requirement changes now. A future scope departure must trace 001/004/005/007/033/046–047 for full-phone, guest and interaction goals; 002–003/044–045 for host authority/support; 009–027/034–037/042–043 for boundary, privacy, networking and trust; 028–032 for Google goals. Apply 006/008/039–041/054 to approval and evidence. Explicitly amend/supersede affected ADR-0001 provisions; assess ADR-0002 delivery compatibility and ADR-0003 evidence obligations without auto-accepting either. |
 
 Under B, dropping full-phone interaction, Android 17, required services, ordinary
@@ -90,7 +102,7 @@ a separately reviewed owner-approved code change plus explicit physical-test
 authorization; this ADR grants none. Existing independent-build and physical
 procedures remain the prerequisite references, not new tasks authorized here.
 
-## Review basis and preservation
+## Original proposal review basis and preservation — historical
 
 Live REST verified main above and all open PRs: **zero**. Therefore open
 heads/bases/full diffs/files/checks/jobs/logs/reviews/comments/threads were an
@@ -126,4 +138,13 @@ verify association once, then stop without polling CI/reviews/comments/bots or
 mergeability. Association failure must be reported UNVERIFIED and UNPRESERVED
 pending association repair, reusing the existing PR under [governance](../governance.md).
 
-**Owner decision remains pending; no implementation is newly authorized.**
+## Owner approval record — 2026-11-07
+
+Option A is accepted on the authority stated above. Recording starts from merged
+main `384f8b0b62160c7b354089592785009f1312ad75` (PR #65); the original review
+basis and technical evidence above retain their historical scope. ADR-0001 stays
+Accepted; ADR-0002 and ADR-0003 stay Proposed, with ADR-0003's separately approved
+Option A unchanged. PR #56's unconditional execution lock, dependency metadata,
+strict whole-signed-APK equality and all fifteen historical failures remain intact.
+No new feasibility research, implementation or execution is authorized by this
+record. **Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
