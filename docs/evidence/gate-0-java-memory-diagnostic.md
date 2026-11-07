@@ -74,6 +74,36 @@ SDK JAR SHA-256 matches PR #57:
 `bf1b4387cc7ca94fc6ef684f040d9d16fbf16248e181819f020736ea2053f177`.
 Local JDK reports Temurin `17.0.20.1+1`; Python is `3.12.14`.
 
+### Follow-up: owner-installed tools, same evidence PR
+
+On 2026-11-07 the owner reported installing Android Studio and Temurin JDK 17
+and authorized read-only installation verification and continued validation.
+The new JDK's release file, `java -version` and `javac -version` agree on
+**Temurin 17.0.21+9, Windows x86_64**. Android Studio's product metadata reports
+build **262.10968.63.2622.16840690**. The new SDK's package metadata reports
+**Platform 37.0 / Android 17, revision 2, extension 22, preview SDK 0**, and
+**Build Tools 36.0.0**. Its platform JAR matches the SHA-256 above. Build-tools
+aapt2 and D8 JAR were readable and hashed; no Android CLI was invoked.
+
+Machine-level JAVA_HOME and PATH identify the newly installed JDK; the existing
+Codex process had not inherited those entries. Process JAVA_HOME was unset and
+bare java/javac lookup failed, while absolute-path invocation succeeded.
+ANDROID_HOME and ANDROID_SDK_ROOT were unset at process/user/machine scopes.
+This is environment selection state, not an observed sandbox access denial:
+the installed files were readable and the JDK ran within the normal sandbox.
+No environment variable, PATH, tool installation or Windows security setting
+was changed. No elevated retry or alternate access mechanism was needed.
+
+Against this new JDK and SDK, the unchanged diagnostic passed its **190 JVM
+assertions**, compiled cleanup-removal negative control, actual Activity bytecode
+with desktop framework doubles, and clean compilation of all production Java
+against API 37. Source RWX/INTERNET controls also passed. These follow-up receipts
+do not reclassify the earlier unsigned package as built with the new JDK: unsigned
+assembly/lint/package results below still belong to the original 17.0.20.1+1
+development environment. No APK was rebuilt, signed, installed or distributed in
+this follow-up. Tool presence/version/hash and successful compilation do not
+establish independent provenance, incident clearance or artifact qualification.
+
 ## Actual validation and limits
 
 | Check actually executed | Observation and limit |
