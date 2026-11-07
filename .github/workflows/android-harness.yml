@@ -66,6 +66,11 @@ jobs:
       - name: Build both variants and exercise protocol
         run: |
           python3 android/build.py :gate0-harness:assembleDebug :gate0-harness:assembleRelease :gate0-harness:assembleDebugAndroidTest :gate0-harness:protocolTest :gate0-harness:lintDebug
+      - name: Compile and inspect separate unsigned Java diagnostic
+        run: |
+          python3 .github/scripts/test-memory-diagnostic.py --java-home "$JAVA_HOME" --android-jar "$ANDROID_HOME/platforms/android-37.0/android.jar"
+          python3 android/build.py --configure-on-demand :memory-diagnostic:assembleRelease :memory-diagnostic:diagnosticTest :memory-diagnostic:lintRelease
+          python3 .github/scripts/test-memory-diagnostic.py --apk android/memory-diagnostic/build/outputs/apk/release/memory-diagnostic-release-unsigned.apk
       - name: Require real offline Gradle STRICT checksum enforcement
         run: timeout --signal=TERM --kill-after=15s 12m python3 .github/scripts/test-gradle-strict-runtime.py
       - name: Require real symlink rejection of the no-follow mutant

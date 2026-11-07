@@ -1,0 +1,41 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'org.pdva.memorydiagnostic'
+    compileSdk 37
+    buildToolsVersion '36.0.0'
+    defaultConfig {
+        applicationId 'org.pdva.memorydiagnostic'
+        minSdk 37
+        targetSdk 37
+        versionCode 1
+        versionName '0.1-diagnostic'
+    }
+    // Development compilation/packaging only. No installable signed output.
+    buildTypes {
+        debug { signingConfig null }
+        release { signingConfig null; debuggable false; minifyEnabled false }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+// The physical candidate is release-equivalent only. Debug compatibility DEX
+// adds an unnecessary surface; no debug APK is an intended diagnostic artifact.
+androidComponents.beforeVariants(androidComponents.selector().withBuildType('debug')) { variant ->
+    variant.enable = false
+}
+tasks.register('compileDiagnosticTests', JavaCompile) {
+    source = files('src/main/java/org/pdva/memorydiagnostic/Experiment.java',
+                   'src/main/java/org/pdva/memorydiagnostic/Attempt.java',
+                   'src/test/java/org/pdva/memorydiagnostic/ExperimentTest.java')
+    classpath = files()
+    destinationDirectory = layout.buildDirectory.dir('diagnostic-tests')
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+}
+tasks.register('diagnosticTest', JavaExec) {
+    dependsOn 'compileDiagnosticTests'
+    classpath = files(layout.buildDirectory.dir('diagnostic-tests'))
+    mainClass = 'org.pdva.memorydiagnostic.ExperimentTest'
+}
