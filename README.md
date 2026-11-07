@@ -14,6 +14,8 @@ That doesn't mean other virtual Android apps are stealing anyone's information. 
 
 **That's why I started Privacy Decoy Virtual Android.**
 
+**THIS IS A WORK IN PROGRESS!!!! I HAVEN'T EVEN GOTTEN TO TEST IT ON A PHONE YET!!! I AM STILL ON THE HYPOTHESIS STAGE!!! I DON'T EVEN KNOW IF I CAN DO IT!**
+
 ## What is Privacy Decoy Virtual Android?
 
 The goal is simple: build a complete Android 17 phone that runs inside an ordinary Android app.
