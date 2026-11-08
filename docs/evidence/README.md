@@ -1,5 +1,11 @@
 # Evidence index
 
+[Installed diagnostic JDK/SDK integrity](gate-0-installed-jdk-sdk-integrity.md),
+2026-11-08: read-only regular-file inventory/comparison, explicit UNTRUSTED state,
+real installed-tool checks and disposable mutation controls. Independent baseline
+authentication remains Unknown; no provenance/security clearance or gate advance.
+Independent backup UNVERIFIED; private evidence UNPRESERVED.
+
 [Java diagnostic dependency metadata](gate-0-diagnostic-dependency-metadata.md),
 2026-11-07: fresh offline unsigned build produces a 97-byte zero-library report
 and a 185-byte encrypted payload. Signed insertion remains conditional source evidence;

@@ -21,6 +21,8 @@ ROOT_DIRS = {".github", "android", "docs"}
 HISTORY = "docs/reference/privacy-decoy-history/"
 SOURCE_SHA = "5320b3b44b38df4b8f3361ecbcb530386ff195e9"
 ALLOWED_CODE = {
+    "android/installed_tools.py",
+    ".github/scripts/test-installed-tools.py",
     ".github/scripts/test-memory-diagnostic.py",
     "android/memory-diagnostic/build.gradle",
     "android/memory-diagnostic/src/main/AndroidManifest.xml",
