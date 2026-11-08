@@ -530,3 +530,213 @@ and blocked. No failed assertion is reclassified as a pass.
 Gate 0 **Unresolved**; Gates A-G **Not reached**. Windows native-host security
 incident remains unresolved. Physical native-launch readiness **NOT READY — STOP**.
 No phone, USB, ADB, emulator, guest execution or antivirus bypass is authorized.
+
+## Companion-only Option B proposal — 2026-11-08
+
+**Status: PROPOSED / UNAPPROVED. Owner decision: NOT GIVEN.** The owner explicitly
+commissioned this proposal in the originating Codex Desktop LOCAL conversation,
+not Option B, metadata changes, signing or physical testing. This addendum reuses
+[PR #70's assessment](../evidence/gate-0-companion-artifact-policy-assessment.md)
+and existing Option B; it does not repeat their investigation. Under
+[governance](../governance.md), no separate ADR is needed for this scoped artifact
+policy proposal: no product, architecture, boundary or evidence gate changes.
+Earlier dated dispositions remain historical. Option A remains active, including
+[PR #67's companion retention obligation](../evidence/gate-0-java-memory-diagnostic.md#decisive-installation-blocker-and-minimum-next-action).
+Nothing below takes effect through proposal publication, checks or merge.
+
+### One proposed artifact and audience
+
+The sole candidate is `:memory-diagnostic` **release**, application/namespace
+`org.pdva.memorydiagnostic`, versionCode **1**, versionName **0.1-diagnostic**,
+non-debuggable, unminified, Java 17, compile/minimum/target API **37**. Its source
+baseline is canonical main `0d5b9ba11157040b06466cf626581bcf4e7e08f2`, specifically
+the [existing module](../../android/memory-diagnostic/README.md), manifest and four
+production Java files. Debug stays disabled. Runtime scope stays API exactly 37,
+ARM64 support, 64-bit process, 4/16-KiB pages; one memfd page with separate shared
+RW/RX mappings, no mapping-byte read/write/execution, no RWX, JNI, payload, native
+worker, networking, permission or external runtime library. The one-way attempt
+marker and independent cleanup attempts remain unchanged.
+
+Intended use is **one private, one-time attempt on the owner's single designated
+stock, nonrooted Samsung Android 17 phone**, by the owner only. A named independent
+reviewer/custodian may privately receive artifacts solely for qualification; no
+other recipient or device is covered. The private packet must bind the selected
+device scope, named roles, exact final source/tree, approved configuration delta,
+tool/input identities, signer and original artifacts before any operation needing
+those identities. No device or signer identity is invented here. Later reviewed
+configuration changes may implement only this proposal and separately authorized
+signing preparation; application/manifest/resources must retain this baseline.
+Any other source or tool/dependency change requires renewed scope review.
+
+Explicitly excluded: the PDVA host/app, `org.pdva.gate0` original research harness,
+guest/image/VM engine/helper, production APKs, debug or bundle artifacts, public
+distribution (including Play, Releases and Actions uploads), other devices or
+recipients, and future versions. No transfer onward, update channel, reusable
+development exemption or promotion of companion evidence to PDVA qualification.
+ADR-0004 Option A and the original unconditional execution lock remain intact.
+
+### Exact proposed metadata policy and cost
+
+If explicitly approved and subsequently implemented under review, **only this
+module's sole enabled release APK would omit AGP dependency information through
+the supported module DSL `android.dependenciesInfo.includeInApk = false`**.
+This names the proposed setting, not an implemented change or an instruction to
+run it. No root/global property override, packaging postprocessing, alternate
+signing route or bundle opt-out is included. `includeInBundle` stays unchanged;
+bundles are outside scope. A future implementation review must demonstrate that
+the opt-out reaches no other artifact and the original complete signed companion
+has no dependency-info block `0x504b4453`; absence is unmeasured today.
+
+This would supersede only the companion's metadata-retention clause in PR #67's
+qualification item 4, for this single approved scope/window. Every other item
+remains mandatory. **Actual PDVA app/host metadata retention and strict
+whole-signed-APK equality stay unchanged.** No current requirement, active policy,
+signing configuration, dependency pin, workflow or required check changes now.
+
+The tradeoff is deliberate loss of this artifact's upstream-recommended embedded
+dependency-reporting channel and associated SDK/dependency issue feedback.
+Zero external runtime libraries does not remove build/transitive risk. The owner
+would accept responsibility as maintenance owner, appoint an independent security
+reviewer and custodian, and fund their time before implementation admission.
+They must maintain privately authenticated source/tool/transitive inventories,
+licenses/transfer rights, advisory review before each authorized stage, and
+withdrawal/recovery records throughout the validity window. Existing
+[185-component/322-artifact ledger](../evidence/gate-0-isolated-worker-dependencies.md),
+[adoption record](../evidence/gate-0-isolated-worker-adoption.md) and
+[provenance policy](../source-provenance-policy.md) remain controlling; pins with
+initial TOFU and locally generated UNTRUSTED inventories are not authentication.
+These manual duties cost review, custody and retention work and do not recreate
+Play feedback or prove vulnerability absence. No new dependency or rights granted.
+
+### Evidence contract, prerequisites and falsifiers
+
+All **fifteen historical reproducibility failures remain failures**, preserved in
+the [original evidence](../evidence/gate-0-apk-reproducibility.md). None is a signed
+companion experiment. Disabling metadata is **not a claim or guarantee of
+reproducibility**; it creates a different artifact policy. PR #68's
+[generated-payload observation](../evidence/gate-0-diagnostic-dependency-metadata.md)
+and PR #70's inference retain their limits, without a new upstream survey.
+
+The companion must still pass genuine **strict whole-signed-byte equality** of two
+independently built original complete APKs from separately initialized source,
+output and dependency homes, with qualified inputs and the same authorized signer
+within the pair. Retain original bytes, execution/input records and separately
+labelled input, content, signature and whole-byte results. Distinct paths alone
+do not prove independent builds; signatures alone do not prove byte equality.
+No normalization, exclusions, stripping, copied signatures/blocks/ciphertext,
+RNG manipulation, reused build output or substitution of fixtures for either
+genuine artifact. Any byte difference fails; no suppressed exit, continue-on-error,
+expected-failure conversion, skipped required check or passing umbrella result.
+D/D1/D2 are not reopened. Unknown, missing or stale receipts remain blocking.
+
+| Mandatory remaining prerequisite | Falsifier and resulting STOP |
+|---|---|
+| Independent implementation/build/security review and approved reproducibility method | Scope leakage to host/harness, changed capabilities or incomplete review rejects admission. B supplies a proposed method to review, not a qualified method or signed proof. |
+| Authenticated complete tool inputs and independent administration | Require OS, repository/workflow, JDK, SDK/build tools, Gradle/AGP, packaging/signing/verifier and metadata/transitive/cache/configuration provenance, rights and CLI-free acquisition. Unauthenticated inputs, shared suspect state or no qualified disposition of the Windows incident (or independently qualified replacement chain) rejects admission. Java-only does not exclude native build-tool trust. |
+| Qualified private signing custody and independent signature verification | Dedicated authorized development identity; no production/debug/affected-host key reuse. Missing custodian, access/recovery controls, wrong signer, invalid signature or failed altered-signature rejection rejects the artifact. No key creation or signing is authorized by policy approval. |
+| Strict original-artifact equality and exact-artifact review | Any whole-byte difference, substituted artifact, unexpected metadata/native content/permission, wrong version or incomplete applicable checks rejects the candidate. Successful unsigned assembly, metadata absence or valid signatures cannot substitute for equality or security review. |
+| Independent private backup and authenticated transfer authorization | Require recoverable independently backed-up originals/receipts and approved encrypted private route, named endpoints/recipients and exact source/tool/output/signer binding. Missing backup, recovery proof, rights or transfer authorization blocks delivery/testing. |
+| Separate exact-artifact physical-test approval | Only after all preceding qualification: owner approves the exact APK, designated Samsung scope, one-attempt window and conditional procedure. Wrong device/API/ABI/page scope, platform protection blocking installation, interruption or incomplete cleanup means STOP/Unknown; no protection bypass, data-clear, reinstall or retry. |
+
+Reuse the [independent-chain NO-GO](../evidence/gate-0-independent-linux-build.md),
+[installed-input limits](../evidence/gate-0-installed-jdk-sdk-integrity.md) and
+[conditional Samsung procedure](../evidence/gate-0-java-memory-diagnostic.md#one-eventual-windows-10--samsung-android-17-procedure).
+They are prerequisites, not an execution queue. **Independent backup UNVERIFIED;
+private evidence UNPRESERVED.** No private location is established or invented.
+Mapping admission cannot prove code execution, containment, full-phone feasibility
+or device support. Kernel/framework trust, substitution, leaked copies, ANR/death,
+marker rollback and incomplete cleanup remain risks even after byte agreement.
+
+### Owner YES/NO and conditional next work
+
+The precise decision for Tony is: **Approve this 2026-11-08 companion-only Option B
+policy, its maintenance responsibility, exclusions, strict-byte contract and
+expiration, solely to permit preparation of a separately reviewed implementation
+change and qualification packet? YES or NO.** Record an explicit dated decision
+bound to the final reviewed addendum commit; a bare PR approval/merge is insufficient.
+Current answer is **NOT GIVEN**, not YES. Full ADR acceptance is not requested.
+
+- **YES:** record the scoped acceptance and appoint independent reviewers/custodian;
+  prepare a narrowly scoped metadata-only implementation diff with source-policy
+  controls and the qualification packet. This permits preparation for review only.
+  Applying that setting, changing signing configuration, generating/using keys,
+  building/signing APKs or executing controls that do so each remains STOP pending
+  separate explicit implementation/operation authorization and its prerequisites.
+  Transfer and physical testing need their own later approvals; no inferred consent.
+- **NO, absent decision, or withdrawn approval:** keep metadata retention and every
+  current stop. Preserve this proposal/rejection and existing evidence; no new
+  signed experiment or repeat survey follows automatically.
+
+Proposed approval expires **30 calendar days after its dated owner acceptance
+(America/Fortaleza), or immediately on the first attempted physical activation,
+withdrawal, scope/input/tool/recipient change, security finding invalidating
+qualification, or failed mandatory evidence, whichever occurs first**. The later
+physical authorization must set a shorter exact window within that term. An
+interrupted attempt consumes the scope. No automatic extension, new version or
+second attempt; a supported metadata-retaining solution also requires review
+before proceeding and may remove the rationale for B.
+
+Owner or independent security reviewer may withdraw admission immediately.
+On expiry/withdrawal, stop builds/delivery/use, notify the named private recipients
+through an authorized channel, revoke access and arrange normal uninstall and
+removal of transferable copies under a separately authorized cleanup plan. Keep
+the required originals/negative evidence in verified private retention; never
+delete the only evidence or claim remote erasure. Policy retirement/restoration
+requires a reviewed change if any exception was later implemented. None of these
+operations is performed or authorized by this proposal.
+
+Alternatives remain existing **A** (retain metadata and STOP), **B** as narrowly
+proposed here, or defer pending a genuinely new qualified metadata-retaining
+method. **C** distributed opt-out is excluded. **D** limited correspondence does
+not meet strict equality and remains unapproved/closed. If B fails equality, STOP;
+do not silently select D or disable another source of differing bytes.
+
+Affected obligations remain unchanged: PDVA-REQ-002–003/044–045 (ordinary-device
+scope), 006/008/054 (approval/gates), 010–013 (authority/control state), 036–038
+(provenance/rights/artifacts), 039–042 (honest evidence/security review), 048/051
+(privacy/validation). No satisfaction, waiver or supersession of a requirement is
+recorded. ADR-0001, ADR-0002, ADR-0003 Option A for PDVA and ADR-0004 Option A retain
+their dispositions. **Gate 0 Unresolved; Gates A–G Not reached; physical testing
+NOT READY — STOP.**
+
+### Proposal procedure and publication evidence
+
+On 2026-11-08 in Codex Desktop LOCAL, live GitHub REST and fetched main agreed on
+`0d5b9ba11157040b06466cf626581bcf4e7e08f2`; PR #70 was merged there. The live open-PR
+list was empty, so open heads/bases/full diffs/files/modes/checks/jobs/logs/reviews/
+comments/threads were an empty set. PR #70's complete diff and merged identities
+were inspected; its reviews, comments and review threads were empty. Read the
+governing ADRs, requirements, source/provenance/adoption/dependency and relevant
+evidence/history records and three workflows; no upstream survey or private
+receipt/inventory inspection. Initial Git network denial was resolved with scoped
+execution approval, without security-setting changes.
+
+Exact-main [Foundation run 42500626697](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42500626697)
+completed successfully, including foundation job `128792371753` and Windows job
+`128792371503`; check/job/step records and completed logs were retrieved. These
+are pre-existing baseline receipts, not local native execution or candidate
+qualification. Android/QEMU had no exact-main run and are not counted as passes.
+[GitHub Status](https://www.githubstatus.com/api/v2/summary.json) reported All
+Systems Operational, no incidents, page updated `2026-11-08T15:09:39.377Z`.
+
+Only this original, task-authored ADR addendum and the evidence-index entry change;
+no third-party code, dependency, binary or new license is adopted. Existing five
+worktrees, branches, ignored assets and private records are preserved; primary
+checkout initially clean, no stashes. No private paths/hashes, signing data,
+inventories, receipts or binaries are published. Local bundled CPython 3.12.14
+`validate-foundation.py` passed: **181 files, 110 Markdown files, 54 requirements,
+four ADRs**. Full exact-base diff, local links/anchors, unchanged historical text,
+regular **100644** modes, whitespace, provenance and public-data hygiene were
+reviewed. Runtime/regression suites were not rerun for these documentation-only
+changes; no new tests or validation policy were added.
+APK/Gradle builds, signing, Android CLI, device/USB/ADB, native/VM execution and
+security-setting changes are **NOT RUN**; no runtime result is claimed.
+
+Unchanged Foundation automatically applies (including its existing hosted host
+controls); Android/QEMU path filters do not select these two Markdown files.
+No workflow/check is changed or manually dispatched. New-head hosted checks remain
+**UNOBSERVED at publication**; filtered/unrun checks are not passes. Publish exactly
+one evidence PR, attach it natively to the originating chat, verify association
+once, then STOP without polling CI/reviews/comments/bots/badges/mergeability.
+Report association failure as UNVERIFIED and UNPRESERVED pending repair of that
+same PR association. Creation or merge is never owner approval of Option B.
