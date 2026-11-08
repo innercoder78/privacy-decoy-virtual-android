@@ -1,5 +1,11 @@
 # Evidence index
 
+[Java diagnostic dependency metadata](gate-0-diagnostic-dependency-metadata.md),
+2026-11-07: fresh offline unsigned build produces a 97-byte zero-library report
+and a 185-byte encrypted payload. Signed insertion remains conditional source evidence;
+no signed reproducibility or physical authorization. Private backup UNVERIFIED;
+private evidence UNPRESERVED pending independently verified retention.
+
 [Separate Java memory diagnostic](gate-0-java-memory-diagnostic.md), 2026-11-07:
 one-page public-SDK memfd RW/RX source, one-action admission, independent cleanup,
 sanitized results, JVM/source/package controls and a conditional novice procedure.
