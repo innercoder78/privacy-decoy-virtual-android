@@ -1,5 +1,11 @@
 # Evidence index
 
+[Java companion signed-artifact policy assessment](gate-0-companion-artifact-policy-assessment.md),
+2026-11-08: UNAPPROVED owner assessment of a narrowly bounded application of
+ADR-0003 Option B; no materially new mechanism, policy change or signing proof.
+Host metadata/strict bytes, all fifteen failures and execution lock stay intact.
+Installation STOP; independent backup UNVERIFIED; private evidence UNPRESERVED.
+
 [Installed diagnostic JDK/SDK integrity](gate-0-installed-jdk-sdk-integrity.md),
 2026-11-08: read-only regular-file inventory/comparison, explicit UNTRUSTED state,
 real installed-tool checks and disposable mutation controls. Independent baseline
