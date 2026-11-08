@@ -1,5 +1,12 @@
 # Evidence index
 
+[Companion-only ADR-0003 Option B proposal](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#companion-only-option-b-proposal--2026-11-08),
+2026-11-08: commissioned, UNAPPROVED decision draft reusing PR #70; one Java release
+diagnostic, proposed metadata policy, owner YES/NO, prerequisites and expiration.
+No active policy or implementation change; strict whole-signed bytes and all
+fifteen failures retained. Physical testing NOT READY — STOP; independent backup
+UNVERIFIED and private evidence UNPRESERVED.
+
 [Java companion signed-artifact policy assessment](gate-0-companion-artifact-policy-assessment.md),
 2026-11-08: UNAPPROVED owner assessment of a narrowly bounded application of
 ADR-0003 Option B; no materially new mechanism, policy change or signing proof.
