@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Source, desktop JVM and unsigned-package checks; never installs or runs Android."""
 import argparse
+import ast
+import hashlib
+import inspect
+import json
 import os
 from pathlib import Path
 import re
 import struct
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
@@ -14,6 +19,392 @@ ROOT = Path(__file__).resolve().parents[2]
 MODULE = ROOT / 'android/memory-diagnostic'
 JAVA = MODULE / 'src/main/java/org/pdva/memorydiagnostic'
 NS = '{http://schemas.android.com/apk/res/android}'
+
+# Public source evidence, derived from canonical Git blobs at this exact base.
+# This is a review boundary, not authentication of the machine or this verifier.
+SOURCE_BASE = '69a7165043e1e7fc565a9ff10f044adc4874c595'
+BUILD_PATH = 'android/memory-diagnostic/build.gradle'
+REVIEWED_FILES = frozenset({
+    '.github/scripts/test-memory-diagnostic.py',
+    'docs/evidence/gate-0-companion-source-controls.md',
+    'docs/evidence/README.md',
+})
+PROTECTED = {
+    'build': (9, '9d2f3c65e56afe1ddbb172e8315f63071b6a0bda8c69a75e6a71072c79ac0816'),
+    'checks': (30, 'bc602236d6d38c868b7257b5cf5efdf6962b08502db68466dd535159abb2c3d4'),
+    'cleanup': (1, '2d2854e1726811fc5703c325f71ba3ab541ae28e41853b06a870d1ad615deeba'),
+    'diagnostic': (7, '4256dfa721e55f8217d4253546fcdaa8dbeced4353f94981ee79847e6bf4aa7e'),
+    'governance': (109, '384c3a4289c41a25e00a5a90f5eaee5f5a8b7208438fe8de099ad359cb57c45c'),
+    'host': (22, 'dd352694ada63116991b5e8743f36b23e170b435c49d1614e1beb7ba77e703da'),
+    'lock': (1, '9fee0fc620a37c57b9fa5be64d24ecdda0335d024486697fa54e4aaa3404b751'),
+}
+BASE_BUILD = b"""plugins { id 'com.android.application' }
+android {
+    namespace 'org.pdva.memorydiagnostic'
+    compileSdk 37
+    buildToolsVersion '36.0.0'
+    defaultConfig {
+        applicationId 'org.pdva.memorydiagnostic'
+        minSdk 37
+        targetSdk 37
+        versionCode 1
+        versionName '0.1-diagnostic'
+    }
+    // Development compilation/packaging only. No installable signed output.
+    buildTypes {
+        debug { signingConfig null }
+        release { signingConfig null; debuggable false; minifyEnabled false }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+// The physical candidate is release-equivalent only. Debug compatibility DEX
+// adds an unnecessary surface; no debug APK is an intended diagnostic artifact.
+androidComponents.beforeVariants(androidComponents.selector().withBuildType('debug')) { variant ->
+    variant.enable = false
+}
+tasks.register('compileDiagnosticTests', JavaCompile) {
+    source = files('src/main/java/org/pdva/memorydiagnostic/Experiment.java',
+                   'src/main/java/org/pdva/memorydiagnostic/Attempt.java',
+                   'src/test/java/org/pdva/memorydiagnostic/ExperimentTest.java')
+    classpath = files()
+    destinationDirectory = layout.buildDirectory.dir('diagnostic-tests')
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+}
+tasks.register('diagnosticTest', JavaExec) {
+    dependsOn 'compileDiagnosticTests'
+    classpath = files(layout.buildDirectory.dir('diagnostic-tests'))
+    mainClass = 'org.pdva.memorydiagnostic.ExperimentTest'
+}
+"""
+METADATA_LINES = b'    dependenciesInfo {\n        includeInApk = false\n    }\n'
+PROPOSED_BUILD = BASE_BUILD.replace(b'    compileSdk 37\n', b'    compileSdk 37\n' + METADATA_LINES)
+
+
+class SourceRejection(AssertionError):
+    """An identified source assertion, distinct from infrastructure failures."""
+
+
+def source_require(condition, code):
+    if not condition:
+        raise SourceRejection(code)
+
+
+def protected_group(path):
+    if path == 'android/gate0-harness/src/main/java/org/pdva/gate0/Session.java':
+        return 'lock'
+    if path == 'android/memory-diagnostic/src/main/java/org/pdva/memorydiagnostic/Experiment.java':
+        return 'cleanup'
+    for prefix, group in (('android/gate0-harness/', 'host'),
+                          ('android/memory-diagnostic/', 'diagnostic'),
+                          ('android/', 'build'), ('.github/', 'checks')):
+        if path.startswith(prefix):
+            return group
+    return 'governance'
+
+
+def protected_evidence(snapshot):
+    """Length-delimited exact path/blob bytes; modes are checked independently."""
+    groups = {group: [] for group in PROTECTED}
+    for path, (_, data) in snapshot.items():
+        if path not in REVIEWED_FILES and path != BUILD_PATH:
+            groups[protected_group(path)].append((path, data))
+    result = {}
+    for group, rows in groups.items():
+        digest = hashlib.sha256()
+        for path, data in sorted(rows):
+            for value in (path.encode('utf-8'), data):
+                digest.update(len(value).to_bytes(8, 'big'))
+                digest.update(value)
+        result[group] = (len(rows), digest.hexdigest())
+    return result
+
+
+def check_baseline(evidence):
+    source_require(evidence == (SOURCE_BASE, PROTECTED), 'baseline-evidence')
+
+
+def check_source_modes(snapshot):
+    source_require(isinstance(snapshot, dict) and all(
+        isinstance(path, str) and isinstance(entry, tuple) and len(entry) == 2
+        and entry[0] == '100644' and isinstance(entry[1], bytes)
+        for path, entry in snapshot.items()), 'regular-source-modes')
+
+
+def check_review_scope(snapshot):
+    # These three files need independent full-diff review. Their contents cannot
+    # self-certify that review; no wildcard exemption or caller allowlist exists.
+    source_require(REVIEWED_FILES <= snapshot.keys(), 'reviewed-file-inventory')
+
+
+def check_metadata_delta(snapshot):
+    source_require(snapshot.get(BUILD_PATH, (None, None))[1] == PROPOSED_BUILD,
+                   'exact-companion-delta')
+
+
+def check_protected_source(snapshot):
+    actual = protected_evidence(snapshot)
+    for group, expected in PROTECTED.items():
+        source_require(actual[group] == expected, 'protected-' + group)
+
+
+def verify_companion_delta(snapshot, evidence):
+    """Only a source-delta result; never build, signing or operation admission.
+
+    Evidence must be the reviewed public baseline receipt. Unknown/missing
+    evidence fails; never derive a replacement baseline from candidate inputs.
+    All content outside the exact proposal and enumerated review files is pinned,
+    including documentation, file additions/deletions and the failure ledger.
+    """
+    check_baseline(evidence)
+    check_source_modes(snapshot)
+    check_review_scope(snapshot)
+    check_metadata_delta(snapshot)
+    check_protected_source(snapshot)
+
+
+def git_source(*arguments):
+    return subprocess.check_output(['git', '--no-optional-locks', *arguments], cwd=ROOT, timeout=60)
+
+
+def committed_source(ref):
+    # Resolve to a commit before using a ref in subsequent plumbing commands.
+    commit = git_source('rev-parse', '--verify', '--end-of-options', ref + '^{commit}').decode().strip()
+    rows = git_source('ls-tree', '-rz', '--full-tree', commit).split(b'\0')
+    entries = []
+    for row in filter(None, rows):
+        meta, path = row.split(b'\t', 1)
+        mode, kind, oid = meta.decode().split()
+        source_require(kind == 'blob', 'unsupported-git-entry')
+        entries.append((path.decode('utf-8'), mode, oid))
+    # One bounded batch; no fetch, checkout, filters, Gradle or filesystem writes.
+    result = subprocess.run(['git', 'cat-file', '--batch'], cwd=ROOT,
+                            input=''.join(oid + '\n' for _, _, oid in entries).encode(),
+                            capture_output=True, check=True, timeout=60).stdout
+    snapshot, offset = {}, 0
+    for path, mode, oid in entries:
+        end = result.index(b'\n', offset)
+        header = result[offset:end].split()
+        source_require(len(header) == 3 and header[:2] == [oid.encode(), b'blob'], 'git-blob-receipt')
+        size = int(header[2]); offset = end + 1
+        data = result[offset:offset + size]; offset += size
+        source_require(len(data) == size and result[offset:offset + 1] == b'\n'
+                       and path not in snapshot, 'git-blob-extent')
+        offset += 1
+        snapshot[path] = (mode, data)
+    source_require(offset == len(result), 'git-batch-extent')
+    return snapshot
+
+
+def working_source():
+    """Tracked and nonignored new files, without opening ignored/private assets."""
+    snapshot = {}
+    for row in filter(None, git_source('ls-files', '--stage', '-z').split(b'\0')):
+        meta, path = row.split(b'\t', 1)
+        mode, _, stage = meta.decode().split()
+        source_require(stage == '0', 'unmerged-source')
+        snapshot[path.decode('utf-8')] = (mode, b'')
+    for path in filter(None, git_source('ls-files', '--others', '--exclude-standard', '-z').split(b'\0')):
+        snapshot[path.decode('utf-8')] = ('100644', b'')
+    for path, (mode, _) in snapshot.copy().items():
+        file = ROOT / path
+        source_require(not file.is_symlink() and file.is_file(), 'nonregular-working-source')
+        # POSIX executable worktree changes must be caught before staging too.
+        if os.name != 'nt' and file.stat().st_mode & 0o111:
+            mode = '100755'
+        snapshot[path] = (mode, file.read_bytes())
+    return snapshot
+
+
+def expect_source_rejection(verifier, snapshot, evidence, code, name):
+    try:
+        verifier(snapshot, evidence)
+    except SourceRejection as failure:
+        require(str(failure) == code, 'wrong source rejection: ' + name)
+    else:
+        raise AssertionError('negative accepted: ' + name)
+
+
+def detector_removed(detector):
+    """Compile a real detector-body deletion, not a mocked success/exception."""
+    node = ast.parse(inspect.getsource(globals()[detector])).body[0]
+    node.body = [ast.Pass()]
+    verifier = ast.parse(inspect.getsource(verify_companion_delta)).body[0]
+    module = ast.fix_missing_locations(ast.Module(body=[node, verifier], type_ignores=[]))
+    namespace = globals().copy()
+    exec(compile(module, '<source-detector-removal>', 'exec'), namespace)
+    return namespace['verify_companion_delta']
+
+
+def source_cli_tests(snapshot):
+    """Real subprocess/Git fixture; no baseline history or active module edits."""
+    with tempfile.TemporaryDirectory(prefix='pdva-source-fixture-') as temp:
+        root = Path(temp)
+        subprocess.run(['git', 'init', '--quiet', str(root)], check=True,
+                       capture_output=True, timeout=30)
+        stream = bytearray(b'commit refs/heads/fixture\n'
+                           b'committer Source Fixture <fixture@example.invalid> 0 +0000\n'
+                           b'data 7\nfixture\n')
+        for path, (mode, data) in sorted(snapshot.items()):
+            stream.extend(f'M {mode} inline {json.dumps(path)}\ndata {len(data)}\n'.encode())
+            stream.extend(data + b'\n')
+        stream.extend(b'\ndone\n')
+        subprocess.run(['git', 'fast-import', '--quiet', '--done'], cwd=root,
+                       input=bytes(stream), check=True, capture_output=True, timeout=30)
+        # Only this reviewed Python file is written to the fixture worktree.
+        # The proposed module remains a disposable Git blob, never a build input.
+        script = root / '.github/scripts/test-memory-diagnostic.py'
+        script.parent.mkdir(parents=True)
+        script.write_bytes(snapshot['.github/scripts/test-memory-diagnostic.py'][1])
+        result = subprocess.run([sys.executable, str(script), '--check-source-ref', 'refs/heads/fixture'],
+                                capture_output=True, text=True, timeout=30)
+        require(result.returncode == 0 and not result.stderr and result.stdout.startswith(
+            'PASS: exact proposed source delta only;'), 'isolated Git proposal CLI')
+        result = subprocess.run([sys.executable, str(script), '--verify-source-baseline'],
+                                capture_output=True, text=True, timeout=30)
+        require(result.returncode == 1 and not result.stdout and 'CalledProcessError' in result.stderr
+                and 'exit status 128' in result.stderr and 'rev-parse' in result.stderr,
+                'missing exact Git baseline must reject recomputation')
+    print('PASS: real isolated Git proposal CLI; missing exact baseline rejected at Git resolution')
+
+
+def companion_source_tests():
+    current = working_source()
+    require(current[BUILD_PATH] == ('100644', BASE_BUILD), 'active metadata configuration must remain unchanged')
+    evidence = (SOURCE_BASE, PROTECTED.copy())
+    positive = current.copy()
+    positive[BUILD_PATH] = ('100644', PROPOSED_BUILD)
+    verify_companion_delta(positive, evidence)
+    # A shallow CI checkout needs no baseline fetch. The explicit
+    # --verify-source-baseline procedure independently recomputes this receipt
+    # from the exact Git object and fails if that object is unavailable.
+    cases = []
+
+    def add(name, path, data, code, detector, mode='100644'):
+        changed = positive.copy()
+        changed[path] = (mode, data)
+        require(changed != positive, 'ineffective fixture: ' + name)
+        cases.append((name, changed, evidence, code, detector))
+
+    def change(name, path, old, new, code, detector):
+        data = positive[path][1]
+        require(data.count(old) == 1, 'unique fixture anchor: ' + name)
+        add(name, path, data.replace(old, new), code, detector)
+
+    for name, old, new in (
+        ('missing-setting', METADATA_LINES, b''),
+        ('duplicate-setting', METADATA_LINES, METADATA_LINES * 2),
+        ('true-setting', b'includeInApk = false', b'includeInApk = true'),
+        ('bundle-opt-out', b'includeInApk = false', b'includeInApk = false\n        includeInBundle = false'),
+        ('enable-debug', b'variant.enable = false', b'variant.enable = true'),
+        ('compile-api', b'compileSdk 37', b'compileSdk 36'),
+        ('minimum-api', b'minSdk 37', b'minSdk 36'),
+        ('target-api', b'targetSdk 37', b'targetSdk 36'),
+        ('namespace', b"namespace 'org.pdva.memorydiagnostic'", b"namespace 'org.pdva.other'"),
+        ('identity', b"applicationId 'org.pdva.memorydiagnostic'", b"applicationId 'org.pdva.other'"),
+        ('version-code', b'versionCode 1', b'versionCode 2'),
+        ('version-name', b"versionName '0.1-diagnostic'", b"versionName 'production'"),
+        ('debuggable-release', b'debuggable false', b'debuggable true'),
+        ('minified-release', b'minifyEnabled false', b'minifyEnabled true'),
+        ('signed-release', b'release { signingConfig null;', b'release { signingConfig signingConfigs.debug;'),
+        ('signed-debug', b'debug { signingConfig null }', b'debug { signingConfig signingConfigs.debug }'),
+        ('build-type', b'    buildTypes {', b'    buildTypes {\n        production {}'),
+        ('flavor', b'    defaultConfig {', b'    productFlavors { other {} }\n    defaultConfig {'),
+        ('test-apk', b'    defaultConfig {', b'    testBuildType "release"\n    defaultConfig {'),
+        ('wrong-dsl-location', b'    compileSdk 37\n' + METADATA_LINES,
+         METADATA_LINES + b'    compileSdk 37\n'),
+        ('CRLF-drift', b'plugins { id \'com.android.application\' }\n', b'plugins { id \'com.android.application\' }\r\n'),
+    ):
+        change(name, BUILD_PATH, old, new, 'exact-companion-delta', 'check_metadata_delta')
+    for name, extra in (
+        ('plugin-hook', b"apply plugin: 'unreviewed'\n"),
+        ('packaging-hook', b'afterEvaluate { android.dependenciesInfo.includeInApk = true }\n'),
+        ('distribution', b"tasks.register('publishRelease') {}\n"),
+        ('dependency', b"dependencies { implementation 'example:unreviewed:1' }\n"),
+        ('native-build', b'android { externalNativeBuild { cmake {} } }\n'),
+    ):
+        add(name, BUILD_PATH, PROPOSED_BUILD + extra, 'exact-companion-delta', 'check_metadata_delta')
+
+    host = 'android/gate0-harness/build.gradle'
+    java = 'android/memory-diagnostic/src/main/java/org/pdva/memorydiagnostic/'
+    mutations = [
+        ('host-opt-out', host, b'android {', b'android {\n' + METADATA_LINES),
+        ('root-opt-out', 'android/build.gradle', b'apply false }',
+         b'apply false }\nsubprojects { afterEvaluate { android.dependenciesInfo.includeInApk = false } }'),
+        ('global-setting', 'android/gradle.properties', b'android.useAndroidX=false',
+         b'android.useAndroidX=false\nandroid.dependenciesInfo.includeInApk=false'),
+        ('execution-lock', 'android/gate0-harness/src/main/java/org/pdva/gate0/Session.java',
+         b'throw new SecurityException("research_execution_disabled");', b'return;'),
+        ('close-cleanup', java + 'Experiment.java', b'ops.close();', b''),
+        ('rx-cleanup', java + 'Experiment.java', b'ops.unmapRX(size);', b''),
+        ('rw-cleanup', java + 'Experiment.java', b'ops.unmapRW(size);', b''),
+        ('runtime-api', java + 'Experiment.java', b'ops.api() != 37', b'ops.api() != 36'),
+        ('attempt-reset', java + 'Attempt.java', b'consumed = true;\n        try', b'consumed = false;\n        try'),
+        ('network', java + 'AndroidOps.java', b'import java.io.FileDescriptor;',
+         b'import java.io.FileDescriptor;\nimport java.net.Socket;'),
+        ('jni', java + 'AndroidOps.java', b'private FileDescriptor fd;', b'private FileDescriptor fd;\n    native void launch();'),
+        ('permission', 'android/memory-diagnostic/src/main/AndroidManifest.xml', b'    <application ',
+         b'    <uses-permission android:name="android.permission.INTERNET"/>\n    <application '),
+        ('check-skip', '.github/workflows/android-harness.yml', b'  android:\n', b'  android:\n    if: false\n'),
+        ('failure-suppression', '.github/workflows/android-harness.yml', b'  android:\n',
+         b'  android:\n    continue-on-error: true\n'),
+        ('trigger-filter', '.github/workflows/android-harness.yml', b'  pull_request:\n',
+         b'  pull_request:\n    branches: [never]\n'),
+        ('check-deletion', '.github/workflows/foundation.yml', b'          python3 .github/scripts/test-memory-diagnostic.py\n', b''),
+        ('expected-failure-conversion', '.github/workflows/foundation.yml',
+         b'          python3 .github/scripts/test-memory-diagnostic.py\n',
+         b'          python3 .github/scripts/test-memory-diagnostic.py || true\n'),
+        ('passing-wrapper', '.github/workflows/foundation.yml',
+         b'          python3 .github/scripts/test-memory-diagnostic.py\n', b'          echo PASS\n'),
+    ]
+    for name, path, old, new in mutations:
+        change(name, path, old, new, 'protected-' + protected_group(path), 'check_protected_source')
+    for name, path, data in (
+        ('new-native-payload', 'android/memory-diagnostic/src/main/jni/payload.c', b'void payload(void) {}\n'),
+        ('new-publish-workflow', '.github/workflows/publish.yml', b'name: unauthorized\n'),
+        ('unknown-scope', 'unreviewed.txt', b'unreviewed\n'),
+        ('comparator-exclusion', '.github/scripts/unreviewed-comparator.py', b'print("PASS")\n'),
+    ):
+        add(name, path, data, 'protected-' + protected_group(path), 'check_protected_source')
+    for mode in ('100755', '120000', '160000'):
+        add('mode-' + mode, BUILD_PATH, PROPOSED_BUILD, 'regular-source-modes', 'check_source_modes', mode)
+    for path in (host, 'docs/requirements.md'):
+        changed = positive.copy(); del changed[path]
+        cases.append(('deleted-' + protected_group(path), changed, evidence,
+                      'protected-' + protected_group(path), 'check_protected_source'))
+    changed = positive.copy(); del changed[BUILD_PATH]
+    cases.append(('missing-module', changed, evidence, 'exact-companion-delta', 'check_metadata_delta'))
+    for path in REVIEWED_FILES:
+        changed = positive.copy(); del changed[path]
+        cases.append(('missing-review-file-' + path, changed, evidence,
+                      'reviewed-file-inventory', 'check_review_scope'))
+    for name, bad_evidence in (('missing-baseline', None), ('wrong-baseline', ('unknown', PROTECTED)),
+                               ('incomplete-baseline', (SOURCE_BASE, {}))):
+        cases.append((name, positive, bad_evidence, 'baseline-evidence', 'check_baseline'))
+
+    mutants = {detector: detector_removed(detector) for *_, detector in cases}
+    for mutant in mutants.values():
+        mutant(positive, evidence)
+    for name, snapshot, receipt, code, detector in cases:
+        expect_source_rejection(verify_companion_delta, snapshot, receipt, code, name)
+        # The same defective input must now be admitted, and its negative
+        # assertion must fail specifically because it was accepted. Any other
+        # exception, wrong detector, parse/compile error or timeout fails the run.
+        mutant = mutants[detector]
+        mutant(snapshot, receipt)
+        try:
+            expect_source_rejection(mutant, snapshot, receipt, code, name)
+        except AssertionError as failure:
+            require(type(failure) is AssertionError and str(failure) == 'negative accepted: ' + name,
+                    'wrong detector-removal outcome: ' + name)
+        else:
+            raise AssertionError('ineffective detector-removal assertion: ' + name)
+    print(f'PASS: exact proposal fixture; {len(cases)} specific negatives; '
+          f'{len(cases)} detector-removal assertion failures ({len(mutants)} detector bodies)')
+    source_cli_tests(positive)
 
 
 def require(condition, message):
@@ -352,7 +743,25 @@ def main():
     parser.add_argument('--java-home', type=Path)
     parser.add_argument('--android-jar', type=Path)
     parser.add_argument('--apk', type=Path)
+    source_mode = parser.add_mutually_exclusive_group()
+    source_mode.add_argument('--verify-source-baseline', action='store_true',
+                             help='recompute the pinned public evidence from the exact base Git object')
+    source_mode.add_argument('--check-source-ref',
+                             help='check an existing local commit for the exact proposed source delta only')
     args = parser.parse_args()
+    if args.verify_source_baseline or args.check_source_ref:
+        require(not (args.java_home or args.android_jar or args.apk), 'source-only options cannot build/inspect packages')
+        snapshot = committed_source(SOURCE_BASE if args.verify_source_baseline else args.check_source_ref)
+        if args.verify_source_baseline:
+            check_source_modes(snapshot)
+            require(snapshot[BUILD_PATH][1] == BASE_BUILD, 'baseline module bytes')
+            require(protected_evidence(snapshot) == PROTECTED, 'baseline protected evidence')
+            print('PASS: public baseline Git blobs/modes recomputed (not independent authentication)')
+        else:
+            verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+            print('PASS: exact proposed source delta only; independent review and qualification still required')
+        return
+    companion_source_tests()
     source_policy()
     adapter = (JAVA / 'AndroidOps.java').read_text()
     manifest = (MODULE / 'src/main/AndroidManifest.xml').read_text()
