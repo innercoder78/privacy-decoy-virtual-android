@@ -1,5 +1,11 @@
 # Evidence index
 
+[Companion diagnostic source controls](gate-0-companion-source-controls.md),
+2026-11-10: implementation and genuine in-memory source controls supersede the
+publication STOP below under explicit authorization for normal existing CI.
+Active metadata remains unchanged; source checks do not qualify signed artifacts.
+Gate 0 Unresolved; independent backup UNVERIFIED; private evidence UNPRESERVED.
+
 [Companion source controls publication STOP](gate-0-companion-source-controls-stop.md),
 2026-11-10: the exact-path code allowlist and workflow integration would
 select the existing Android APK build job. Implementation and its tests
