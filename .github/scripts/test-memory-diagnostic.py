@@ -4,6 +4,7 @@ import argparse
 import ast
 import hashlib
 import inspect
+import io
 import json
 import os
 from pathlib import Path
@@ -273,10 +274,9 @@ def source_cli_tests(snapshot):
 
 def companion_source_tests():
     current = working_source()
-    require(current[BUILD_PATH] == ('100644', BASE_BUILD), 'active metadata configuration must remain unchanged')
     evidence = (SOURCE_BASE, PROTECTED.copy())
     positive = current.copy()
-    positive[BUILD_PATH] = ('100644', PROPOSED_BUILD)
+    # Require the approved delta in the actual working source, not just a fixture.
     verify_companion_delta(positive, evidence)
     # A shallow CI checkout needs no baseline fetch. The explicit
     # --verify-source-baseline procedure independently recomputes this receipt
@@ -402,7 +402,7 @@ def companion_source_tests():
                     'wrong detector-removal outcome: ' + name)
         else:
             raise AssertionError('ineffective detector-removal assertion: ' + name)
-    print(f'PASS: exact proposal fixture; {len(cases)} specific negatives; '
+    print(f'PASS: exact active companion delta; {len(cases)} specific negatives; '
           f'{len(cases)} detector-removal assertion failures ({len(mutants)} detector bodies)')
     source_cli_tests(positive)
 
@@ -554,6 +554,74 @@ def binary_manifest(data):
     return root
 
 
+def unsigned_metadata_policy(data, archive):
+    # Dependency information is an APK signing-block pair, not a ZIP member.
+    # No signing block is allowed in this explicitly unsigned development output.
+    require(data[archive.start_dir - 16:archive.start_dir] != b'APK Sig Block 42',
+            'no APK signing block')
+    require(not any(n.startswith('BUNDLE-METADATA/com.android.tools.build.libraries/')
+                    or n.rsplit('/', 1)[-1] in ('sdkDependencyData.pb', 'dependencies.pb')
+                    for n in archive.namelist()), 'no packaged dependency metadata')
+
+
+def metadata_outputs_policy(build):
+    # Stale outputs are a failure too: use a fresh build directory, never delete
+    # evidence to make this check pass. The ordinary dependency report may exist;
+    # it is NOT the encrypted SDK payload or evidence of signing-block insertion.
+    for relative in ('intermediates/sdk_dependency_data', 'outputs/sdk-dependencies'):
+        require(not os.path.lexists(build / relative), 'no generated SDK dependency payload/report')
+
+
+def metadata_package_tests():
+    def check(data):
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            unsigned_metadata_policy(data, archive)
+
+    def fixture(name):
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, 'w') as archive:
+            archive.writestr(name, b'fixture')
+        return stream.getvalue()
+
+    plain = fixture('classes.dex')
+    check(plain)
+    # Synthetic block marker placed before the central directory, with its ZIP
+    # offset updated. No real APK is modified; no signature validity is claimed.
+    with zipfile.ZipFile(io.BytesIO(plain)) as archive:
+        start = archive.start_dir
+    blocked = bytearray(plain[:start] + b'APK Sig Block 42' + plain[start:])
+    struct.pack_into('<I', blocked, len(blocked) - 6, start + 16)
+    cases = [(blocked, 'no APK signing block')]
+    cases += [(fixture(name), 'no packaged dependency metadata') for name in (
+        'sdkDependencyData.pb', 'dependencies.pb',
+        'BUNDLE-METADATA/com.android.tools.build.libraries/other.pb')]
+    for data, reason in cases:
+        try:
+            check(data)
+        except AssertionError as failure:
+            require(str(failure) == reason, 'specific unsigned metadata rejection')
+        else:
+            raise AssertionError('unsigned metadata negative accepted')
+    with tempfile.TemporaryDirectory(prefix='pdva-metadata-fixture-') as temp:
+        root = Path(temp)
+        metadata_outputs_policy(root)
+        report = root / 'intermediates/metadata_library_dependencies_report/release/dependencies.pb'
+        report.parent.mkdir(parents=True)
+        report.write_bytes(b'ordinary-report-fixture')
+        metadata_outputs_policy(root)
+        for index, relative in enumerate(('intermediates/sdk_dependency_data', 'outputs/sdk-dependencies')):
+            build = root / str(index)
+            (build / relative).mkdir(parents=True)
+            try:
+                metadata_outputs_policy(build)
+            except AssertionError as failure:
+                require(str(failure) == 'no generated SDK dependency payload/report',
+                        'specific intermediate rejection')
+            else:
+                raise AssertionError('SDK output negative accepted')
+    print('PASS: unsigned metadata fixtures; 6 specific negatives; ordinary report allowed (not APK evidence)')
+
+
 def package_policy(apk):
     data = apk.read_bytes()
     with zipfile.ZipFile(apk) as archive:
@@ -561,7 +629,7 @@ def package_policy(apk):
         require(len(names) == len(set(names)), 'unique ZIP entries')
         require(not any(n.startswith(('lib/', 'assets/')) or n.lower().endswith(('.so', '.rsa', '.dsa', '.ec', '.sf'))
                         for n in names), 'no native payloads/assets/v1 signatures')
-        require(data[archive.start_dir - 16:archive.start_dir] != b'APK Sig Block 42', 'no APK signing block')
+        unsigned_metadata_policy(data, archive)
         manifest_policy(binary_manifest(archive.read('AndroidManifest.xml')), packaged=True)
         # AAPT2 shortens resource ZIP paths in release packages. Inspect the sole
         # compiled XML resource without rewriting or normalizing any APK bytes.
@@ -574,7 +642,12 @@ def package_policy(apk):
             for forbidden in (b'Ljava/net/', b'Landroid/net/', b'Ljava/lang/ProcessBuilder;',
                               b'Ljava/lang/Runtime;', b'Ljava/lang/reflect/', b'Ldalvik/system/DexClassLoader;'):
                 require(forbidden not in content, 'prohibited DEX reference')
-    print('PASS: unsigned package manifest/DEX/native/signature inventory (not qualification)')
+    require(tuple(apk.parts[-4:]) == ('outputs', 'apk', 'release',
+                                    'memory-diagnostic-release-unsigned.apk'), 'diagnostic output location')
+    metadata_outputs_policy(apk.parents[3])
+    require(apk.read_bytes() == data, 'package unchanged during inspection')
+    print('PASS: unsigned package manifest/DEX/native/signature inventory; no SDK dependency outputs '
+          '(not signed-stage proof or qualification)')
 
 
 def jvm_tests(java_home, android_jar):
@@ -762,6 +835,7 @@ def main():
             print('PASS: exact proposed source delta only; independent review and qualification still required')
         return
     companion_source_tests()
+    metadata_package_tests()
     source_policy()
     adapter = (JAVA / 'AndroidOps.java').read_text()
     manifest = (MODULE / 'src/main/AndroidManifest.xml').read_text()
