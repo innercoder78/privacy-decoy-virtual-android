@@ -2,6 +2,9 @@ plugins { id 'com.android.application' }
 android {
     namespace 'org.pdva.memorydiagnostic'
     compileSdk 37
+    dependenciesInfo {
+        includeInApk = false
+    }
     buildToolsVersion '36.0.0'
     defaultConfig {
         applicationId 'org.pdva.memorydiagnostic'
