@@ -1,7 +1,18 @@
 # Evidence index
 
+[Companion-only Option B acceptance and bounded preparation](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#companion-only-acceptance-and-preparation--recorded-2026-11-10),
+recorded 2026-11-10: Tony's explicit YES of 2026-11-08 to exact PR #71 scope,
+for implementation/qualification preparation only; expires by 2026-12-08 or
+earlier stated condition. Proposed three-line module-only diff is documentation,
+NOT APPLIED; source controls and qualification sequence NOT RUN. Missing roles
+UNASSIGNED, independent proof Unknown/STOP. Host Option A, ADR-0004 Option A,
+all fifteen failures and required checks preserved; full ADR remains PROPOSED.
+Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY;
+independent backup UNVERIFIED and private evidence UNPRESERVED.
+
 [Companion-only ADR-0003 Option B proposal](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#companion-only-option-b-proposal--2026-11-08),
-2026-11-08: commissioned, UNAPPROVED decision draft reusing PR #70; one Java release
+2026-11-08 historical proposal (decision later recorded above): commissioned,
+then UNAPPROVED decision draft reusing PR #70; one Java release
 diagnostic, proposed metadata policy, owner YES/NO, prerequisites and expiration.
 No active policy or implementation change; strict whole-signed bytes and all
 fifteen failures retained. Physical testing NOT READY — STOP; independent backup
