@@ -1,5 +1,10 @@
 # Evidence index
 
+[Companion source controls publication STOP](gate-0-companion-source-controls-stop.md),
+2026-11-10: the exact-path code allowlist and workflow integration would
+select the existing Android APK build job. Implementation and its tests
+remain stopped pending a separate scope decision. Gate 0 Unresolved.
+
 [Companion-only Option B acceptance and bounded preparation](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#companion-only-acceptance-and-preparation--recorded-2026-11-10),
 recorded 2026-11-10: Tony's explicit YES of 2026-11-08 to exact PR #71 scope,
 for implementation/qualification preparation only; expires by 2026-12-08 or
