@@ -1,5 +1,9 @@
 # Companion diagnostic source controls
 
+**Current update:** the [authorized implementation and unsigned packaging evidence](#active-option-b-and-unsigned-packaging--2026-11-10)
+below supersedes the earlier unchanged-active-state statements for this separate
+diagnostic only. The following original source-control record is retained as history.
+
 Date: **2026-11-10, America/Fortaleza**. Source baseline: canonical main
 `69a7165043e1e7fc565a9ff10f044adc4874c595`. Scope: implement the source controls in
 [ADR-0003's bounded preparation plan](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#companion-only-acceptance-and-preparation--recorded-2026-11-10).
@@ -156,3 +160,151 @@ New-head hosted checks are **UNOBSERVED at publication**, not passing. Publish o
 PR, attach it natively to this chat, verify association once and stop without
 polling CI, reviews, comments, bots, badges or mergeability. PR publication is not
 merge into canonical main or independent private preservation.
+
+## Active Option B and unsigned packaging — 2026-11-10
+
+The owner explicitly authorized the exact three-line companion-only metadata
+change, existing source/package control updates, local development validation and
+unchanged automatic CI. This resolves implementation/development-build restrictions
+for this task only; it is not approval of an installable physical-test artifact.
+No new policy proposal, signing, key operation, installation or phone test occurred.
+ADR-0003 retains its **2026-12-08 maximum expiration and earlier stop conditions**.
+
+### Exact implementation and source binding
+
+Verified main/base: `44a2d1cc2c914c4d23f3733b3625a9e589d75874` (PR #74 merged).
+Implementation commit: `1db535da7feb4271745055c1059bf0a091f7741f`.
+Its complete Android Git tree is `a844105b1373ef121401718e1c5d08cf1d6ca3ce`;
+verifier blob is `623eeddec60cd3b784e65e7693ffa70619ba86b7`.
+The sole Android delta inserts `dependenciesInfo { includeInApk = false }` on
+exactly three lines immediately after `compileSdk 37`. Complete module source
+SHA-256: `2f5594ab82be8d669cbdeafc211275a62de2608466b0e6b66628cf2e859d26f6`.
+These are public source identities, not private artifact fingerprints.
+
+The default source verifier now checks the actual working module against the
+existing exact proposal bytes. It no longer replaces baseline bytes in memory
+before checking the positive state. `SOURCE_BASE`, `BASE_BUILD`, all seven
+protected groups and their exact-byte receipts, the three review-file exceptions,
+and all 60 existing negatives/detector-removal controls remain intact. Missing,
+duplicate, true/reversed, misplaced and bundle-broadened settings fail
+`exact-companion-delta`; host/root/global changes fail their protected groups.
+All manifest, Java, cleanup, attempt, variant, null-signing, host, execution-lock,
+workflow, requirement, ADR and historical signed-failure files remain byte-identical.
+
+The existing `--apk` path additionally checks the standard diagnostic release
+output location, rejects a signing-block marker and dependency metadata ZIP
+entries, and rejects generated SDK payload/text-report directories, including
+stale directories. It checks that the inspected original APK bytes did not change.
+It permits ordinary dependency-report intermediates. It does not authenticate
+build execution, provenance or freshness by itself: those require the separately
+recorded fresh build below. Six specific synthetic negatives cover the marker,
+three prohibited ZIP names/prefixes and both SDK output directories. The marker
+fixture is only a disposable ZIP parser control, not a signed APK or signature
+verification. No genuine APK contents were rewritten, stripped or normalized.
+
+### Actual unsigned development build
+
+A fresh ignored source export from the verified base received the exact module
+delta and the then-current verifier. Its module build directory did not exist.
+All exported tracked Android source/configuration bytes were compared after the
+build with the implementation commit above and matched. The verifier subsequently
+received the package controls; it is not a Gradle input. The final verifier was
+run from the primary checkout against the resulting original APK, both before
+and after the report control. Documentation changes are not build inputs.
+
+Used the existing Windows x86_64 installation, bundled CPython **3.12.14**,
+Temurin **17.0.21+9**, Gradle **9.6.0**, AGP **9.4.0**, SDK **37.0 revision 2,
+extension 22, preview 0**, Build Tools **36.0.0**. The existing Gradle distribution
+ZIP and Maven artifact/metadata cache were copied into new isolated stores;
+no previous module outputs, init scripts or user properties were copied. The
+unchanged bootstrap verified distribution bytes/installation and forced STRICT
+dependency verification. Execution was offline with build cache disabled. No new
+dependency/tool download, SDK-manager operation, signing or native harness build
+was performed locally. Existing inputs remain independently **UNTRUSTED**.
+
+From the isolated export, with task-local Gradle/Android homes and the existing
+JDK/SDK selected only in the child environment:
+
+```text
+python android/build.py --offline --configure-on-demand --no-build-cache :memory-diagnostic:assembleRelease :memory-diagnostic:diagnosticTest :memory-diagnostic:lintRelease
+python android/build.py --offline --configure-on-demand --no-build-cache :memory-diagnostic:collectReleaseDependencies :memory-diagnostic:tasks --all
+```
+
+| Direct observation | Result and limit |
+|---|---|
+| Fresh assembly/JVM/lint invocation | Exit 0, BUILD SUCCESSFUL, **45 actionable tasks / 45 executed**; only diagnostic project configured; no harness task or FROM-CACHE output. APK timestamp followed invocation start. |
+| Actual unsigned APK | **16,036 bytes**; existing packaged manifest/API/version, extraction rules, DEX, permission/native/assets and v1/signing-block absence checks passed. Original bytes were preserved throughout inspection. |
+| Opt-out during assembly | No `collectReleaseDependencies` or `sdkReleaseDependencyData` execution; no ordinary report, encrypted payload or SDK text report output. This contrasts with the [historical retained-policy build](gate-0-diagnostic-dependency-metadata.md), which generated the 97-byte report and 185-byte encrypted payload. That historical build is not a new matched independent pair. |
+| Explicit ordinary-report control | Second invocation exit 0, **2 tasks executed**; `collectReleaseDependencies` generated a **97-byte** report; `tasks --all` contained no `sdkReleaseDependencyData` task. No encrypted SDK output or SDK text report appeared; complete original APK bytes still matched their pre-control bytes. Final package checks passed with that ordinary report present. |
+| Warnings and skips | Release lint: **0 errors, 5 SetTextI18n warnings** in unchanged Java. Existing builtInKotlin/useAndroidX deprecation and analytics-initialization warnings remained. Gradle reported incompatibility of deprecated features with Gradle 10. `lintVitalReportRelease`/`lintVitalRelease` were SKIPPED while the explicitly requested full `lintRelease` completed; skips are not separate passes. |
+
+The predicted development-output effect was observed. An ordinary dependency
+report is distinct from the encrypted payload and from signing-block pair
+`0x504b4453`. Both old and new unsigned APKs lack signing blocks because signing
+is null: that absence alone does **not** demonstrate the effect of Option B at
+the signed stage. Signed-stage absence, signature validity, independent builds
+and complete signed-byte equality remain **NOT RUN / Unknown**. No comparator
+was weakened and none of the fifteen historical failures was reclassified.
+
+### Local controls, preflight and publication
+
+Final source checks passed **60 specific negatives and 60 detector-removal
+assertion failures across five detector bodies**, isolated Git CLI integration,
+exact historical-baseline recomputation and committed implementation admission.
+Six new unsigned-metadata fixture negatives passed. Diagnostic desktop execution
+passed **190 JVM assertions**, the compiled cleanup-removal rejection, actual
+Activity bytecode initiation/recreation controls with framework doubles, and
+compilation of all production Java against the existing API-37 SDK JAR.
+The unchanged execution-lock test passed **600 denials in three JVMs and three
+compiled mutant rejections**. These are not Android runtime/physical results.
+
+Repository validators passed: **183 files, 112 Markdown files, 54 requirements,
+four ADRs**, and harness manifest authority. Repository regression: **152 tests,
+148 passed / four existing Windows skips**. Desktop readiness, offline-image,
+frame-copy and Gradle-distribution regressions passed **28, 45, 4 and 38 tests**.
+Installed-tools initially ran 16 with one error: disposable Windows junction
+creation exceeded the unchanged ten-second timeout in the sandbox. The identical
+suite with scoped execution access passed **all 16**; original failure retained,
+no timeout/test/security-setting change. Linux-specific controls were not run
+locally and remain the unchanged automatic workflow's responsibility.
+
+Live connector and REST agreed on main; connector search and paginated REST found
+**zero open PRs**, so all requested open heads/bases/diffs/files/checks/jobs/logs/
+reviews/comments/threads were an empty set. PR #74 merge identity was reverified.
+Exact-main [Foundation run 42921763930](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42921763930)
+had successful foundation **130198110721** and Windows **130198109983** jobs;
+[Android run 42921764026](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42921764026)
+job **130198109902** succeeded. Check/job/step records and completed logs were
+retrieved and inspected; these are baseline results, not new-head CI evidence.
+[GitHub Status](https://www.githubstatus.com/api/v2/summary.json) snapshot updated
+`2026-11-10T21:34:20.716Z` reported All Systems Operational, no incidents.
+An initial sandbox REST socket denial was resolved with scoped execution access.
+
+Reviewed requirements, ADRs, governance, provenance/catalog/adoption/dependency
+records, diagnostic/incident/independent-chain and signed-byte evidence, relevant
+history and all three workflows. No tracked binary-extension matches were found.
+The initially clean primary checkout, six existing worktrees/branches, ignored
+assets and private evidence were preserved; no stashes existed. The final diff
+is exactly four regular 100644 text files: module, verifier, this record and index.
+Full diff, exact source boundary, whitespace, links, dependency/license and privacy
+review completed. No new upstream code, dependency, license grant or binary is
+adopted. Python additions use only the standard library. Existing license/rights
+records do not supply new independent clearance.
+
+Foundation and Android workflows select this change unchanged; QEMU filters do
+not. Automatic CI may run normally. New-head checks remain **UNOBSERVED at
+publication**. Publish one PR, attach it natively to the originating chat, verify
+association once, then STOP without polling CI/reviews/comments/bots/badges or
+mergeability. No APK, raw log, private path, receipt or signing material is public.
+
+Falsifiers remain any source/protected-byte drift, metadata output appearing in
+a fresh admitted build, prohibited package content/signing block, ineffective
+negative control, missing build/source correspondence, or a later signed-stage
+contradiction. Do not delete stale outputs to manufacture a pass: preserve them
+and use a separately initialized build for a new scoped observation.
+Independent source/toolchain authentication, Windows-incident disposition,
+qualified signing custody, two genuinely independent signed builds, strict
+complete signed-byte equality, independent artifact review, private backup and
+transfer, and separate exact-artifact Samsung approval remain required.
+**Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
+**Independent backup UNVERIFIED; private evidence UNPRESERVED.**

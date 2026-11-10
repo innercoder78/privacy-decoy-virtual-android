@@ -1,9 +1,11 @@
 # Evidence index
 
 [Companion diagnostic source controls](gate-0-companion-source-controls.md),
-2026-11-10: implementation and genuine in-memory source controls supersede the
-publication STOP below under explicit authorization for normal existing CI.
-Active metadata remains unchanged; source checks do not qualify signed artifacts.
+2026-11-10: authorized exact companion-only Option B metadata implementation;
+60 source negatives/detector-removal controls retained, six package negatives,
+fresh offline unsigned assembly/JVM/lint and actual metadata-output inspection.
+The ordinary report remains available; the encrypted SDK payload is absent.
+Unsigned output does not prove signed-stage behavior or qualify signed artifacts.
 Gate 0 Unresolved; independent backup UNVERIFIED; private evidence UNPRESERVED.
 
 [Companion source controls publication STOP](gate-0-companion-source-controls-stop.md),
@@ -14,8 +16,8 @@ remain stopped pending a separate scope decision. Gate 0 Unresolved.
 [Companion-only Option B acceptance and bounded preparation](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#companion-only-acceptance-and-preparation--recorded-2026-11-10),
 recorded 2026-11-10: Tony's explicit YES of 2026-11-08 to exact PR #71 scope,
 for implementation/qualification preparation only; expires by 2026-12-08 or
-earlier stated condition. Proposed three-line module-only diff is documentation,
-NOT APPLIED; source controls and qualification sequence NOT RUN. Missing roles
+earlier stated condition. Historical preparation state: proposed delta NOT APPLIED;
+later authorized implementation is recorded above. Signed qualification NOT RUN. Missing roles
 UNASSIGNED, independent proof Unknown/STOP. Host Option A, ADR-0004 Option A,
 all fifteen failures and required checks preserved; full ADR remains PROPOSED.
 Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY;
