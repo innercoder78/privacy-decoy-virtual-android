@@ -527,3 +527,14 @@ mergeability. New-head CI is **UNOBSERVED at publication**. All fifteen historic
 signed-byte failures remain failures. ADR-0003 expires no later than **2026-12-08**,
 subject to earlier termination. **Gate 0 Unresolved; Gates A–G Not reached; physical
 testing NOT READY. Independent backup UNVERIFIED; private evidence UNPRESERVED.**
+
+### Publication continuation — 2026-11-11
+
+The initial push was not executed: automatic approval review could not complete
+because its usage limit was reached, not because it found the action unsafe.
+On explicit owner resume, the clean saved implementation/evidence commits were
+preserved. Live main remained `e0e088e27d435e999cc339e52ad23bd7cf25cee5`;
+no open PR or existing PR for this branch was found. Its three baseline checks
+remained successful. Completed implementation tests were not repeated; only this
+publication disposition was added and documentation/whitespace checks rerun.
+The same one-PR publication and single association-verification procedure applies.
