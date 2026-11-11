@@ -1,5 +1,14 @@
 # Evidence index
 
+[Fresh companion unsigned-pair experiment](gate-0-companion-source-controls.md#fresh-unsigned-pair-experiment--2026-11-11),
+2026-11-11: two fresh exact-main unsigned builds, 45 actionable tasks executed
+each, and complete original-byte equality PASSED. Both APKs are 16,036 bytes.
+Separate combined observation FAILED because each SDK directory gained
+`.knownPackages`; original SDK input bytes stayed unchanged. Real byte mutations,
+package/source/record controls and 24 new detector-removal pairs are recorded.
+Only bounded untrusted local unsigned reproducibility; no signed qualification,
+independent administration or Samsung readiness. Private backup UNVERIFIED.
+
 [Strict companion signed-APK prequalification controls](gate-0-companion-source-controls.md#strict-signed-apk-prequalification--2026-11-10),
 2026-11-10: complete-byte comparison, bounded signing/ZIP/package inspection,
 receipt contradiction checks and 60 synthetic negatives with detector-removal
