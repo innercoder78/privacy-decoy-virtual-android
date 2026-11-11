@@ -1,5 +1,13 @@
 # Evidence index
 
+[Strict companion signed-APK prequalification controls](gate-0-companion-source-controls.md#strict-signed-apk-prequalification--2026-11-10),
+2026-11-10: complete-byte comparison, bounded signing/ZIP/package inspection,
+receipt contradiction checks and 60 synthetic negatives with detector-removal
+controls implemented. Existing exact-source protections remain unchanged.
+Independent receipt authority and qualified signature-tool integration are blocked;
+the read-only CLI cannot admit artifacts. Real signed qualification **NOT RUN / Unknown**.
+Gate 0 Unresolved; independent backup UNVERIFIED; private evidence UNPRESERVED.
+
 [Companion diagnostic source controls](gate-0-companion-source-controls.md),
 2026-11-10: authorized exact companion-only Option B metadata implementation;
 60 source negatives/detector-removal controls retained, six package negatives,

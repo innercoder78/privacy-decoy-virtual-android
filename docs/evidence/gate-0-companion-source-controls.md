@@ -308,3 +308,222 @@ complete signed-byte equality, independent artifact review, private backup and
 transfer, and separate exact-artifact Samsung approval remain required.
 **Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.**
+
+## Strict signed-APK prequalification — 2026-11-10
+
+Scope: the separate Android 17 memory diagnostic under PDVA-REQ-036–043, 048,
+051 and 054. Verified main/base `e0e088e27d435e999cc339e52ad23bd7cf25cee5`.
+Implementation commit `052f4a6338f49d63d572560bd47af120137d11ab` adds read-only
+controls and disposable synthetic tests to the existing
+[diagnostic checker](../../.github/scripts/test-memory-diagnostic.py), Git blob
+`4037439e602f5a73551a14f522f47d3783972d59`. The unchanged Android tree is
+`a844105b1373ef121401718e1c5d08cf1d6ca3ce`; these are public source identities.
+This is a **partial implementation with an explicit hard blocker**, not a
+completed end-to-end qualification service. **Real signed-APK admission remains
+NOT RUN / Unknown.** No qualified signed companion pair was available or created.
+
+### Executable controls and supported limits
+
+The new `--signed-pair` route reads two original files, rejects aliases of the
+same file, checks regular-file identity and bounded sizes, and requires direct
+equality of **every original byte**. No hashes-only equality decision, ignored
+regions, normalization, repacking, metadata removal, timestamp adjustment or
+signature/ciphertext copying exists. A separate re-read control rejects changed
+content and same-byte replacement with a different file identity. These are
+point-in-time checks under qualified administration, not a hostile-filesystem
+atomicity guarantee. The actual CLI exits nonzero with a sanitized reason and
+cannot produce a qualification success.
+
+The conventional ZIP profile requires contiguous local records, a bounded APK
+signing block, an exact central directory and final uncommented EOCD. It rejects
+prefixes, trailing data, ZIP64, multi-disk, encryption/data descriptors, duplicate
+names/extras, contradictory local/central fields, unsupported methods/attributes,
+bad CRCs and excessive expansion. Stored and complete raw-deflate streams are
+supported. Only the narrowly checked Android alignment extra is recognized.
+ZIP metadata participates in the original-byte comparison without modification.
+
+The signing-block parser checks both size fields, bounded length-prefixed fields,
+unique pair IDs, one v2 signer/certificate and matching unique algorithm lists.
+It specifically rejects **dependency-metadata pair `0x504b4453`**, unknown pairs,
+nonzero padding, unknown algorithms, extra signed fields and all attributes.
+The deliberately narrow supported structural profile is v2 with RSA PKCS1/SHA-256
+or ECDSA/SHA-256 and optional zero verity padding. v1/v3/v3.1/v4, rotation and the
+historical extra empty signed-data field are unsupported. No signing configuration
+was selected or changed to fit this profile. A future qualified pair outside it
+must fail pending independent review, never be rewritten into compatibility.
+Parsing a certificate or signature-shaped field is **not cryptographic verification**.
+
+Package checks reuse the existing manifest/API/version/release/extraction policy
+and add an exact permitted ZIP inventory and one uses-sdk element. Native libraries,
+assets, extra DEX, v1 signatures, dependency payload entries, unauthorized permissions
+and extra components are excluded. The existing DEX capability screen is retained.
+It is not a DEX verifier, resource-table reference resolver or proof of compiled
+one-attempt semantics. Those require authenticated source-to-build correspondence;
+the original source controls and JVM tests remain necessary and unchanged.
+
+Optional `--build-receipts` reads a private, size-bounded JSON claim packet with
+duplicate-key rejection. Exactly two records must bind the whole APK bytes, the
+length-delimited full source/mode snapshot and matching input/tool/signer identities.
+Build, checkout, output, dependency-home, execution, operator and retained-artifact
+identities must differ. Missing fields, contradictory hashes, copied/stale claims,
+non-fresh claims, future execution, expired records and mismatched inputs reject.
+Identity fields are opaque 64-hex digests of private evidence; their syntax and
+inequality do **not** establish the underlying events or independence. The maximum
+receipt expiry is conservatively **2026-12-08 00:00 UTC**, with a calendar assertion;
+ADR-0003's earlier termination conditions still apply and are not automated here.
+
+### Hard blocker: authenticated authority and real signatures
+
+`qualified_authority` always rejects with
+`independent-qualification-authority-unavailable`. There is no caller trust hash,
+approval boolean, environment bypass, self-reported verified-signature flag or
+test-runner callback that can enable admission. Even a complete internally
+consistent synthetic receipt packet fails this boundary through the real CLI.
+This preserves the existing [UNTRUSTED installed-tool disposition](gate-0-installed-jdk-sdk-integrity.md)
+and [unqualified independent chain](gate-0-independent-linux-build.md).
+
+The staged SDK integration specifies verification only, individually for each
+original: `verify --verbose --print-certs --min-sdk-version 37 --max-sdk-version 37 -Werr`.
+Its output parser requires successful exit, no stderr/warnings, verified v2 only,
+exactly one signer, and the authorized certificate matching the parsed original.
+However, **the integration is unreachable without a separately implemented and
+reviewed authority adapter** supplying authenticated SDK/JDK identity, sanitized
+execution environment, signer authorization and independently authenticated
+evidence. Final admission also remains explicitly unimplemented, preventing a
+future adapter addition alone from silently enabling qualification. No SDK signature
+verification was executed here. Output-parser fixtures are not valid/invalid
+cryptographic signature experiments. Real altered-signature and wrong-signer
+verification remain **NOT RUN**, not passed by fixture text.
+
+The next required real proof is a designated independent review packet that
+authenticates source, OS/administration, complete tools/dependencies and verifier,
+disposes of the Windows incident or qualifies a replacement chain, and establishes
+dedicated private signing custody and recoverable independent retention. That
+packet must define an authenticated receipt authority, freshness/revocation and
+source/artifact binding suitable for a reviewed adapter and final admission.
+Only after separate build/signing authorization may two genuinely fresh builds,
+their independently retained originals, actual signature controls and strict
+complete-byte equality supply the real qualification evidence. Backup/recovery,
+artifact review, transfer approval and exact Samsung installation approval remain
+mandatory subsequent boundaries. No such proof or approval is inferred here.
+
+### Historical logic review and provenance
+
+Read the historical comparator and signing reader at
+`18697fd8c32450d96e0c134acb7e9724bd2f65c7`, referenced by the unchanged
+[fifteen-failure record](gate-0-apk-reproducibility.md). Retained concepts are
+bounded little-endian framing, matching block lengths, duplicate rejection and
+original-file comparison. The old native inventory, build orchestration, shared
+development signer, summary-object equality and unsigned positive fixtures were
+not restored as admission. Unknown pair/algorithm acceptance and the historical
+extra-field compatibility exception were deliberately not inherited.
+The current [AOSP v2 format](https://source.android.com/docs/security/features/apksigning/v2)
+and [SDK verification interface](https://developer.android.com/tools/apksigner)
+were consulted for field ordering and verification arguments; no upstream code was
+copied. This task's source review is not the designated independent approval.
+Original task-authored Python uses only the standard library; existing PSF/SDK/JDK
+and toolchain rights records remain applicable, with no new dependency, binary,
+license grant or distribution claim. Maintainer remains the repository owner.
+
+### Actual local validation and falsifiers
+
+Windows x86_64, bundled CPython 3.12.14, existing Temurin 17.0.21+9 and API-37
+compile JAR. No Gradle/unsigned packaging research was repeated. Commands used
+the selected existing Python/JDK paths privately; public equivalents:
+
+```text
+python .github/scripts/test-memory-diagnostic.py
+python .github/scripts/test-memory-diagnostic.py --verify-source-baseline
+python .github/scripts/test-memory-diagnostic.py --check-source-ref HEAD
+python .github/scripts/test-memory-diagnostic.py --java-home <existing-JDK> --android-jar <existing-API-37-JAR>
+python .github/scripts/test-execution-lock.py --android-jar <existing-API-37-JAR>
+python .github/scripts/validate-foundation.py
+python .github/scripts/validate-harness.py
+python .github/scripts/test-repository-validation.py
+python .github/scripts/test-desktop-readiness.py
+python .github/scripts/test-offline-image-inspect.py
+python .github/scripts/test-frame-copy.py
+python .github/scripts/test-gradle-distribution.py
+python .github/scripts/test-installed-tools.py
+git diff --check
+```
+
+- New controls: **60 specific synthetic negatives and 60 assertion failures after
+  actual AST detector-body removal across eight functions**, plus **eight** file,
+  real CLI and admission negatives. Each mutant must complete on the defective
+  input, then the negative assertion must fail because rejection disappeared;
+  arbitrary exceptions, timeouts and wrong rejection reasons do not count.
+- Positive controls: stored/deflated synthetic ZIP/signing framing, exact original
+  byte equality, policy parsing, consistent receipt syntax and SDK-output parsing.
+  All binary fixtures are disposable and visibly labeled synthetic; none is a
+  valid signed, independently built or installable APK. They never pass admission.
+- Existing controls: **60 source negatives / 60 detector-removal assertions**,
+  six unsigned metadata negatives, isolated Git CLI and exact historical baseline
+  recomputation passed. No protected inventory or trust digest was regenerated.
+- Diagnostic JVM: **190 assertions**, compiled cleanup-removal rejection, actual
+  Activity bytecode with desktop framework doubles, and all Java compilation
+  against API 37 passed. Execution lock: **600 denials in three JVMs and three
+  rejected mutants**. Android runtime remains untested.
+- Foundation/harness validators passed: **183 files, 112 Markdown files, 54
+  requirements, four ADRs**. Repository regression: **152 tests, 148 passed / four
+  existing Windows skips**. Readiness, offline-image, frame and Gradle-distribution
+  suites passed **28, 45, 4 and 38** tests respectively.
+- Installed-tools: first run **16 tests, one error**, the unchanged disposable
+  Windows junction creation exceeded its ten-second sandbox timeout. The identical
+  suite with scoped execution access passed **16/16**. No timeout/security change.
+- First new run rejected its positive synthetic file due to Windows path/handle
+  ctime differences. Corrected by comparing ctime within the handle and using
+  file ID/size/mtime plus complete bytes across path reads. Final review also caught
+  and corrected a one-day error in the proposed expiry literal; the new calendar
+  assertion and over-limit receipt negative pass. Neither issue is concealed as
+  a successful initial run.
+
+Falsifiers include acceptance of any byte change, metadata pair, malformed or
+unsupported structure; wrong package/release/API; protected-source drift; missing,
+stale, copied or contradictory receipts; replacement after inspection; a negative
+surviving its detector deletion; or any fixture/self-reported evidence causing
+admission. Resource/DEX semantic interpretation, cryptographic negatives, authentic
+receipt verification, real build independence and real signed equality are unrun.
+
+### Live preflight, final scope and publication
+
+Live GitHub main and local Git agreed on the base above. PR #75 was reverified
+merged from `eb03768c80af8a9a2df26b6168037b045e9fd0e7` against
+`44a2d1cc2c914c4d23f3733b3625a9e589d75874`. Connector search and REST returned
+**zero open PRs**: all requested open heads/bases/diffs/files/modes/checks/jobs/logs/
+reviews/comments/threads were an empty set. The commit-workflow connector returned
+no runs; REST supplied the actual push-run results. An initial CLI socket denial
+was resolved with scoped execution access.
+Exact-main [Foundation run 42925839071](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42925839071)
+passed foundation job **130211960231** and Windows job **130211959792**;
+[Android run 42925839106](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/42925839106)
+job **130211959920** passed. Check/job/step metadata and completed logs were
+retrieved; relevant checkout, test, build and inspection results were examined.
+These are baseline receipts, not this PR's CI. [GitHub Status](https://www.githubstatus.com/api/v2/status.json)
+reported All Systems Operational, update `2026-11-10T23:36:07.008Z`.
+
+Read governing requirements/ADRs, acceptance/provenance, diagnostic and incident
+records, independent-chain/tool-integrity evidence, adoption/dependency catalog,
+source history and all three workflows. Six registered worktrees and their branches,
+ignored/private assets and the initially clean checkout were preserved; no stashes
+existed. No tracked APK/JAR/AAR/SO/EXE/DLL was found. Private artifact inventories
+were not exhaustively inspected or authenticated. No APK, private hash/path,
+receipt, signing data or personal identifier is published.
+
+Final scope is three existing regular **100644** text files: the diagnostic
+checker, this evidence and its index. They were already the exact three explicit
+review files. `SOURCE_BASE`, `BASE_BUILD`, `PROPOSED_BUILD`, `PROTECTED` and
+`REVIEWED_FILES` remain unchanged; every other tracked file is unchanged.
+Complete diff/mode/source/privacy review and whitespace/link validation were
+performed. No metadata setting, signing configuration, source authority, requirement,
+workflow, execution lock or one-attempt Java code changed. Foundation and Android
+remain automatically applicable; QEMU filters do not select this change.
+Linux/native controls were not run locally. No keys, signing, physical-test
+artifacts, private transfer, phone/ADB/USB, native activation or VM execution.
+
+Publish exactly one PR, attach to the originating Codex chat, verify that association
+once, then stop without polling new-head CI, reviews, comments, bots, badges or
+mergeability. New-head CI is **UNOBSERVED at publication**. All fifteen historical
+signed-byte failures remain failures. ADR-0003 expires no later than **2026-12-08**,
+subject to earlier termination. **Gate 0 Unresolved; Gates A–G Not reached; physical
+testing NOT READY. Independent backup UNVERIFIED; private evidence UNPRESERVED.**
