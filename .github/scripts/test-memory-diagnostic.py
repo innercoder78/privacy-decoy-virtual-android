@@ -15,6 +15,9 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
+import stat
+import time
+import zlib
 
 ROOT = Path(__file__).resolve().parents[2]
 MODULE = ROOT / 'android/memory-diagnostic'
@@ -811,17 +814,592 @@ public class ActivityTest {
     print(result.stdout.strip())
 
 
+class QualificationRejection(ValueError):
+    """Stable public reason only; never include private paths, bytes or receipts."""
+
+
+QUALIFICATION_EXPIRES = 1796688000  # 2026-12-08 00:00 UTC; earlier stop conditions still apply
+
+
+def qualification_require(condition, code):
+    if not condition:
+        raise QualificationRejection(code)
+
+
+class SigningFields:
+    """Re-reviewed historical PDVA framing; independent approval remains required."""
+    def __init__(self, data):
+        self.data, self.pos = data, 0
+
+    def take(self, size):
+        qualification_require(0 <= size <= len(self.data) - self.pos, 'signing-field-bounds')
+        value = self.data[self.pos:self.pos + size]
+        self.pos += size
+        return value
+
+    def number(self, size=4):
+        return int.from_bytes(self.take(size), 'little')
+
+    def field(self):
+        return self.take(self.number())
+
+    def end(self):
+        qualification_require(self.pos == len(self.data), 'signing-trailing-field')
+
+
+def signed_v2(value):
+    outer = SigningFields(value)
+    sequence = SigningFields(outer.field()); outer.end()
+    signer = SigningFields(sequence.field()); sequence.end()  # exactly one signer
+    signed = SigningFields(signer.field())
+    signatures, key = signer.field(), signer.field(); signer.end()
+    digests, certificates, attributes = signed.field(), signed.field(), signed.field()
+    # No undocumented extensions, rotation, attributes or extra certificates.
+    signed.end()
+    qualification_require(key and not attributes, 'unsupported-v2-attributes-or-key')
+    certs = SigningFields(certificates)
+    certificate = certs.field(); certs.end()
+    qualification_require(certificate, 'missing-v2-certificate')
+
+    def algorithms(raw, digest=False):
+        fields, seen = SigningFields(raw), []
+        while fields.pos < len(raw):
+            record = SigningFields(fields.field())
+            algorithm, payload = record.number(), record.field(); record.end()
+            qualification_require(algorithm not in seen, 'duplicate-signature-algorithm')
+            qualification_require(algorithm in (0x0103, 0x0201) and payload
+                                  and (not digest or len(payload) == 32), 'unsupported-signature-algorithm')
+            seen.append(algorithm)
+        qualification_require(seen, 'missing-signature-algorithm')
+        return seen
+
+    qualification_require(algorithms(digests, True) == algorithms(signatures), 'signature-algorithm-mismatch')
+    return hashlib.sha256(certificate).hexdigest()  # identity only, NOT verification
+
+
+def signed_block(raw):
+    qualification_require(32 <= len(raw) <= 4 * 1024 * 1024
+                          and raw[-16:] == b'APK Sig Block 42', 'signing-envelope')
+    qualification_require(int.from_bytes(raw[:8], 'little') ==
+                          int.from_bytes(raw[-24:-16], 'little') == len(raw) - 8, 'signing-size')
+    fields, seen, certificate = SigningFields(raw[8:-24]), set(), None
+    while fields.pos < len(fields.data):
+        pair = SigningFields(fields.take(fields.number(8)))
+        identifier = pair.number()
+        qualification_require(identifier not in seen, 'duplicate-signing-pair')
+        seen.add(identifier)
+        qualification_require(identifier != 0x504b4453, 'dependency-metadata-pair')
+        qualification_require(identifier in (0x7109871a, 0x42726577), 'unsupported-signing-pair')
+        value = pair.take(len(pair.data) - pair.pos)
+        if identifier == 0x7109871a:
+            certificate = signed_v2(value)
+        else:
+            qualification_require(not any(value), 'nonzero-signing-padding')
+    qualification_require(certificate is not None, 'missing-v2-pair')
+    return certificate
+
+
+def signed_zip(raw):
+    """Conservative non-ZIP64 profile; original bytes are never rewritten."""
+    qualification_require(22 <= len(raw) <= 32 * 1024 * 1024, 'apk-size')
+    # No ZIP comment, trailing data, multi-disk, ZIP64, prefixes or hidden records.
+    end = len(raw) - 22
+    qualification_require(raw[end:end + 4] == b'PK\x05\x06', 'zip-eocd')
+    disk, cd_disk, count_disk, count, size, central, comment = struct.unpack_from('<4H2IH', raw, end + 4)
+    qualification_require(disk == cd_disk == comment == 0 and 0 < count == count_disk <= 128
+                          and central + size == end and central >= 32, 'zip-layout')
+    block_size = int.from_bytes(raw[central - 24:central - 16], 'little')
+    qualification_require(24 <= block_size <= min(4 * 1024 * 1024 - 8, central - 8), 'signing-block-bounds')
+    start = central - block_size - 8
+    certificate = signed_block(raw[start:central])
+    local, cursor, payloads = 0, central, {}
+
+    def extras(data):
+        fields, seen = SigningFields(data), set()
+        while fields.pos < len(data):
+            identifier, length = fields.number(2), fields.number(2)
+            value = fields.take(length)
+            qualification_require(identifier not in seen, 'duplicate-zip-extra')
+            seen.add(identifier)
+            qualification_require(identifier == 0xd935 and len(value) >= 2
+                                  and int.from_bytes(value[:2], 'little') in (4, 4096, 16384)
+                                  and not any(value[2:]), 'unsupported-zip-extra')
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+            entries = archive.infolist()
+            qualification_require(len(entries) == count and archive.start_dir == central, 'zip-inventory')
+            total = 0
+            for entry in entries:
+                qualification_require(cursor + 46 <= end and raw[cursor:cursor + 4] == b'PK\x01\x02', 'central-header')
+                name_len, extra_len, comment_len = struct.unpack_from('<3H', raw, cursor + 28)
+                next_cursor = cursor + 46 + name_len + extra_len + comment_len
+                qualification_require(next_cursor <= end and not comment_len, 'central-extent')
+                name = raw[cursor + 46:cursor + 46 + name_len]
+                qualification_require(re.fullmatch(rb'[A-Za-z0-9_./-]+', name) is not None
+                                      and all(p not in ('', '.', '..') for p in entry.filename.split('/'))
+                                      and entry.filename.encode('ascii') == name, 'zip-name')
+                qualification_require(entry.filename not in payloads, 'duplicate-zip-name')
+                qualification_require(entry.flag_bits in (0, 0x800) and entry.compress_type in (0, 8)
+                                      and entry.extract_version <= 20 and entry.volume == 0
+                                      and entry.file_size <= 8 * 1024 * 1024
+                                      and entry.header_offset == local
+                                      and (entry.external_attr >> 16) & 0o170000 in (0, stat.S_IFREG),
+                                      'unsupported-zip-entry')
+                total += entry.file_size
+                qualification_require(total <= 16 * 1024 * 1024, 'zip-expanded-size')
+                qualification_require(local + 30 <= start and raw[local:local + 4] == b'PK\x03\x04', 'local-header')
+                version, flags, method, stamp, date, crc, compressed, expanded, nl, el = struct.unpack_from(
+                    '<5H3I2H', raw, local + 4)
+                header_end = local + 30 + nl + el
+                qualification_require(header_end + compressed <= start and
+                                      (version, flags, method, crc, compressed, expanded, nl) ==
+                                      (entry.extract_version, entry.flag_bits, entry.compress_type,
+                                       entry.CRC, entry.compress_size, entry.file_size, name_len)
+                                      and raw[local + 10:local + 14] == raw[cursor + 12:cursor + 16]
+                                      and raw[local + 30:local + 30 + nl] == name, 'local-central-mismatch')
+                extras(raw[local + 30 + nl:header_end]); extras(entry.extra)
+                compressed_bytes = raw[header_end:header_end + compressed]
+                if method == 0:
+                    qualification_require(compressed == expanded, 'stored-zip-size')
+                else:
+                    decoder = zlib.decompressobj(-15)
+                    decoded = decoder.decompress(compressed_bytes, expanded + 1)
+                    qualification_require(decoder.eof and not decoder.unused_data and not decoder.unconsumed_tail
+                                          and len(decoded) == expanded, 'deflate-extent')
+                payloads[entry.filename] = archive.read(entry)  # includes CRC verification
+                local, cursor = header_end + compressed, next_cursor
+            qualification_require(local == start and cursor == end, 'zip-hidden-records')
+    except (zipfile.BadZipFile, NotImplementedError, UnicodeError, RuntimeError, zlib.error):
+        raise QualificationRejection('zip-decode') from None
+    return payloads, certificate
+
+
+def signed_package(payloads):
+    names = set(payloads)
+    required = {'AndroidManifest.xml', 'classes.dex', 'resources.arsc'}
+    optional = {'META-INF/com/android/build/gradle/app-metadata.properties', 'META-INF/version-control-info.textproto'}
+    xmls = {n for n in names if re.fullmatch(r'res/[A-Za-z0-9_-]+\.xml', n)}
+    qualification_require(required <= names and len(xmls) == 1 and names <= required | optional | xmls,
+                          'signed-package-inventory')
+    try:
+        manifest = binary_manifest(payloads['AndroidManifest.xml'])
+        qualification_require(len(manifest.findall('uses-sdk')) == 1, 'signed-package-sdk-count')
+        manifest_policy(manifest, packaged=True)
+        extraction_policy(binary_manifest(payloads[next(iter(xmls))]))
+    except (AssertionError, IndexError, struct.error, UnicodeError):
+        raise QualificationRejection('signed-package-policy') from None
+    qualification_require(payloads['classes.dex'].startswith(b'dex\n'), 'signed-package-dex')
+    # This is a policy screen; authenticated source/build correspondence remains
+    # mandatory for DEX semantics and the unchanged one-attempt boundary.
+    for forbidden in (b'Ljava/net/', b'Landroid/net/', b'Ljava/lang/ProcessBuilder;',
+                      b'Ljava/lang/Runtime;', b'Ljava/lang/reflect/', b'Ldalvik/system/DexClassLoader;'):
+        qualification_require(forbidden not in payloads['classes.dex'], 'signed-package-capability')
+
+
+def original_snapshot(path):
+    path = Path(path)
+    qualification_require(not any(p.is_symlink() or getattr(p.lstat(), 'st_file_attributes', 0) & 0x400
+                                  for p in (path, *path.parents)), 'artifact-alias')
+    qualification_require(stat.S_ISREG(path.lstat().st_mode), 'artifact-type-size')
+    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0)
+    with os.fdopen(os.open(path, flags), 'rb') as stream:
+        before = os.fstat(stream.fileno())
+        qualification_require(stat.S_ISREG(before.st_mode) and 0 < before.st_size <= 32 * 1024 * 1024,
+                              'artifact-type-size')
+        raw = stream.read(32 * 1024 * 1024 + 1)
+        after = os.fstat(stream.fileno())
+    # CPython 3.12 Windows stat/fstat expose different ctime semantics. Compare
+    # ctime only within the open handle; retain portable file ID/mtime plus bytes.
+    identity = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns)
+    qualification_require(identity(before) == identity(after) == identity(path.stat())
+                          and before.st_ctime_ns == after.st_ctime_ns
+                          and len(raw) == before.st_size, 'artifact-changed')
+    return identity(before), raw
+
+
+def exact_original_bytes(left, right):
+    qualification_require(left == right, 'original-bytes-differ')
+
+
+def original_pair(paths):
+    qualification_require(len(paths) == 2, 'original-pair-count')
+    snapshots = [original_snapshot(p) for p in paths]
+    qualification_require(snapshots[0][0][:2] != snapshots[1][0][:2], 'same-original-file')
+    exact_original_bytes(snapshots[0][1], snapshots[1][1])
+    return snapshots
+
+
+def unchanged_originals(paths, snapshots):
+    qualification_require([original_snapshot(p) for p in paths] == snapshots, 'artifact-replaced')
+
+
+def receipt_consistency(receipts, raw, source, now):
+    """Reject contradictions; well-formed claims are NOT authenticated evidence."""
+    qualification_require(type(receipts) is list and len(receipts) == 2, 'missing-build-receipts')
+    fields = {'build', 'checkout', 'outputs', 'dependency_home', 'retained', 'execution', 'operator',
+              'source', 'apk', 'inputs', 'tools', 'signer', 'started', 'finished', 'expires', 'fresh', 'copied'}
+    for row in receipts:
+        qualification_require(type(row) is dict and set(row) == fields, 'build-receipt-schema')
+        qualification_require(all(type(row[k]) is str and re.fullmatch('[0-9a-f]{64}', row[k])
+                                  for k in fields - {'started', 'finished', 'expires', 'fresh', 'copied'}),
+                              'build-receipt-identity')
+        qualification_require(all(type(row[k]) is int for k in ('started', 'finished', 'expires'))
+                              and 0 < row['started'] < row['finished'] <= now < row['expires']
+                              <= QUALIFICATION_EXPIRES, 'build-receipt-time')
+        qualification_require(row['fresh'] is True and row['copied'] is False, 'build-receipt-freshness')
+        qualification_require(row['source'] == source and row['apk'] == hashlib.sha256(raw).hexdigest(),
+                              'build-receipt-correspondence')
+    for key in ('build', 'checkout', 'outputs', 'dependency_home', 'retained', 'execution', 'operator'):
+        qualification_require(receipts[0][key] != receipts[1][key], 'build-receipt-independence')
+    for key in ('source', 'inputs', 'tools', 'signer'):
+        qualification_require(receipts[0][key] == receipts[1][key], 'build-receipt-inputs')
+
+
+def qualified_authority(receipts):
+    """No independent authority/receipt authentication is available in this repo.
+
+    Deliberately no CLI trust hash, environment bypass, boolean approval, fake
+    runner or caller-supplied success callback. A separately reviewed integration
+    must authenticate the custody, administration, tool and fresh-build packet
+    before this boundary can return an authorized signer and SDK tool command.
+    Never replace this with acceptance of receipt_consistency alone.
+    """
+    raise QualificationRejection('independent-qualification-authority-unavailable')
+
+
+def read_build_receipts(path):
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            qualification_require(key not in result, 'duplicate-receipt-field')
+            result[key] = value
+        return result
+    with Path(path).open('rb') as stream:
+        data = stream.read(65537)
+    qualification_require(len(data) <= 65536, 'receipt-size')
+    try:
+        return json.loads(data, object_pairs_hook=unique)
+    except (UnicodeError, json.JSONDecodeError):
+        raise QualificationRejection('receipt-json') from None
+
+
+def verified_signature_output(result, expected):
+    """Parse SDK verification output; calling this on fixture text proves no signature."""
+    qualification_require(result.returncode == 0 and not result.stderr and result.stdout.startswith('Verifies\n'),
+                          'signature-verification-failed')
+    text = result.stdout
+    schemes = re.findall(r'^Verified using (v[0-9.]+) scheme .*: (true|false)$', text, re.M)
+    qualification_require(len(schemes) == 5 and dict(schemes) ==
+                          {'v1': 'false', 'v2': 'true', 'v3': 'false', 'v3.1': 'false', 'v4': 'false'},
+                          'unsupported-verified-schemes')
+    certs = re.findall(r'^Signer #1 certificate SHA-256 digest: ([0-9a-f]{64})$', text, re.M)
+    qualification_require(certs == [expected] and text.count('certificate SHA-256 digest:') == 1
+                          and re.findall(r'^Number of signers: (.+)$', text, re.M) == ['1'], 'unauthorized-signer')
+    qualification_require('WARNING' not in text and 'DOES NOT VERIFY' not in text, 'signature-warning')
+
+
+def qualification_source_identity(snapshot):
+    return hashlib.sha256(b''.join(
+        len(part).to_bytes(8, 'big') + part
+        for path, (mode, blob) in sorted(snapshot.items()) for part in (path.encode(), mode.encode(), blob)
+    )).hexdigest()
+
+
+def qualify_signed_pair(paths, receipts=None):
+    """Read-only staged verifier. There is currently NO successful admission path."""
+    snapshot = working_source()
+    verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+    originals = original_pair(paths)
+    certificates = []
+    for _, raw in originals:
+        payloads, certificate = signed_zip(raw)
+        signed_package(payloads)
+        certificates.append(certificate)
+    source = qualification_source_identity(snapshot)
+    receipt_consistency(receipts, originals[0][1], source, int(time.time()))
+    authority = qualified_authority(receipts)  # STOP until independent authentication exists
+    # Integration contract for a future reviewed authority, not an active trust
+    # configuration. command must be an authenticated absolute SDK/JDK invocation
+    # with a qualified, sanitized process environment (no ambient JVM injections).
+    for path, certificate in zip(paths, certificates):
+        qualification_require(certificate == authority['signer'], 'unauthorized-signer')
+        result = subprocess.run([*authority['command'], 'verify', '--verbose', '--print-certs',
+                                 '--min-sdk-version', '37', '--max-sdk-version', '37', '-Werr', str(Path(path).resolve())],
+                                capture_output=True, text=True, timeout=60, env=authority['environment'], check=False)
+        verified_signature_output(result, authority['signer'])
+    unchanged_originals(paths, originals)
+    qualification_require(working_source() == snapshot, 'qualification-source-changed')
+    # Even a future adapter must explicitly add and review final admission;
+    # removing the unavailable-authority detector alone cannot qualify artifacts.
+    raise QualificationRejection('final-admission-not-implemented')
+
+
+def signed_qualification_tests():
+    """Disposable synthetic bytes ONLY: no keys, signing, APK execution or admission."""
+    import copy
+    from types import SimpleNamespace
+    cases = []
+    require(time.gmtime(QUALIFICATION_EXPIRES)[:6] == (2026, 12, 8, 0, 0, 0), 'fixed qualification expiration')
+
+    def negative(function, arguments, code):
+        cases.append((function, arguments, code))
+
+    def rejected(function, arguments, code):
+        try:
+            function(*arguments)
+        except QualificationRejection as failure:
+            require(str(failure) == code, 'wrong qualification rejection: ' + code)
+        else:
+            raise AssertionError('qualification negative accepted: ' + code)
+
+    def field(raw):
+        return struct.pack('<I', len(raw)) + raw
+
+    def v2(algorithm=0x0103, attributes=b'', duplicate=False):
+        digest = field(struct.pack('<I', algorithm) + field(bytes(32)))
+        signature = field(struct.pack('<I', algorithm) + field(b'SYNTHETIC-NOT-A-SIGNATURE'))
+        data = field(digest * (2 if duplicate else 1)) + field(field(b'SYNTHETIC-NOT-A-CERTIFICATE')) + field(attributes)
+        return field(field(field(data) + field(signature) + field(b'SYNTHETIC-NOT-A-KEY')))
+
+    def block(pairs=None):
+        if pairs is None:
+            pairs = [(0x7109871a, v2())]
+        data = b''.join(struct.pack('<QI', len(value) + 4, identifier) + value for identifier, value in pairs)
+        size = struct.pack('<Q', len(data) + 24)
+        return size + data + size + b'APK Sig Block 42'
+
+    def xml(root):
+        # Minimal string-valued binary XML fixture. Never compiled or installable.
+        strings = []
+        def index(value):
+            if value not in strings:
+                strings.append(value)
+            return strings.index(value)
+        def chunk(kind, body):
+            return struct.pack('<HHI', kind, 16, 16 + len(body)) + bytes(8) + body
+        def node(element):
+            attrs = []
+            for key, value in element.attrib.items():
+                ns = index(NS[1:-1]) if key.startswith(NS) else 0xffffffff
+                key = key[len(NS):] if key.startswith(NS) else key
+                attrs.append(struct.pack('<IIIHBBI', ns, index(key), index(value), 8, 0, 3, index(value)))
+            name = index(element.tag)
+            begin = chunk(0x102, struct.pack('<II6H', 0xffffffff, name, 20, 20, len(attrs), 0, 0, 0) + b''.join(attrs))
+            return begin + b''.join(node(c) for c in element) + chunk(0x103, struct.pack('<II', 0xffffffff, name))
+        nodes = node(root)
+        pool, offsets = b'', []
+        for string in strings:
+            encoded = string.encode()
+            require(len(encoded) < 128, 'bounded fixture string')
+            offsets.append(len(pool)); pool += bytes([len(string), len(encoded)]) + encoded + b'\0'
+        start = 28 + 4 * len(strings)
+        pool = (struct.pack('<HHI5I', 1, 28, start + len(pool), len(strings), 0, 0x100, start, 0)
+                + b''.join(struct.pack('<I', n) for n in offsets) + pool)
+        return struct.pack('<HHI', 3, 8, 8 + len(pool) + len(nodes)) + pool + nodes
+
+    manifest = ET.parse(MODULE / 'src/main/AndroidManifest.xml').getroot()
+    manifest.set('package', 'org.pdva.memorydiagnostic')
+    manifest.set(NS + 'versionCode', '1'); manifest.set(NS + 'versionName', '0.1-diagnostic')
+    ET.SubElement(manifest, 'uses-sdk', {NS + 'minSdkVersion': '37', NS + 'targetSdkVersion': '37'})
+    payloads = {'AndroidManifest.xml': xml(manifest), 'classes.dex': b'dex\nSYNTHETIC-NOT-DEX',
+                'resources.arsc': b'SYNTHETIC-NOT-RESOURCES',
+                'res/policy.xml': xml(ET.parse(MODULE / 'src/main/res/xml/data_extraction_rules.xml').getroot())}
+
+    def apk(signing=None, timestamp=(2026, 1, 1, 0, 0, 0), compression=0, extra=b''):
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, 'w') as archive:
+            for name, data in payloads.items():
+                entry = zipfile.ZipInfo(name, timestamp); entry.compress_type = compression
+                entry.extra = extra
+                archive.writestr(entry, data)
+        raw = stream.getvalue(); central = struct.unpack_from('<I', raw, len(raw) - 6)[0]
+        signing = block() if signing is None else signing
+        result = bytearray(raw[:central] + signing + raw[central:])
+        struct.pack_into('<I', result, len(result) - 6, central + len(signing))
+        return bytes(result)
+
+    raw = apk()
+    parsed, certificate = signed_zip(raw)
+    require(parsed == payloads and certificate == signed_block(block()), 'synthetic structural positive')
+    require(signed_zip(apk(compression=8))[0] == payloads, 'synthetic deflate positive')
+    signed_package(parsed); exact_original_bytes(raw, bytes(raw))
+    for changed in (raw[:-1], raw + b'x', bytes([raw[0] ^ 1]) + raw[1:], apk(timestamp=(2026, 1, 2, 0, 0, 0))):
+        negative(exact_original_bytes, (raw, changed), 'original-bytes-differ')
+    for changed in (raw[:-1], raw + b'x'):
+        negative(signed_zip, (changed,), 'zip-eocd')
+    bad = bytearray(raw); struct.pack_into('<H', bad, len(bad) - 18, 1)
+    negative(signed_zip, (bytes(bad),), 'zip-layout')
+    bad = bytearray(raw); bad[10] ^= 1
+    negative(signed_zip, (bytes(bad),), 'local-central-mismatch')
+    bad = bytearray(raw); bad[30 + len('AndroidManifest.xml') + 4] ^= 1
+    negative(signed_zip, (bytes(bad),), 'zip-decode')
+    bad = bytearray(raw); central = struct.unpack_from('<I', bad, len(bad) - 6)[0]
+    struct.pack_into('<I', bad, central + 42, 1)
+    negative(signed_zip, (bytes(bad),), 'unsupported-zip-entry')
+    negative(signed_zip, (apk(extra=struct.pack('<HHH', 0xd935, 2, 4) * 2),), 'duplicate-zip-extra')
+    negative(signed_zip, (apk(extra=struct.pack('<HH', 0x9999, 0)),), 'unsupported-zip-extra')
+    bad = bytearray(raw); struct.pack_into('<H', bad, central + 8, 1)
+    negative(signed_zip, (bytes(bad),), 'unsupported-zip-entry')
+    negative(signed_block, (block([(0x7109871a, v2()), (0x504b4453, b'metadata')]),), 'dependency-metadata-pair')
+    negative(signed_block, (block([(0x7109871a, v2())] * 2),), 'duplicate-signing-pair')
+    negative(signed_block, (block([(0xf05368c0, b'unsupported')]),), 'unsupported-signing-pair')
+    negative(signed_block, (block([(0x42726577, b'x')]),), 'nonzero-signing-padding')
+    negative(signed_block, (block([]),), 'missing-v2-pair')
+    negative(signed_block, (bytes(8) + block()[8:],), 'signing-size')
+    negative(signed_block, (block()[:-1],), 'signing-envelope')
+    bad = bytearray(block()); struct.pack_into('<Q', bad, 8, 0xffffffffffffffff)
+    negative(signed_block, (bytes(bad),), 'signing-field-bounds')
+    negative(signed_v2, (v2() + b'x',), 'signing-trailing-field')
+    negative(signed_v2, (v2(duplicate=True),), 'duplicate-signature-algorithm')
+    negative(signed_v2, (v2(algorithm=0x9999),), 'unsupported-signature-algorithm')
+    negative(signed_v2, (v2(attributes=field(struct.pack('<I', 1))),), 'unsupported-v2-attributes-or-key')
+    for size in range(4):
+        negative(signed_v2, (v2()[:size],), 'signing-field-bounds')
+    for extra in ('lib/arm64-v8a/payload.so', 'assets/payload', 'sdkDependencyData.pb', 'META-INF/CERT.RSA'):
+        negative(signed_package, ({**payloads, extra: b'synthetic'},), 'signed-package-inventory')
+    for key, value in (('package', 'wrong.package'), (NS + 'versionCode', '2'), (NS + 'versionName', 'wrong')):
+        tree = copy.deepcopy(manifest); tree.set(key, value)
+        negative(signed_package, ({**payloads, 'AndroidManifest.xml': xml(tree)},), 'signed-package-policy')
+    for target, key, value in (('application', 'debuggable', 'true'), ('uses-sdk', 'minSdkVersion', '36'),
+                               ('uses-sdk', 'targetSdkVersion', '36')):
+        tree = copy.deepcopy(manifest); tree.find(target).set(NS + key, value)
+        negative(signed_package, ({**payloads, 'AndroidManifest.xml': xml(tree)},), 'signed-package-policy')
+    tree = copy.deepcopy(manifest); ET.SubElement(tree, 'uses-permission', {NS + 'name': 'android.permission.INTERNET'})
+    negative(signed_package, ({**payloads, 'AndroidManifest.xml': xml(tree)},), 'signed-package-policy')
+    negative(signed_package, ({**payloads, 'classes.dex': b'dex\nLjava/net/Socket;'},), 'signed-package-capability')
+    tree = copy.deepcopy(manifest); tree.append(copy.deepcopy(tree.find('uses-sdk')))
+    negative(signed_package, ({**payloads, 'AndroidManifest.xml': xml(tree)},), 'signed-package-sdk-count')
+
+    now = 1794355200  # fixed synthetic clock, not a current-time assertion
+    row = {k: hashlib.sha256(k.encode()).hexdigest() for k in (
+        'build', 'checkout', 'outputs', 'dependency_home', 'retained', 'execution', 'operator',
+        'source', 'apk', 'inputs', 'tools', 'signer')}
+    row.update(apk=hashlib.sha256(raw).hexdigest(), started=now - 20, finished=now - 10,
+               expires=now + 60, fresh=True, copied=False)
+    second = row.copy()
+    for key in ('build', 'checkout', 'outputs', 'dependency_home', 'retained', 'execution', 'operator'):
+        second[key] = hashlib.sha256(('second-' + key).encode()).hexdigest()
+    receipts = [row, second]
+    receipt_consistency(receipts, raw, row['source'], now)
+    negative(receipt_consistency, (None, raw, row['source'], now), 'missing-build-receipts')
+    for key, value, code in (
+        ('expires', now, 'build-receipt-time'), ('started', now + 1, 'build-receipt-time'),
+        ('expires', QUALIFICATION_EXPIRES + 1, 'build-receipt-time'),
+        ('copied', True, 'build-receipt-freshness'), ('fresh', False, 'build-receipt-freshness'),
+        ('apk', '0' * 64, 'build-receipt-correspondence'), ('source', '0' * 64, 'build-receipt-correspondence'),
+        ('build', row['build'], 'build-receipt-independence'), ('retained', row['retained'], 'build-receipt-independence'),
+        ('tools', '0' * 64, 'build-receipt-inputs'), ('signer', '0' * 64, 'build-receipt-inputs')):
+        changed = copy.deepcopy(receipts); changed[1][key] = value
+        negative(receipt_consistency, (changed, raw, row['source'], now), code)
+    changed = copy.deepcopy(receipts); del changed[1]['execution']
+    negative(receipt_consistency, (changed, raw, row['source'], now), 'build-receipt-schema')
+    # Even complete, consistent synthetic claims cannot authenticate themselves.
+    negative(qualified_authority, (receipts,), 'independent-qualification-authority-unavailable')
+    output = 'Verifies\n' + ''.join(f'Verified using {v} scheme (fixture): {str(v == "v2").lower()}\n'
+                                    for v in ('v1', 'v2', 'v3', 'v3.1', 'v4'))
+    output += 'Number of signers: 1\nSigner #1 certificate SHA-256 digest: ' + certificate + '\n'
+    result = SimpleNamespace(returncode=0, stdout=output, stderr='')
+    verified_signature_output(result, certificate)  # parser test ONLY
+    negative(verified_signature_output, (SimpleNamespace(returncode=1, stdout='DOES NOT VERIFY\n', stderr=''), certificate),
+             'signature-verification-failed')
+    negative(verified_signature_output, (result, '0' * 64), 'unauthorized-signer')
+    negative(verified_signature_output, (SimpleNamespace(returncode=0, stdout=output.replace('v2 scheme (fixture): true',
+             'v2 scheme (fixture): false'), stderr=''), certificate), 'unsupported-verified-schemes')
+    negative(verified_signature_output, (SimpleNamespace(returncode=0, stdout=output +
+             'Signer #2 certificate SHA-256 digest: ' + certificate + '\n', stderr=''), certificate), 'unauthorized-signer')
+
+    with tempfile.TemporaryDirectory(prefix='pdva-synthetic-signed-structure-') as temp:
+        paths = [Path(temp) / name for name in ('synthetic-a.bin', 'synthetic-b.bin')]
+        for path in paths:
+            path.write_bytes(raw)
+        originals = original_pair(paths)
+        unchanged_originals(paths, originals)
+        rejected(original_pair, ([paths[0], paths[0]],), 'same-original-file')
+        paths[1].write_bytes(raw + b'replacement')
+        rejected(unchanged_originals, (paths, originals), 'artifact-replaced')
+        paths[1].write_bytes(raw)
+        replacement = Path(temp) / 'synthetic-replacement.bin'
+        replacement.write_bytes(raw)
+        originals = original_pair(paths)
+        replacement.replace(paths[1])
+        rejected(unchanged_originals, (paths, originals), 'artifact-replaced')
+        receipt_file = Path(temp) / 'synthetic-receipts.json'
+        receipt_file.write_text('{"build":1,"build":2}')
+        rejected(read_build_receipts, (receipt_file,), 'duplicate-receipt-field')
+        # Actual complete verifier never qualifies these structurally positive
+        # fixtures: absence of receipts is a named, observed rejection.
+        rejected(qualify_signed_pair, (paths,), 'missing-build-receipts')
+        cli = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--signed-pair',
+                              *map(str, paths)], capture_output=True, text=True, timeout=30)
+        require(cli.returncode == 1 and not cli.stderr and cli.stdout.strip() ==
+                'NOT QUALIFIED: missing-build-receipts; admission NOT RUN / Unknown', 'real signed-pair CLI denial')
+        consistent = copy.deepcopy(receipts)
+        current = int(time.time())
+        for item in consistent:
+            item.update(source=qualification_source_identity(working_source()), started=current - 20,
+                        finished=current - 10, expires=min(current + 60, QUALIFICATION_EXPIRES))
+        # The fixed policy expires: after that, time rejection replaces authority
+        # rejection. Tests must never extend the actual policy to stay green.
+        expected = ('independent-qualification-authority-unavailable'
+                    if current < QUALIFICATION_EXPIRES else 'build-receipt-time')
+        rejected(qualify_signed_pair, (paths, consistent), expected)
+        receipt_file.write_text(json.dumps(consistent))
+        cli = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--signed-pair', *map(str, paths),
+                              '--build-receipts', str(receipt_file)], capture_output=True, text=True, timeout=30)
+        require(cli.returncode == 1 and not cli.stderr and cli.stdout.strip() ==
+                'NOT QUALIFIED: ' + expected + '; admission NOT RUN / Unknown', 'real untrusted-receipts CLI denial')
+
+    mutants = {}
+    for function, arguments, code in cases:
+        rejected(function, arguments, code)
+        if function.__name__ not in mutants:
+            tree = ast.parse(inspect.getsource(function))
+            tree.body[0].body = [ast.Pass()]
+            namespace = globals().copy()
+            exec(compile(ast.fix_missing_locations(tree), '<qualification-detector-removal>', 'exec'), namespace)
+            mutants[function.__name__] = namespace[function.__name__]
+        mutant = mutants[function.__name__]
+        mutant(*arguments)  # must complete: arbitrary exceptions are not a kill
+        try:
+            rejected(mutant, arguments, code)
+        except AssertionError as failure:
+            require(type(failure) is AssertionError and str(failure) == 'qualification negative accepted: ' + code,
+                    'wrong qualification mutant outcome')
+        else:
+            raise AssertionError('qualification mutant survived')
+    print(f'PASS: synthetic signed-structure/byte/package/receipt/output controls; {len(cases)} specific negatives; '
+          f'{len(cases)} detector-removal assertion failures ({len(mutants)} bodies); 8 file/CLI/admission negatives')
+    print('Signed-APK qualification: NOT RUN / Unknown; fixtures and parsed signature text are not verification')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java-home', type=Path)
     parser.add_argument('--android-jar', type=Path)
     parser.add_argument('--apk', type=Path)
+    parser.add_argument('--signed-pair', nargs=2, type=Path,
+                        help='read-only preliminary checks; real admission remains unavailable and exits nonzero')
+    parser.add_argument('--build-receipts', type=Path, help='private untrusted claim packet; never grants approval')
     source_mode = parser.add_mutually_exclusive_group()
     source_mode.add_argument('--verify-source-baseline', action='store_true',
                              help='recompute the pinned public evidence from the exact base Git object')
     source_mode.add_argument('--check-source-ref',
                              help='check an existing local commit for the exact proposed source delta only')
     args = parser.parse_args()
+    if args.signed_pair:
+        try:
+            qualification_require(not (args.java_home or args.android_jar or args.apk or args.verify_source_baseline
+                                       or args.check_source_ref), 'incompatible-qualification-options')
+            qualify_signed_pair(args.signed_pair, read_build_receipts(args.build_receipts) if args.build_receipts else None)
+        except QualificationRejection as failure:
+            print('NOT QUALIFIED: ' + str(failure) + '; admission NOT RUN / Unknown')
+            raise SystemExit(1) from None
+        except (OSError, ValueError, AssertionError, struct.error, subprocess.SubprocessError, RecursionError):
+            print('NOT QUALIFIED: inspection-unavailable; admission NOT RUN / Unknown')
+            raise SystemExit(1) from None
+        raise SystemExit('NOT QUALIFIED: no admission result')
+    require(args.build_receipts is None, 'build receipts require signed pair')
     if args.verify_source_baseline or args.check_source_ref:
         require(not (args.java_home or args.android_jar or args.apk), 'source-only options cannot build/inspect packages')
         snapshot = committed_source(SOURCE_BASE if args.verify_source_baseline else args.check_source_ref)
@@ -836,6 +1414,7 @@ def main():
         return
     companion_source_tests()
     metadata_package_tests()
+    signed_qualification_tests()
     source_policy()
     adapter = (JAVA / 'AndroidOps.java').read_text()
     manifest = (MODULE / 'src/main/AndroidManifest.xml').read_text()
