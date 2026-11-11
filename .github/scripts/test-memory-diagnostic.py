@@ -1373,11 +1373,190 @@ def signed_qualification_tests():
     print('Signed-APK qualification: NOT RUN / Unknown; fixtures and parsed signature text are not verification')
 
 
+def unsigned_execution_claims(records, paths, originals, source, now):
+    """Contradiction detection only; local records cannot authenticate execution."""
+    qualification_require(type(records) is list and len(records) == 2, 'unsigned-execution-records')
+    locations = []
+    for row, path, (identity, raw) in zip(records, paths, originals):
+        qualification_require(type(row) is dict and {
+            'source', 'sdk', 'android_home', 'gradle_home', 'started_ns', 'finished_ns',
+            'exit', 'initial_build_absent', 'source_unchanged', 'sdk_unchanged',
+            'source_identity', 'apk', 'apk_identity', 'apk_sha256', 'trust'
+        } <= row.keys(), 'unsigned-execution-schema')
+        qualification_require(row['exit'] == 0 and row['initial_build_absent'] is True
+                              and row['source_unchanged'] is True and row['sdk_unchanged'] is True
+                              and row['trust'] == 'UNTRUSTED', 'unsigned-execution-state')
+        qualification_require(type(row['started_ns']) is int and type(row['finished_ns']) is int
+                              and 0 < row['started_ns'] < identity[3] <= row['finished_ns'] <= now,
+                              'unsigned-execution-time')
+        qualification_require(row['source_identity'] == source
+                              and row['apk_sha256'] == hashlib.sha256(raw).hexdigest()
+                              and row['apk_identity'] == list(identity)
+                              and Path(row['apk']).resolve() == Path(path).resolve(),
+                              'unsigned-execution-correspondence')
+        roots = [Path(row[k]).resolve() for k in ('source', 'sdk', 'android_home', 'gradle_home')]
+        qualification_require(Path(path).resolve() == roots[0] / 'android/memory-diagnostic/build/outputs/apk/release/memory-diagnostic-release-unsigned.apk',
+                              'unsigned-output-location')
+        locations.extend(roots)
+    qualification_require(all(a != b and a not in b.parents and b not in a.parents
+                              for i, a in enumerate(locations) for b in locations[i + 1:]),
+                          'unsigned-execution-separation')
+
+
+def unsigned_task_execution(log):
+    tasks = re.findall(r'^> Task (:memory-diagnostic:\S+)([^\r\n]*)$', log, re.M)
+    executed = {name for name, state in tasks if not state.strip()}
+    empty = {':memory-diagnostic:' + name for name in ('preBuild', 'preReleaseBuild', 'generateReleaseAssets')}
+    qualification_require('BUILD SUCCESSFUL' in log and 'BUILD FAILED' not in log
+                          and 'FROM-CACHE' not in log
+                          and all(state.strip() != 'UP-TO-DATE' or name in empty for name, state in tasks)
+                          and {':memory-diagnostic:' + name for name in (
+                              'compileReleaseJavaWithJavac', 'dexBuilderRelease', 'packageRelease',
+                              'assembleRelease', 'diagnosticTest', 'lintRelease')} <= executed,
+                          'unsigned-task-execution')
+
+
+def unsigned_source_correspondence(source, snapshot):
+    qualification_require(all((source / name).is_file() and not (source / name).is_symlink()
+                              and (source / name).read_bytes() == blob
+                              for name, (_, blob) in snapshot.items()), 'unsigned-source-correspondence')
+
+
+def compare_unsigned_pair(paths, source_ref, records):
+    """Bounded development observation, never signed or independent qualification."""
+    snapshot = committed_source(source_ref)
+    verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+    originals = original_pair(paths)  # ALL original bytes, before any ZIP interpretation.
+    print('PASS: complete original unsigned bytes equal; package/execution checks still pending')
+    unsigned_execution_claims(records, paths, originals, qualification_source_identity(snapshot), time.time_ns())
+    for row, path, (_, raw) in zip(records, paths, originals):
+        source = Path(row['source'])
+        unsigned_source_correspondence(source, snapshot)
+        log = (source.parent / 'execution.log').read_text(errors='strict')
+        unsigned_task_execution(log)
+        package_policy(Path(path))
+        qualification_require(raw[-22:-18] == b'PK\x05\x06' and raw[-2:] == b'\0\0', 'unsigned-zip-end')
+        with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+            signed_package({entry.filename: archive.read(entry) for entry in archive.infolist()})
+    unchanged_originals(paths, originals)
+    print('PASS: complete original unsigned bytes equal; source/package/execution claims consistent; '
+          'UNTRUSTED local observation, NOT independently authenticated or signed qualification')
+
+
+def unsigned_pair_tests():
+    """Synthetic contradiction controls; real builds are a separate experiment."""
+    import copy
+    raw = b'synthetic unsigned observation; not an APK'
+    paths = [Path(tempfile.gettempdir()) / ('pdva-unsigned-fixture-' + x) / 'source/android/memory-diagnostic/build/outputs/apk/release/memory-diagnostic-release-unsigned.apk' for x in ('a', 'b')]
+    originals = [((1, i + 1, len(raw), 20), raw) for i in range(2)]
+    records = []
+    for path, (identity, _) in zip(paths, originals):
+        base = path.parents[7]
+        records.append(dict(source=str(base / 'source'), sdk=str(base / 'sdk'),
+                            android_home=str(base / 'android-home'), gradle_home=str(base / 'gradle-home'),
+                            started_ns=10, finished_ns=30, exit=0, initial_build_absent=True,
+                            source_unchanged=True, sdk_unchanged=True, source_identity='fixture',
+                            apk=str(path), apk_identity=list(identity), apk_sha256=hashlib.sha256(raw).hexdigest(),
+                            trust='UNTRUSTED'))
+    unsigned_execution_claims(records, paths, originals, 'fixture', 40)
+    cases = []
+    for field, value, reason in (
+        ('initial_build_absent', False, 'state'), ('exit', 1, 'state'),
+        ('source_unchanged', False, 'state'), ('sdk_unchanged', False, 'state'),
+        ('trust', 'APPROVED', 'state'), ('started_ns', 21, 'time'),
+        ('finished_ns', 41, 'time'), ('source_identity', 'wrong', 'correspondence'),
+        ('apk_sha256', 'wrong', 'correspondence'), ('apk_identity', [1, 99, len(raw), 20], 'correspondence'),
+        ('apk', str(paths[0]), 'correspondence'),
+        ('gradle_home', records[0]['gradle_home'], 'separation'),
+        ('sdk', records[0]['sdk'], 'separation'),
+        ('android_home', records[0]['android_home'], 'separation')):
+        changed = copy.deepcopy(records); changed[1][field] = value
+        cases.append((changed, 'unsigned-execution-' + reason))
+    cases.extend([(None, 'unsigned-execution-records'), ([{}, {}], 'unsigned-execution-schema')])
+    node = ast.parse(inspect.getsource(unsigned_execution_claims)).body[0]
+    node.body = [ast.Pass()]
+    namespace = globals().copy()
+    exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])), '<unsigned-detector-removal>', 'exec'), namespace)
+    def reject(fn, rows, reason):
+        try:
+            fn(rows, paths, originals, 'fixture', 40)
+        except QualificationRejection as failure:
+            require(str(failure) == reason, 'specific unsigned rejection')
+        else:
+            raise AssertionError('unsigned negative accepted')
+    for rows, reason in cases:
+        reject(unsigned_execution_claims, rows, reason)
+        namespace['unsigned_execution_claims'](rows, paths, originals, 'fixture', 40)
+        try:
+            reject(namespace['unsigned_execution_claims'], rows, reason)
+        except AssertionError as failure:
+            require(str(failure) == 'unsigned negative accepted', 'effective unsigned detector removal')
+        else:
+            raise AssertionError('unsigned detector removal survived')
+    print('PASS: unsigned execution claims; 16 negatives / 16 effective detector-removal assertions (synthetic only)')
+    log = ''.join('> Task :memory-diagnostic:' + name + '\n' for name in (
+        'compileReleaseJavaWithJavac', 'dexBuilderRelease', 'packageRelease', 'assembleRelease',
+        'diagnosticTest', 'lintRelease')) + 'BUILD SUCCESSFUL\n'
+    unsigned_task_execution(log)
+    unsigned_task_execution(log + '> Task :memory-diagnostic:preBuild UP-TO-DATE\n')
+    bad_logs = [log.replace('packageRelease\n', 'packageRelease ' + state + '\n')
+                for state in ('FROM-CACHE', 'UP-TO-DATE', 'SKIPPED', 'NO-SOURCE')]
+    bad_logs += [log.replace('BUILD SUCCESSFUL', 'BUILD FAILED'),
+                 log.replace('> Task :memory-diagnostic:compileReleaseJavaWithJavac\n', '')]
+    node = ast.parse(inspect.getsource(unsigned_task_execution)).body[0]; node.body = [ast.Pass()]
+    namespace = globals().copy()
+    exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])), '<task-detector-removal>', 'exec'), namespace)
+    def reject_log(fn, text):
+        try:
+            fn(text)
+        except QualificationRejection as failure:
+            require(str(failure) == 'unsigned-task-execution', 'specific task rejection')
+        else:
+            raise AssertionError('task negative accepted')
+    for text in bad_logs:
+        reject_log(unsigned_task_execution, text)
+        namespace['unsigned_task_execution'](text)
+        try:
+            reject_log(namespace['unsigned_task_execution'], text)
+        except AssertionError as failure:
+            require(str(failure) == 'task negative accepted', 'effective task detector removal')
+        else:
+            raise AssertionError('task detector removal survived')
+    print('PASS: task execution claims; 6 negatives / 6 effective detector-removal assertions (synthetic only)')
+    with tempfile.TemporaryDirectory(prefix='pdva-source-correspondence-') as temp:
+        source = Path(temp)
+        (source / 'fixture').write_bytes(b'fixture')
+        unsigned_source_correspondence(source, {'fixture': ('100644', b'fixture')})
+        node = ast.parse(inspect.getsource(unsigned_source_correspondence)).body[0]; node.body = [ast.Pass()]
+        namespace = globals().copy()
+        exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])), '<export-detector-removal>', 'exec'), namespace)
+        def reject_source(fn, snapshot):
+            try:
+                fn(source, snapshot)
+            except QualificationRejection as failure:
+                require(str(failure) == 'unsigned-source-correspondence', 'specific source correspondence rejection')
+            else:
+                raise AssertionError('source correspondence negative accepted')
+        for snapshot in ({'missing': ('100644', b'fixture')}, {'fixture': ('100644', b'changed')}):
+            reject_source(unsigned_source_correspondence, snapshot)
+            namespace['unsigned_source_correspondence'](source, snapshot)
+            try:
+                reject_source(namespace['unsigned_source_correspondence'], snapshot)
+            except AssertionError as failure:
+                require(str(failure) == 'source correspondence negative accepted', 'effective correspondence removal')
+            else:
+                raise AssertionError('source correspondence removal survived')
+    print('PASS: exported source correspondence; 2 negatives / 2 effective detector-removal assertions')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java-home', type=Path)
     parser.add_argument('--android-jar', type=Path)
     parser.add_argument('--apk', type=Path)
+    parser.add_argument('--unsigned-pair', nargs=2, type=Path)
+    parser.add_argument('--unsigned-source-ref')
+    parser.add_argument('--unsigned-executions', type=Path, help='private local observations; not authenticated receipts')
     parser.add_argument('--signed-pair', nargs=2, type=Path,
                         help='read-only preliminary checks; real admission remains unavailable and exits nonzero')
     parser.add_argument('--build-receipts', type=Path, help='private untrusted claim packet; never grants approval')
@@ -1387,6 +1566,21 @@ def main():
     source_mode.add_argument('--check-source-ref',
                              help='check an existing local commit for the exact proposed source delta only')
     args = parser.parse_args()
+    if args.unsigned_pair:
+        try:
+            qualification_require(args.unsigned_source_ref and args.unsigned_executions
+                                  and not (args.signed_pair or args.build_receipts or args.java_home
+                                           or args.android_jar or args.apk or args.verify_source_baseline
+                                           or args.check_source_ref), 'unsigned-options')
+            compare_unsigned_pair(args.unsigned_pair, args.unsigned_source_ref, read_build_receipts(args.unsigned_executions))
+        except QualificationRejection as failure:
+            print('FAIL/Unknown unsigned observation: ' + str(failure))
+            raise SystemExit(1) from None
+        except (OSError, ValueError, TypeError, KeyError, AssertionError, struct.error, subprocess.SubprocessError):
+            print('FAIL/Unknown unsigned observation: inspection-unavailable')
+            raise SystemExit(1) from None
+        return
+    require(not (args.unsigned_source_ref or args.unsigned_executions), 'unsigned options require unsigned pair')
     if args.signed_pair:
         try:
             qualification_require(not (args.java_home or args.android_jar or args.apk or args.verify_source_baseline
@@ -1415,6 +1609,7 @@ def main():
     companion_source_tests()
     metadata_package_tests()
     signed_qualification_tests()
+    unsigned_pair_tests()
     source_policy()
     adapter = (JAVA / 'AndroidOps.java').read_text()
     manifest = (MODULE / 'src/main/AndroidManifest.xml').read_text()
