@@ -313,6 +313,251 @@ transfer, and separate exact-artifact Samsung approval remain required.
 **Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.**
 
+## SDK generated-state investigation — 2026-11-15
+
+**Result: generated package-discovery state, for the specifically observed event.**
+The exact repository library used with AGP 9.4.0 writes `.knownPackages` during
+local package discovery. A fresh isolated invocation directly observed its writer
+stack. This does **not** identify the historical process that wrote either PR #77
+file: those executions have no retained file-write stack. Their matching contents,
+absence in the saved prebuild inventories and presence afterward support the
+same mechanism as an **inference**, not retroactive process attribution.
+
+The original complete-original-APK equality remains PASSED for `f272de8` only.
+The original `sdk_unchanged=False` records, `unsigned-execution-state` rejection
+and historical nonzero combined CLI result remain FAILED and unmodified. No new
+APK build, signed or unsigned, was necessary or performed. This experiment is a
+library invocation, **not** another Gradle execution or APK reproducibility run.
+
+### Hypothesis, identities and source evidence
+
+Hypothesis: this pinned library creates a package-location cache after discovering
+the two existing XML-described packages; creating it need not change any original
+SDK input. Falsifiers: another observed writer, an absent/truncated/unexpected
+stack, unexpected state bytes/mode, a pre-existing or substituted state file, or
+any changed/deleted original entry or additional entry. A filename match or a
+16-byte length alone is insufficient. Promoting this observation to authenticated
+tool or artifact admission would independently falsify the authority boundary.
+
+Reviewed existing AGP **9.4.0**, Gradle **9.6.0**, Temurin **17.0.21+9**, Platform
+**37.0** and Build Tools **36.0.0**, on local Windows x86_64 with CPython **3.12.14**.
+All remain **UNTRUSTED**. The pinned public component
+`com.android.tools:repository:32.4.0` has JAR SHA-256
+`9fd419f3307be633aaf7b02b52832521c1300d4bf9058cee83bb11139990a7f9`, matching existing
+verification metadata and the retained build cache. Supporting
+`com.android.tools:sdklib:32.4.0` has JAR SHA-256
+`d0bbe0e03155a7bdd9bac03567b6b26797f81a778f55d5eadc3e71e7a0a27434`.
+All **130** JARs on the experiment's classpath were checked against the unchanged
+strict metadata by component group/name/version/artifact and SHA-256, both before
+the initial invocation and the continuation. No unlisted JAR was admitted. This
+checks existing pins, not independent acquisition or source-to-binary provenance.
+
+Retrieved Google's exact
+[repository 32.4.0 source archive](https://dl.google.com/dl/android/maven2/com/android/tools/repository/32.4.0/repository-32.4.0-sources.jar)
+privately; public archive SHA-256:
+`770b35ee75031185ffe53637b98bc400494b2837bf6ab8731f798bb5208bb7a4`.
+`com/android/repository/impl/manager/LocalRepoLoaderImpl.kt` describes and implements
+the cache. `getPackages` collects candidate directories, parses their packages
+and, when the resulting package map is nonempty, calls `writeHashFile`.
+`getKnownPackagesHashFile(true)` creates the file; `Files.write` writes the buffer.
+`getLocalPackagesHash` hashes the sorted absolute package-directory strings encoded
+as UTF-8 with **MD5**. It hashes neither SDK tool bytes nor package XML contents.
+`needsUpdate` can later read this cache; a deep check can update it. Thus generated
+state can become an input to later discovery. It is not universally irrelevant
+or harmless, and its MD5 is not used as the SDK integrity digest.
+
+`javap -p -c` on the exact pinned binary confirms the calls to the hash function,
+`writeHashFile`, `Files.createFile` and `Files.write`. Source/bytecode agreement
+and the runtime stack below support this narrow mechanism, not a full library
+reconstruction. The upstream algorithm skips some metadata/cache directories;
+**the Python SDK inspector does not inherit those exclusions**.
+
+### Actual procedure and observed writer
+
+Created one new private SDK tree by copying only `build-tools/36.0.0`,
+`platforms/android-37.0` and `licenses` from the existing installed SDK, preserving
+the installation and both previous experiment trees. Captured the complete tree
+before invocation using `sdk_capture` in the existing
+[diagnostic checker](../../.github/scripts/test-memory-diagnostic.py). The capture
+contains **11,556 regular files and 2,899 directories including the root**.
+No `.knownPackages` existed. Saved the private baseline exclusively; never derived
+or repaired it from post-operation data.
+
+Compiled an original disposable Java `WriterProbe` against the checked classpath
+with the existing JDK. Its complete operative sequence was:
+
+1. Assert `.knownPackages` absent. Construct `LocalRepoLoaderImpl(root,
+   new HashSet<>(AndroidSdkHandler.getAllModules()))` without a fallback loader.
+2. Call `needsUpdate(0, true)` and require `true` with the file still absent.
+3. Start a JDK Flight Recorder `Recording`, enabling `jdk.FileWrite` with threshold
+   zero and stack traces. Call `getPackages` with a `ProgressIndicatorAdapter`
+   that rejects package warnings/errors. Require exactly `build-tools;36.0.0`
+   and `platforms;android-37.0`, and a newly present 16-byte state file.
+4. Stop and dump the recording privately. The Java process exits zero. Export
+   events using `jfr print --json --stack-depth 64 --events jdk.FileWrite`.
+5. Require exactly one event, its path equal to this SDK's `.knownPackages`,
+   `bytesWritten=16`, an untruncated stack and the exact stack below. Bind that
+   observation to the private process interval, repository JAR identity and the
+   recorded post-event state-file identity/content/mode. Run the separate
+   `inspect_sdk_generation(before, root, witness)` API against a fresh full scan.
+
+Observed event stack, top to bottom:
+
+```text
+sun.nio.ch.FileChannelImpl.write
+java.nio.channels.Channels.writeFullyImpl
+java.nio.channels.Channels.writeFully
+java.nio.channels.Channels$1.write
+java.nio.file.Files.write
+com.android.repository.impl.manager.LocalRepoLoaderImpl.writeHashFile
+com.android.repository.impl.manager.LocalRepoLoaderImpl.getPackages
+WriterProbe.main
+```
+
+**Direct result:** exactly one added regular file, `.knownPackages`; no original
+file bytes, modes, identities, timestamps or link counts changed; no original
+directory disappeared or changed identity/mode/link count; no other addition.
+The generated file matched the independently computed path-derived 16-byte digest
+and the witnessed file identity. The API returned `original_inputs_unchanged=True`,
+`generated_state_observed=True`, **`whole_sdk_unchanged=False`**, `trust=UNTRUSTED`
+and **`artifact_admission=False`**. Root directory timestamps necessarily reflect
+the addition; directory timestamps are checked for scan races, not treated as
+immutable input bytes. File timestamps are compared in addition to content/mode.
+
+Read-only reinspection of the old SDKs found their 16-byte files match the digest
+for their own distinct absolute roots. The retained original APK bytes still
+compare equal, and unchanged execution records still raise exactly
+`unsigned-execution-state`. These reads neither rebuild nor relabel the pair.
+PR #77's original inventory stored file hashes, **not modes or empty directories**;
+historical mode/directory invariance and historical write-time process attribution
+remain **Unknown**. The new complete inventory cannot backfill those facts.
+
+### Inspector contract, controls and failures
+
+The additive standard-library API is experiment-specific and read-only after
+capture. Call `sdk_capture(absolute_root)` before an isolated operation, retain
+that private return value, collect the separate local file-write observation above,
+then call `inspect_sdk_generation(before, root, witness)`. Its result is a bounded
+consistency observation, never an APK-verifier input. Private persisted JSON must
+be read without duplicate keys and restore entry arrays to tuples before use;
+`sdk_baseline` validates the exact schema, root, time, UNTRUSTED label, entry types,
+parents and case aliases. An invented or edited internally consistent local
+baseline/witness is not authenticated by these checks.
+
+The scanner enumerates every entry recursively, including hidden files, licenses,
+empty directories and root. It reuses `android/build.py` ancestor, no-follow and
+descriptor-identity reads. Symlinks, hard links, Windows reparse points and special
+files are refused rather than omitted/followed. Complete original file SHA-256,
+size, host mode, device/inode, link count and timestamps are compared; directories
+retain type/mode/device/inode/link count. Membership detects additions/deletions.
+No directory or file class is ignored. Pre-existing generated state is rejected.
+Only the one expected addition can pass, and only with the correct bytes, ordinary
+file mode, exact pinned writer, observed stack, process interval, successful exit
+and matching witnessed state identity. Missing/malformed/substituted/unknown state
+fails closed. The observed path digest is not a replacement for full-tree SHA-256.
+
+Default source tests include a positive synthetic observation and **36** specific
+negative/removal pairs for input deletion, bytes/size/mode/identity changes, hidden
+or other additions, missing/pre-existing state, invalid baselines, missing/wrong
+witnesses, wrong writers/pins/stacks, bad event intervals and malformed/substituted
+state. Each real rejection must be `SdkStateRejection` with its expected code.
+The actual detector body is removed through AST substitution, must accept the
+same case, and must cause the original negative assertion to fail with the exact
+expected message. Overlapping checks are tested individually rather than disabled
+together. A real input-file mutation also fails fresh inspection; replacing the
+live scan with cached data admits it and breaks that same negative assertion.
+Real malformed-state and hard-link controls pass. Windows reparse-stat injection
+exercises the actual scanner rejection; no claim of a real Windows symlink test.
+The suite uses a real symlink on POSIX when run there; new-head POSIX execution is
+UNOBSERVED at publication.
+
+Failures retained, not counted as successful controls:
+
+- Initial sandbox GitHub access and branch-ref creation were denied; scoped
+  execution access completed those authorized operations.
+- Web-tool retrieval of the source archive failed; direct HTTPS retrieval from
+  the same exact Google Maven URL succeeded. The source download is research,
+  not a new build dependency or authenticated upstream receipt.
+- The first detector-removal run encountered another valid downstream rejection;
+  the revised test separately checks full-inspector rejection and effective removal
+  of its specific layer. A malformed fixture intended as 16 bytes was actually
+  17; its size rejection was correct, and the fixture was corrected to test content.
+- Initial Java/JFR startup failed with access denied to the ambient temporary
+  directory, before `getPackages`. The complete SDK still matched the original
+  baseline. A separate continuation used a new workspace-local JFR temporary
+  directory and succeeded. Original failure logs and baseline were preserved.
+- The first JFR JSON display used the printer's default five-frame limit. Reading
+  the same recording with `--stack-depth 64` revealed the full eight-frame stack;
+  no library operation or build was repeated for that display correction.
+
+### Preflight, validation, provenance and authority
+
+Live main remained `2c64fc1f5a873474c9beba1402c3b11ea6e6eed2`; PR #77 is merged.
+Connector and REST open-PR inventories were empty, so open heads/bases/diffs/files/
+modes/checks/jobs/logs/reviews/comments/threads were an empty set. Post-merge
+[Foundation run 43790692955](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43790692955)
+passed foundation **133048187097** and Windows **133048186838**; post-merge
+[Android run 43790693722](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43790693722)
+passed **133048189531**. Exact checkout, job/step records and completed logs were
+inspected. The Android log records 45 diagnostic tasks, ten real offline STRICT
+controls and execution-lock mutations. These are existing baseline CI observations,
+not newly requested local builds. GitHub Status reported All Systems Operational,
+page update `2026-11-16T00:09:19.907Z` (UTC).
+
+Local validation passed the unchanged historical source-baseline and exact README
+transition audits; existing 60 source and 60 signed-structure negative/removal
+pairs, 11 README pairs, 24 unsigned pairs, eight file/CLI/admission negatives and
+six metadata negatives. Diagnostic JVM: 190 assertions, cleanup-removal and Activity
+bytecode controls, API-37 compilation. Execution lock: 600 denials, three JVMs and
+three mutants. Repository regression: 148 passed with four existing Windows skips
+(152 total). Readiness/image/frame/Gradle-distribution/installed-tools: 28/45/4/38/16
+passed. Foundation/harness validation: 183 files, 112 Markdown files, 54 requirements,
+four ADRs. Linux/native/real-Gradle/device regressions were not run locally.
+
+The three-file change extends only this existing checker, focused record and index.
+Protected-source pins, reviewed-file scope, complete-byte comparator, signed verifier
+and its permanent independent-authority rejection, unsigned combined verifier,
+active metadata policy, host source, one-attempt behavior, execution lock and every
+workflow remain unchanged. Existing Foundation and Android workflows select the
+change normally; QEMU filters do not. Full diff/modes/public-data hygiene, source
+admission, requirements/ADRs, prior experiment procedure, provenance/dependency and
+license records were reviewed. No binary, upstream code, dependency or license grant
+is added. New Python/fixture code is original; existing filesystem helpers are
+reused. The downloaded source carries Apache-2.0 notices and stays private. JDK
+GPLv2/Classpath Exception, SDK terms, transitive notices and the existing
+185-component/322-artifact ledger retain their limits. Build-tool maintainers retain
+maintenance responsibility; library upgrades invalidate this exact-event contract.
+
+This is not an atomic filesystem snapshot, an independent authority or protection
+against a compromised host/concurrent same-user writer. Changed-and-restored bytes
+between scans can escape observation. Host `st_mode` does not cover Windows ACLs,
+alternate data streams, owners, xattrs or every permission semantic. JFR and the
+local witness can be forged on an untrusted host; consistent records cannot prove
+independent execution. Dependency/classpath pin checks do not clear TOFU or the
+Windows incident. The direct library call identifies this new event's writer;
+it does not establish which Gradle/AGP caller performed the historical writes.
+
+Any proposal to substitute this distinction for mandatory whole-SDK stability or
+artifact admission needs explicit project-owner approval of an **ADR-0003 amendment
+to the companion qualification/evidence contract**, assessed under **ADR-0004
+Option A**, with PDVA-REQ-036, 039–042 and 054 traced and designated independent
+provisioning/security/build reviewers. No such admission change is implemented.
+Independent provisioning, Windows-incident disposition, reviewers, qualified signer
+custody, genuine signed builds, strict complete signed-byte equality, independent
+signature verification, authenticated receipts, private backup and exact-artifact
+Samsung approval remain separate prerequisites. All fifteen signed-byte failures
+remain failures. No signing, keys, device/ADB/USB, installation, native activation,
+VM execution, privilege or environment-security changes occurred.
+
+**Gate 0 Unresolved; Gates A–G Not reached. ADR-0003's December 8, 2026 deadline
+and earlier termination conditions remain binding. Independent backup UNVERIFIED;
+private evidence UNPRESERVED.** Public implementation preservation does not back up
+the private records. Next proof is independent review of this exact input/state
+contract and qualified custody/provisioning evidence; the historical writer and
+missing historical modes cannot be manufactured. Publish one focused PR, attach
+to this chat, verify association once, then STOP without polling new-head CI,
+comments, reviews, bots, badges or mergeability. New-head CI is UNOBSERVED.
+
 ## Exact README integration correction — 2026-11-11
 
 This is a revision of **existing draft PR #77**, on explicit owner instruction,
