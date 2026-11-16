@@ -1,5 +1,14 @@
 # Evidence index
 
+[SDK cache-integrity adversarial experiment](gate-0-companion-source-controls.md#sdk-cache-integrity-adversarial-experiment--2026-11-16),
+2026-11-16: actual pinned-library calls and JFR reads show timestamp-preserved XML
+changes and recomputed path caches can leave an existing manager's package list
+stale. Direct discovery, forced refresh and cold initialization expose the changed
+inputs. A fresh full SDK copy reproduces the stale result while the unchanged
+full-tree inspector rejects the input mutation and pre-existing state. Eight added
+negative/removal controls preserve that boundary; no admission relaxation or APK
+build. Historical unsigned equality and failed combined SDK result stay intact.
+
 [SDK generated-state investigation](gate-0-companion-source-controls.md#sdk-generated-state-investigation--2026-11-15),
 2026-11-15: pinned repository-library source/bytecode and a fresh isolated library
 call identify `LocalRepoLoaderImpl.getPackages` → `writeHashFile` as a writer of
