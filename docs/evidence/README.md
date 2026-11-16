@@ -1,5 +1,14 @@
 # Evidence index
 
+[Gradle installation-level precedence](gate-0-companion-source-controls.md#gradle-installation-level-precedence--2026-11-16),
+2026-11-16: four real desktop controls resolve PR #64's untested installation
+case. Disposable OFF/LENIENT files lose to trusted STRICT; removing only that
+argument resolves the exact bad-checksum fixture, with LENIENT reporting the
+mismatch. The unchanged production bootstrap rejects both altered copies before
+launch; effective guard removals reach only a trapped invocation. Original inputs
+are preserved. Docs-only extension uses existing reviewable evidence files without
+changing historical source pins; independent toolchain qualification remains open.
+
 [SDK cache-integrity adversarial experiment](gate-0-companion-source-controls.md#sdk-cache-integrity-adversarial-experiment--2026-11-16),
 2026-11-16: actual pinned-library calls and JFR reads show timestamp-preserved XML
 changes and recomputed path caches can leave an existing manager's package list
