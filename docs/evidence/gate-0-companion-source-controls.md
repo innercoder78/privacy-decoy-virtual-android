@@ -1,5 +1,205 @@
 # Companion diagnostic source controls
 
+## Gradle installation-level precedence — 2026-11-16
+
+**Runtime Observation:** installation `gradle.properties` selected OFF or LENIENT
+when the trusted CLI selection was absent. With `--dependency-verification=strict`
+present, both files selected STRICT and the deliberately incorrect dependency
+checksum was rejected. **Production-boundary Observation:** the unchanged bootstrap
+rejected each altered installation copy before its execution call. These are
+separate results; the disposable runtime invocation does not grant production
+admission to a modified distribution.
+
+This extends the [existing Gradle runtime record](gate-0-gradle-strict-runtime.md),
+specifically PR #64's installation-level **NOT RUN** row. Its ten historical
+project/user-home controls and PR #59's synthetic integrity experiments were not
+repeated as new runtime evidence. The existing regression suite was run unchanged.
+Traceability: PDVA-REQ-010, 036–042, 048, 051 and 054.
+
+### Exact baseline, publication boundary and tools
+
+Canonical live main was `4c2ebd5177172ac2d20ca4383a50fdd17e083283`, agreed by
+`git ls-remote origin refs/heads/main`, `git fetch origin main` and
+`git rev-parse origin/main`. PR #79 was merged; all-open-PR search returned zero,
+so open heads/bases/diffs/files/modes/checks/jobs/logs/reviews/comments/threads
+were an empty set. Exact-main [Foundation run 43909808438](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43909808438)
+and [Android run 43909808482](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43909808482)
+completed successfully. Foundation job 133448319171, Windows job 133448319892 and
+Android job 133448319297, their steps and completed logs were inspected. This is
+base evidence, not new-PR CI. GitHub Status reported All Systems Operational,
+updated `2026-11-16T20:54:41.478Z`; repository API reported push/admin rights.
+Reviewed PR #59/#64 diffs and empty discussions, relevant bootstrap history,
+requirements, four ADRs, source controls, workflows and tool/dependency adoption
+records. Existing main, worktrees, branches, ignored assets and private evidence
+were preserved in place; a separate exact-base worktree held this research.
+
+The source checker admits only its enumerated review files outside the exact
+companion delta. Actual prospective one-newline edits to the existing Gradle
+runner and Gradle evidence file were rejected with **protected-checks** and
+**protected-governance**, respectively. These were in-memory candidate snapshots;
+neither protected file was edited. Consequently this public change is docs-only,
+in this existing reviewable evidence record and the evidence index, linking the
+historical Gradle record. No new script admission, historical pin update, source
+exception, workflow change or protected-source policy decision is introduced.
+
+Windows x86_64 desktop execution used existing CPython **3.12.14**, Gradle
+**9.6.0** and Eclipse Adoptium Temurin **17.0.21+9** (runtime Java **17.0.21**).
+The existing archive matched the unchanged bootstrap pin; the production validator
+accepted the full original extracted tree against that same archive snapshot.
+Both copies matched before deliberate mutation. Complete original distribution,
+archive and JDK file-content/type/size/mtime observations were captured before and
+compared after the experiment. Production verification XML was compared unchanged.
+No tool download, installation, upgrade, dependency or binary adoption occurred.
+Private paths, inventories, raw receipts, generated artifact hashes and logs are
+not published. All inputs and local observations remain **UNTRUSTED**.
+
+### Source evidence and binary correspondence limits
+
+Fresh immutable source reads at Gradle revision
+`3f750f03d77e42327c5f9fcb9992110088330a32` confirm the
+[previously documented conversion path](gate-0-gradle-strict-precedence.md#exact-upstream-source-observations):
+`LayoutToPropertiesConverter` loads recognized installation properties before
+project and user-home properties; `BuildOptionBackedConverter` applies properties
+before CLI; `EnumBuildOption` applies a present CLI enum to the same target;
+`DependencyVerificationModeOption` binds the property and CLI mode selectors.
+`StartParameterResolutionOverride` selects no verification for OFF, whereas
+`ChecksumAndSignatureVerificationOverride` logs fatal checksum errors in LENIENT
+and throws the verification exception in STRICT.
+
+Fresh `javap -p -c` inspection of the four precedence classes in the
+archive-matched installation confirmed those conversion calls, ordering and mode
+setter. Its embedded build receipt identifies 9.6.0 and the same source revision.
+This corroborates the scoped source explanation; a vendor self-report and matching
+bytecode behavior are **not independent source-to-binary reconstruction**. That
+qualification remains Unknown and cannot be admitted as passed. The bootstrap and
+fixture source bytes used locally matched the exact base Git blobs. No altered
+production source or claimed rebuilt Gradle binary supplied the observation.
+
+### Disposable procedure and exact invocation
+
+Two fresh, explicitly UNTRUSTED copies of the complete installed distribution and
+pinned archive were created in ignored private research storage. Only each copy's
+new root `gradle.properties` was deliberately added, containing exactly one line:
+`org.gradle.dependency.verification=off` or
+`org.gradle.dependency.verification=lenient`. Original installation and archive
+were never changed. Each case received a fresh project, Gradle user home, HOME and
+temporary directory; neither project nor user home contained `gradle.properties`.
+
+The runner reused PR #64's exact Groovy `BUILD` and POM constants and deterministic
+resource-only JAR recipe, confirming correspondence with that historical fixture.
+The local file Maven repository exposed only the invented nontransitive dependency
+`org.pdva.fixture:sample:1.0`. POM metadata verification stayed enabled and correct;
+only the JAR's expected SHA-256 was 64 zeroes. No real production dependency or
+metadata was substituted. Correct-checksum/project/user-home runtime controls were
+not rerun; their prior observations remain historical, not new desktop results.
+
+The pinned Windows launcher uses Java `-jar` on its CLI JAR. The probe invoked
+that exact entrypoint directly, avoiding shell argument interpretation. For each
+case, the private receipt retained this argument vector with resolved paths:
+
+```text
+<existing-jdk>/bin/java.exe -Xmx64m -Xms64m -Dorg.gradle.appname=gradle
+  -jar <untrusted-copy>/lib/gradle-gradle-cli-main-9.6.0.jar
+  -p <fixture-project> --no-daemon -g <fixture-gradle-home>
+  --dependency-verification=strict --offline --console=plain --stacktrace
+  --no-build-cache --no-configuration-cache --max-workers=1 --no-watch-fs
+  -Duser.home=<fixture-home> -Djava.io.tmpdir=<fixture-tmp>
+  -Porg.gradle.dependency.verification.console=verbose resolveFixture
+```
+
+The child environment was an explicit allowlist: selected JAVA_HOME/PATH,
+SystemRoot/WINDIR, isolated HOME/USERPROFILE/GRADLE_USER_HOME, TEMP/TMP and isolated
+APPDATA/LOCALAPPDATA. No real Gradle home, SDK, Android project, injection variable,
+credential or inherited user cache was supplied. Each invocation had a 90-second
+wait bound and timeout tree-termination handler; no timeout occurred, so timeout
+cleanup effectiveness was not tested. Offline is a Gradle option, not independently
+observed network isolation or an administrative sandbox.
+
+Within each pair the second command removed **only** the literal trusted STRICT
+argument. It retained its own case-local cache and identical inputs; no cache was
+imported or swapped. Prior generated receipt and report directory were moved aside
+inside that case, so they could not satisfy later assertions. The task ran anew;
+FROM-CACHE, UP-TO-DATE, SKIPPED and NO-SOURCE markers were rejected. Fresh receipts
+recorded actual mode, offline state, Gradle/JDK/vendor and resolved artifact bytes
+or exception causes. Fixture input bytes and the complete disposable tool/archive
+snapshot were checked after every invocation.
+
+### Actual outcomes and falsifiers
+
+Four invocations completed **18:44:26–18:45:33 America/Fortaleza** on 2026-11-16
+(21:44:26–21:45:33 UTC). All reported 9.6.0, Java 17.0.21, Eclipse Adoptium and
+offline true. No generic exit or build-failure message alone counted as evidence.
+
+| Installation property | Trusted STRICT | Actual mode / exit | Observed dependency behavior |
+|---|---|---|---|
+| OFF | Present | STRICT / 1 | Unresolved; actual verification exception in receipt cause chain and stack; fresh HTML report and console identify expected/actual checksum mismatch |
+| OFF | Removed only | OFF / 0 | Exact generated JAR resolved; no verification failure or report |
+| LENIENT | Present | STRICT / 1 | Same specific checksum rejection and fresh report |
+| LENIENT | Removed only | LENIENT / 0 | Exact generated JAR resolved; mismatch printed and a fresh HTML report generated |
+
+Both STRICT failures contained
+`org.gradle.api.internal.artifacts.verification.exceptions.DependencyVerificationException`.
+The report parser required the artifact name and exact expected/actual checksum
+pair, and successful resolution required the generated artifact's exact name and
+hash. Missing artifacts, parser errors, task not reached, wrong mode, incomplete
+receipt, stale output, input drift and timeout could not count as successful
+controls. The strict-mode/unresolved assertion failed on both token-removal
+observations, demonstrating that the changed command exercised the intended guard.
+
+Separately, unchanged production `main()` was called with its ROOT and user home
+redirected only to each disposable tree, a forbidden-download trap and a mocked
+execution sentinel. Each pristine copy reached the sentinel once (positive
+control). Each added property caused **Unexpected installed distribution entry**
+and zero execution calls (negative control), repeated after runtime. Removing only
+`validate_installation` in memory made the same rejection assertion fail exactly
+with **installed-entry rejection missing** and reached one trapped launch still
+carrying STRICT. No mutant launched Gradle; production source was never changed or
+bypassed. Actual precedence execution above is the separately authorized isolated
+research invocation, not a successful production-bootstrap admission.
+
+Initial sandbox Git network/metadata access and private-directory creation/write
+attempts failed. Scoped approved retries succeeded; the initial probe stopped at
+its private receipt write before creating execution copies or launching Gradle.
+Those infrastructure failures are not runtime passes. No security setting changed.
+
+### Validation, preservation and remaining blockers
+
+Existing offline checks passed: **38** Gradle distribution/startup/verification
+tests (including existing removals), **16** installed-tools tests, repository
+**148 passed / four existing Windows skips**, readiness **28**, offline image
+**45**, frame copy **4**, and harness validation. Existing source, metadata,
+signed/unsigned receipt, SDK and cache-integrity fixtures/removals passed, including
+60 source negatives/removals and eight cache-integrity pairs. Historical source
+baseline and exact README transition recomputation passed. Foundation validated
+183 files, 112 Markdown files, 54 requirements and four ADRs. Final working-tree
+source admission, full diff, regular 100644 modes, links, whitespace and public-data
+review passed; exact committed-head admission is checked separately before
+publication. No new JVM diagnostic, Android CLI, APK assembly,
+signing, device/USB/ADB, native activation or VM execution was performed.
+
+Only original task-authored Markdown in two existing review files is published.
+Existing Gradle Apache-2.0/bundled notices, Temurin GPLv2/Classpath-exception and
+CPython PSF research-tool terms remain applicable; no upstream code or tool
+binary is redistributed. Maintenance remains with the repository owner. Source
+pins, dependency metadata, automatic workflows, diagnostic application,
+signed/unsigned comparison logic and execution lock are unchanged. Foundation
+applies to this docs-only PR; existing Android and QEMU path filters do not select
+these two files. New-PR CI remains **UNOBSERVED**, not waived.
+
+The runtime falsifier is resolved for these exact inputs. Independent source/toolchain
+authentication, administrative independence, Windows-incident disposition,
+designated reviewers, private signing custody, independent signature verification,
+genuine complete signed-byte equality, backup/recovery, transfer and exact Samsung
+approval remain separate blockers. No hostile-build-code, same-user-race,
+build-system isolation, signed reproducibility or phone-readiness claim follows.
+Historical SDK cache observations and their failed combined SDK-stability result
+remain unchanged; all fifteen signed-byte failures remain failures.
+**Gate 0 Unresolved; Gates A–G Not reached.** ADR-0003 expires no later than
+**December 8, 2026**, subject to earlier conditions. Independent private backup
+remains **UNVERIFIED**; private evidence durability remains **UNPRESERVED**.
+Publish one evidence PR, attach it natively to this chat, verify association once,
+then STOP without polling CI, reviews, comments, bots, badges or mergeability.
+
 **Current update:** the [exact README integration correction](#exact-readme-integration-correction--2026-11-11)
 adds only the reviewed documentation transition to source admission; updated-head
 CI remains unverified at publication. The [fresh unsigned pair experiment](#fresh-unsigned-pair-experiment--2026-11-11)
