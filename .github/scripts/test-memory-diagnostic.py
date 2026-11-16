@@ -1631,6 +1631,315 @@ def unsigned_pair_tests():
     print('PASS: exported source correspondence; 2 negatives / 2 effective detector-removal assertions')
 
 
+class SdkStateRejection(AssertionError):
+    """Experimental SDK observation failure; never artifact admission."""
+
+
+def sdk_require(condition, code):
+    if not condition:
+        raise SdkStateRejection(code)
+
+
+def sdk_helpers():
+    # Reuse the existing no-follow, descriptor-identity and ancestor controls.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('sdk_build_helpers', ROOT / 'android/build.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def sdk_scan(root):
+    """Complete point-in-time tree, including empty directories and root mode.
+
+    Private output. Reject links/reparse points/special files instead of following
+    or ignoring them. st_mode is the host's representation, not Windows ACLs.
+    No cache-directory, hidden-file or extension exclusions.
+    """
+    root = Path(root)
+    sdk_require(root.is_absolute() and '..' not in root.parts, 'sdk-root')
+    helper = sdk_helpers()
+    entries, aliases = {}, set()
+
+    def identity(s):
+        return (s.st_dev, s.st_ino, s.st_mode, s.st_nlink)
+
+    def visit(path):
+        name = path.relative_to(root).as_posix()
+        sdk_require(name.casefold() not in aliases, 'sdk-alias')
+        aliases.add(name.casefold())
+        s = path.lstat()
+        sdk_require(not stat.S_ISLNK(s.st_mode)
+                    and not getattr(s, 'st_file_attributes', 0) & 0x400
+                    and (stat.S_ISDIR(s.st_mode) or stat.S_ISREG(s.st_mode))
+                    and (stat.S_ISDIR(s.st_mode) or s.st_nlink == 1), 'sdk-link-or-type')
+        if stat.S_ISDIR(s.st_mode):
+            helper.checked_stat(path, directory=True)
+            children = sorted(path.iterdir())
+            entries[name] = ('directory', *identity(s))
+            for child in children:
+                visit(child)
+            end = path.lstat()
+            sdk_require(identity(s) == identity(end) and s.st_mtime_ns == end.st_mtime_ns
+                        and s.st_ctime_ns == end.st_ctime_ns
+                        and children == sorted(path.iterdir()), 'sdk-scan-race')
+        else:
+            raw = helper.read_regular(path)
+            end = path.lstat()
+            sdk_require(identity(s) == identity(end) and s.st_mtime_ns == end.st_mtime_ns
+                        and s.st_ctime_ns == end.st_ctime_ns, 'sdk-scan-race')
+            entries[name] = ('file', *identity(end), len(raw),
+                             hashlib.sha256(raw).hexdigest(), end.st_mtime_ns, end.st_ctime_ns)
+    helper.check_parents(root)
+    visit(root)
+    return entries
+
+
+SDK_PACKAGES = ('build-tools/36.0.0', 'platforms/android-37.0')
+SDK_WRITER = 'com.android.repository.impl.manager.LocalRepoLoaderImpl.writeHashFile'
+SDK_REPOSITORY_SHA256 = '9fd419f3307be633aaf7b02b52832521c1300d4bf9058cee83bb11139990a7f9'
+
+
+def sdk_layout(entries):
+    # This experiment has exactly two package.xml roots. Do not generalize the
+    # upstream discovery exclusions or its MD5 into an input integrity check.
+    sdk_require({p for p in entries if '/' not in p and p != '.'}
+                == {'build-tools', 'platforms', 'licenses'}, 'sdk-layout')
+    sdk_require({p for p in entries if p.endswith('/package.xml')}
+                == {p + '/package.xml' for p in SDK_PACKAGES}
+                and all(entries.get(p, (None,))[0] == 'directory' for p in SDK_PACKAGES),
+                'sdk-layout')
+
+
+def sdk_capture(root):
+    """Call BEFORE the isolated operation; never reconstruct a past baseline."""
+    entries = sdk_scan(root)
+    sdk_require('.knownPackages' not in entries, 'sdk-preexisting-state')
+    sdk_layout(entries)
+    return {'schema': 1, 'trust': 'UNTRUSTED', 'root': str(Path(root)),
+            'captured_ns': time.time_ns(), 'entries': entries}
+
+
+def sdk_baseline(before, root):
+    sdk_require(type(before) is dict and set(before) ==
+                {'schema', 'trust', 'root', 'captured_ns', 'entries'}
+                and type(before['schema']) is int and before['schema'] == 1
+                and before['trust'] == 'UNTRUSTED' and before['root'] == str(Path(root))
+                and type(before['captured_ns']) is int and 0 < before['captured_ns'] <= time.time_ns(),
+                'sdk-baseline')
+    entries = before['entries']
+    sdk_require(type(entries) is dict and entries.get('.', (None,))[0] == 'directory', 'sdk-baseline')
+    aliases = set()
+    for name, row in entries.items():
+        sdk_require(isinstance(name, str) and name and not name.startswith('/')
+                    and '\\' not in name and ':' not in name
+                    and (name == '.' or all(p not in ('', '.', '..') for p in name.split('/')))
+                    and name.casefold() not in aliases, 'sdk-baseline')
+        aliases.add(name.casefold())
+        sdk_require(type(row) is tuple and len(row) in (5, 9)
+                    and row[0] in ('file', 'directory')
+                    and all(type(x) is int and x >= 0 for x in row[1:5])
+                    and row[2] > 0, 'sdk-baseline')
+        if row[0] == 'file':
+            sdk_require(len(row) == 9 and stat.S_ISREG(row[3]) and row[4] == 1
+                        and type(row[5]) is int and row[5] >= 0
+                        and isinstance(row[6], str) and re.fullmatch('[0-9a-f]{64}', row[6])
+                        and all(type(x) is int and x >= 0 for x in row[7:]), 'sdk-baseline')
+        else:
+            sdk_require(len(row) == 5 and stat.S_ISDIR(row[3]), 'sdk-baseline')
+        if name != '.':
+            parent = name.rpartition('/')[0] or '.'
+            sdk_require(entries.get(parent, (None,))[0] == 'directory', 'sdk-baseline')
+    sdk_require('.knownPackages' not in entries, 'sdk-preexisting-state')
+    sdk_layout(entries)
+
+
+def sdk_input_delta(before, after):
+    sdk_require(all(after.get(p) == row for p, row in before.items()), 'sdk-input-changed')
+    sdk_require(set(after) - set(before) == {'.knownPackages'}, 'sdk-unexpected-additions')
+
+
+def sdk_generation(before, root, after, witness):
+    """Check a local write witness, not an authenticated or independent receipt.
+
+    Caller collects the JFR event from the isolated process and binds the file's
+    recorded post-event snapshot. A forged consistent witness is not detectable
+    on a compromised host; this route can never qualify an artifact.
+    """
+    row = after.get('.knownPackages')
+    sdk_require(row is not None and row[0] == 'file' and row[5] == 16
+                and row[3] == (stat.S_IFREG | (0o666 if os.name == 'nt' else 0o644)),
+                'sdk-state-format')
+    expected = hashlib.md5(''.join(str(Path(root) / p) for p in SDK_PACKAGES).encode('utf-8')).digest()
+    sdk_require(row[6] == hashlib.sha256(expected).hexdigest(), 'sdk-state-content')
+    sdk_require(type(witness) is dict and set(witness) ==
+                {'schema', 'trust', 'root', 'writer', 'repository_sha256', 'started_ns',
+                 'finished_ns', 'exit', 'bytes_written', 'state', 'stack'}
+                and type(witness['schema']) is int and witness['schema'] == 1
+                and witness['trust'] == 'UNTRUSTED', 'sdk-witness')
+    sdk_require(witness['root'] == str(Path(root)) and witness['writer'] == SDK_WRITER
+                and witness['repository_sha256'] == SDK_REPOSITORY_SHA256
+                and witness['stack'] == [SDK_WRITER,
+                    'com.android.repository.impl.manager.LocalRepoLoaderImpl.getPackages']
+                and type(witness['exit']) is int and witness['exit'] == 0
+                and type(witness['bytes_written']) is int and witness['bytes_written'] == 16,
+                'sdk-writer')
+    sdk_require(type(witness['started_ns']) is int and type(witness['finished_ns']) is int
+                and before['captured_ns'] <= witness['started_ns'] <= row[7]
+                <= witness['finished_ns'] <= time.time_ns(), 'sdk-event-time')
+    sdk_require(witness['state'] == row, 'sdk-state-substituted')
+
+
+def inspect_sdk_generation(before, root, witness):
+    """Read-only API, separate from both APK verifiers and every admission path."""
+    sdk_baseline(before, root)
+    after = sdk_scan(root)
+    sdk_input_delta(before['entries'], after)
+    sdk_generation(before, root, after, witness)
+    return {'original_inputs_unchanged': True, 'generated_state_observed': True,
+            'whole_sdk_unchanged': False, 'trust': 'UNTRUSTED', 'artifact_admission': False}
+
+
+def sdk_state_tests():
+    import copy
+    from unittest.mock import patch
+    with tempfile.TemporaryDirectory(prefix='pdva-sdk-state-') as temp:
+        root = Path(temp) / 'sdk'
+        for p in SDK_PACKAGES:
+            (root / p).mkdir(parents=True)
+            (root / p / 'package.xml').write_bytes(b'fixture, not executable tooling')
+        (root / 'licenses').mkdir()
+        (root / 'licenses/fixture').write_bytes(b'license fixture')
+        (root / 'platforms/android-37.0/empty').mkdir()
+        before = sdk_capture(root)
+        started = time.time_ns()
+        state = root / '.knownPackages'
+        state.write_bytes(hashlib.md5(''.join(str(root / p) for p in SDK_PACKAGES).encode()).digest())
+        # Synthetic fixture clock/mode, not an alteration of retained evidence.
+        # Avoid filesystem timestamp granularity and ambient umask assumptions.
+        state.chmod(0o666 if os.name == 'nt' else 0o644)
+        os.utime(state, ns=(started, started))
+        after = sdk_scan(root)
+        witness = dict(schema=1, trust='UNTRUSTED', root=str(root), writer=SDK_WRITER,
+                       repository_sha256=SDK_REPOSITORY_SHA256, started_ns=started,
+                       finished_ns=time.time_ns(), exit=0, bytes_written=16,
+                       state=after['.knownPackages'], stack=[SDK_WRITER,
+                           'com.android.repository.impl.manager.LocalRepoLoaderImpl.getPackages'])
+        require(inspect_sdk_generation(before, root, witness)['artifact_admission'] is False,
+                'SDK observation cannot admit artifacts')
+        cases = []
+        def case(name, code, detector, b=None, a=None, w=None):
+            cases.append((name, code, detector, b if b is not None else before,
+                          a if a is not None else after, w if w is not None else witness))
+        for p in before['entries']:
+            a = after.copy(); del a[p]
+            case('deleted-' + p, 'sdk-input-changed', 'sdk_input_delta', a=a)
+        for index, value in ((3, stat.S_IFREG | 0o400), (5, 1), (6, '0' * 64), (2, 999)):
+            a = after.copy(); row = list(a['licenses/fixture']); row[index] = value
+            a['licenses/fixture'] = tuple(row)
+            case('changed-' + str(index), 'sdk-input-changed', 'sdk_input_delta', a=a)
+        for name in ('extra', 'licenses/hidden', 'platforms/android-37.0/empty/addition'):
+            a = after.copy(); a[name] = after['licenses/fixture']
+            case(name, 'sdk-unexpected-additions', 'sdk_input_delta', a=a)
+        a = after.copy(); del a['.knownPackages']
+        case('missing-state', 'sdk-unexpected-additions', 'sdk_input_delta', a=a)
+        b = copy.deepcopy(before); b['entries']['.knownPackages'] = after['.knownPackages']
+        case('preexisting', 'sdk-preexisting-state', 'sdk_baseline', b=b)
+        for field, value in (('trust', 'APPROVED'), ('root', str(root / 'other')), ('schema', 2)):
+            b = copy.deepcopy(before); b[field] = value
+            case('baseline-' + field, 'sdk-baseline', 'sdk_baseline', b=b)
+        for field, value, code in (
+            ('writer', 'unknown', 'sdk-writer'), ('repository_sha256', '0' * 64, 'sdk-writer'),
+            ('stack', [], 'sdk-writer'), ('exit', 1, 'sdk-writer'), ('bytes_written', 0, 'sdk-writer'),
+            ('root', str(root / 'other'), 'sdk-writer'), ('trust', 'APPROVED', 'sdk-witness'),
+            ('started_ns', time.time_ns() + 10**12, 'sdk-event-time'),
+            ('finished_ns', time.time_ns() + 10**12, 'sdk-event-time'),
+            ('state', (), 'sdk-state-substituted')):
+            w = witness.copy(); w[field] = value
+            case('witness-' + field, code, 'sdk_generation', w=w)
+        case('missing-witness', 'sdk-witness', 'sdk_generation', w={})
+        for index, value, code in ((5, 0, 'sdk-state-format'), (3, stat.S_IFREG | 0o777, 'sdk-state-format'),
+                                   (6, '0' * 64, 'sdk-state-content')):
+            a = after.copy(); row = list(a['.knownPackages']); row[index] = value
+            a['.knownPackages'] = tuple(row)
+            case('malformed-state-' + str(index), code, 'sdk_generation', a=a)
+        def reject(fn, b, w, code, name):
+            try:
+                fn(b, root, w)
+            except SdkStateRejection as error:
+                require(str(error) == code, 'wrong SDK rejection: ' + name)
+            else:
+                raise AssertionError('SDK negative accepted: ' + name)
+        for name, code, detector, b, a, w in cases:
+            # Remove the actual called detector; require acceptance, then the
+            # original negative assertion must fail for exactly that reason.
+            namespace = globals().copy()
+            node = ast.parse(inspect.getsource(globals()[detector])).body[0]
+            node.body = [ast.Pass()]
+            exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])),
+                         '<sdk-detector-removal>', 'exec'), namespace)
+            with patch.dict(globals(), sdk_scan=lambda unused, a=a: a):
+                reject(inspect_sdk_generation, b, w, code, name)
+            # Test the removed layer directly as well: overlapping downstream
+            # checks can still reject missing/pre-existing state. They must not
+            # be disabled merely to make an end-to-end mutant appear effective.
+            def invoke(fn):
+                if detector == 'sdk_baseline':
+                    return lambda b, root, w: fn(b, root)
+                if detector == 'sdk_input_delta':
+                    return lambda b, root, w: fn(b['entries'], a)
+                return lambda b, root, w: fn(b, root, a, w)
+            reject(invoke(globals()[detector]), b, w, code, name)
+            mutant = invoke(namespace[detector])
+            mutant(b, root, w)
+            try:
+                reject(mutant, b, w, code, name)
+            except AssertionError as error:
+                require(type(error) is AssertionError and str(error) == 'SDK negative accepted: ' + name,
+                        'wrong SDK removal failure')
+            else:
+                raise AssertionError('ineffective SDK detector removal')
+        # A real input mutation must be found by a fresh scan. Replacing scanning
+        # with the cached post-event tree admits it and breaks the same oracle.
+        target = root / 'licenses/fixture'
+        target.write_bytes(b'changed fixture')
+        reject(inspect_sdk_generation, before, witness, 'sdk-input-changed', 'live input')
+        with patch.dict(globals(), sdk_scan=lambda unused: after):
+            inspect_sdk_generation(before, root, witness)
+            try:
+                reject(inspect_sdk_generation, before, witness, 'sdk-input-changed', 'live input')
+            except AssertionError as error:
+                require(type(error) is AssertionError and str(error) == 'SDK negative accepted: live input',
+                        'wrong cached-scan removal failure')
+            else:
+                raise AssertionError('cached-scan removal survived')
+        # Fresh baseline for subsequent fixtures only; no real evidence repaired.
+        before['entries'] = {p: r for p, r in sdk_scan(root).items() if p != '.knownPackages'}
+        # Real filesystem controls, distinct from synthetic manifest mutations.
+        state.write_bytes(b'x' * 16)
+        reject(inspect_sdk_generation, before, witness, 'sdk-state-content', 'real malformed')
+        state.unlink()
+        os.link(root / 'licenses/fixture', state)
+        reject(inspect_sdk_generation, before, witness, 'sdk-link-or-type', 'real hardlink')
+        state.unlink()
+        if os.name != 'nt':
+            state.symlink_to(root / 'licenses/fixture')
+            reject(inspect_sdk_generation, before, witness, 'sdk-link-or-type', 'real symlink')
+            state.unlink()
+        else:
+            # Windows symlinks need host privileges; exercise the actual lstat
+            # reparse detector without requesting those privileges.
+            s = (root / 'licenses').lstat()
+            class Reparse:
+                st_mode = s.st_mode
+                st_file_attributes = 0x400
+            original = Path.lstat
+            with patch.object(Path, 'lstat', lambda p: Reparse() if p == root / 'licenses' else original(p)):
+                reject(inspect_sdk_generation, before, witness, 'sdk-link-or-type', 'reparse stat')
+        print(f'PASS: SDK state positive; {len(cases)} specific negatives / effective detector removals; '
+              'live-input/cached-scan removal and real content/hardlink controls; no artifact admission')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java-home', type=Path)
@@ -1700,6 +2009,7 @@ def main():
     metadata_package_tests()
     signed_qualification_tests()
     unsigned_pair_tests()
+    sdk_state_tests()
     source_policy()
     adapter = (JAVA / 'AndroidOps.java').read_text()
     manifest = (MODULE / 'src/main/AndroidManifest.xml').read_text()

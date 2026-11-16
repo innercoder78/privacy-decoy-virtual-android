@@ -1,5 +1,14 @@
 # Evidence index
 
+[SDK generated-state investigation](gate-0-companion-source-controls.md#sdk-generated-state-investigation--2026-11-15),
+2026-11-15: pinned repository-library source/bytecode and a fresh isolated library
+call identify `LocalRepoLoaderImpl.getPackages` → `writeHashFile` as a writer of
+`.knownPackages`. A JFR stack records the 16-byte write; all 11,556 original files
+and 2,899 directories in that experiment remain unchanged. Separate full-tree
+inspection and detector-removal controls grant no artifact admission. Historical
+writer attribution remains inferred; original unsigned equality and combined
+`unsigned-execution-state` failure remain intact. No APK build repeated.
+
 [Exact README integration correction for draft PR #77](gate-0-companion-source-controls.md#exact-readme-integration-correction--2026-11-11),
 2026-11-11: merged current main while preserving its README; narrowly pinned the
 reviewed README-only transition without replacing historical protection evidence.
