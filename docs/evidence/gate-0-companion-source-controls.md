@@ -313,6 +313,261 @@ transfer, and separate exact-artifact Samsung approval remain required.
 **Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.**
 
+## SDK cache-integrity adversarial experiment — 2026-11-16
+
+**Runtime Observation: a generated cache can become an invalidation input and
+postpone discovery of changed SDK inputs by an already-loaded manager.** With
+changed XML contents but preserved modification times, the pinned library's deep
+`needsUpdate` returned `false`; `RepoManagerImpl.reloadLocalIfNeeded` retained the
+old package description without reading XML. Direct `getPackages` and forced
+refresh exposed the change. A separate cold Java process also exposed it. This is
+not a persistent replacement package database or demonstrated APK-build exploit.
+
+**Runtime Observation: the existing full-tree inspector rejected the changed
+input and pre-existing state.** The result argues against treating a matching
+`.knownPackages` filename, MD5, timestamp or locally supplied witness as integrity
+or freshness proof. No mandatory SDK-stability rule, source pin, protected build
+configuration, metadata policy, signer/unsigned qualification, host source,
+execution lock or one-attempt behavior changes.
+
+### Hypothesis and exact experimental boundary
+
+PR #78 established writer attribution for one new library invocation and noted
+that later reads were possible. It did not execute these stale-read/manager
+falsifiers. This extends that record rather than repeating its writer survey.
+Hypothesis: an unchanged path digest can coexist with changed input bytes, and a
+cache-dependent refresh decision can preserve stale in-memory package information.
+Falsifiers for the scoped explanation and inspector boundary: deep invalidation
+always detects those mutations; manager reload reads
+and reports changed XML; direct discovery also remains stale; or the full-tree
+inspector accepts the changed original input. Each has a concrete observation below.
+
+Fact/Source: canonical base is `2bd1fc1376e2c13733eddb8c1e3652a7cf628843`, PR #78's
+merge. Reused the exact repository **32.4.0**, sdklib **32.4.0**, Temurin
+**17.0.21+9**, CPython **3.12.14** and Windows x86_64 environment identified in the
+[preceding investigation](#sdk-generated-state-investigation--2026-11-15).
+Rehashed all **130** existing classpath JARs against unchanged verification metadata
+by group/name/version/artifact; rechecked the retained source archive's recorded
+SHA-256 and exact extracted Kotlin bytes. Fresh `javap -p -c` output confirms the
+read/compare/time and manager-invalidation paths. Reinspected the original genuine
+JFR write event without modifying it. No installation, download, dependency
+substitution or source-to-binary trust promotion. Everything remains **UNTRUSTED**.
+
+Original disposable Java probes used actual `LocalRepoLoaderImpl` and
+`RepoManagerImpl`, `AndroidSdkHandler.getAllModules()`, null fallback loaders,
+empty remote source providers and null downloader/settings. No Gradle invocation,
+APK assembly, Android CLI, native payload or VM execution occurred. Initial small
+trees contained two original minimal generic-schema XML fixtures, not SDK binaries;
+their observed library behavior is real, but their contents are fixtures. A second
+experiment copied all original installed `build-tools/36.0.0`,
+`platforms/android-37.0` and `licenses` inputs into a fresh disposable tree and used
+their actual XML. The installed SDK and retained PR #77/#78 evidence were read-only.
+All mutation, hard-link, recording and compiler output stayed in new disposable
+workspace directories. Private raw captures, paths, hashes and probe files are
+not published; independent backup remains **UNVERIFIED**.
+
+### Read and refresh paths, derived from exact source and bytecode
+
+- `needsUpdate(last, false)` checks cache existence and whether its modification
+  time is greater than `last`; it does not read cache or XML contents.
+- `needsUpdate(last, true)` short-circuits on that same time check. Otherwise it
+  traverses candidate package directories, hashes their sorted absolute paths,
+  compares latest XML modification time with cache modification time, then reads
+  cache bytes only when XML is not newer. Equal path hashes return `false`.
+  A mismatch/newer XML writes a path hash and returns `true`, including when the
+  attempted write fails. Neither XML contents nor package payloads enter the hash.
+- `getPackages` collects and parses XML afresh; it does not consume cached package
+  entries. Nonempty discovery writes the path hash. Corrupted XML may be omitted
+  with a warning; the hash still describes candidate directories, not parse success.
+- `LocalLoadTask.doLoad` reuses the manager's existing package objects when its
+  expiration has not elapsed and shallow invalidation is false. Deep
+  `reloadLocalIfNeeded` resets the last-refresh time only if deep invalidation is
+  true, then uses the normal default-expiration load path. Explicit expiration
+  zero forces discovery. This call graph alone is source evidence; the observations
+  below separately establish actual effects.
+
+### Bounded observations and controls
+
+Each of **15** small-tree scenarios had a fresh root. Except the missing-cache
+case, a real manager first loaded the two packages. The probe then applied exactly
+that scenario's mutation. It recorded, in order: shallow `needsUpdate(last,false)`,
+ordinary manager load with **600,000 ms** expiration, deep `needsUpdate(last,true)`,
+manager `reloadLocalIfNeeded`, direct loader `getPackages`, and manager load with
+expiration **0**. `last` was captured immediately after initial load. The missing
+case recorded only both invalidation decisions and direct discovery. Thus **86**
+separately recorded phases completed, with genuine return values/package names,
+warning/error counts and JFR events. Later phases are sequential: deep repair and
+direct discovery may rewrite the cache; they are not independent snapshots of the
+original mutation. An independent fresh tree supplies each scenario.
+
+| Condition | Observed shallow / deep decisions | Observed manager and direct discovery |
+|---|---|---|
+| Missing cache | `true` / `true`; no file created by these calls | Direct discovery returned two packages and wrote 16 bytes |
+| Valid pre-existing cache | `false` / `false` | Ordinary/deep reload retained correct packages; direct discovery read XML and returned both |
+| XML changed, XML time explicitly newer than cache | `false` / `true` | Ordinary load remained old; deep reload and direct discovery reported changed description |
+| XML changed, original XML modification time restored | `false` / `false` | Ordinary and deep reload retained old description with zero XML reads; direct and forced discovery reported changed description |
+| Package directory replaced at same path, XML time restored | `false` / `false` | Old description survived deep reload; direct discovery reported replacement |
+| Added package directory, original cache retained | `false` / `true` | Ordinary load missed addition; deep reload/direct discovery enumerated three packages |
+| Deleted package directory, original cache retained | `false` / `true` | Ordinary load retained deleted package; deep reload/direct discovery enumerated one |
+| Empty / seven-byte / incorrect 16-byte cache, original cache time restored | `false` / `true` for each | Ordinary load reused objects; deep check repaired cache and reload/direct discovery returned correct packages; no injected package entries |
+| Same bytes and modification time in a replacement cache file | `false` / `false` | Library did not reject substitution; direct discovery still parsed XML |
+| Changed XML with cache timestamp 60 seconds in future | `true` initially | Ordinary manager load discovered change; this was not a successful concealment control. It rewrote the cache before the subsequent deep call |
+| Incorrect cache with an in-tree hard-link alias | `false` / `true` | Deep/direct writes also changed the alias; no library link rejection |
+| Directory substituted for cache, old cache time restored | `false` / `true` | Discovery returned packages despite unsuccessful cache I/O; no successful cache write event or warning; deep invalidation remained required |
+| Truncated XML with original XML time restored | `false` / `false` | Deep reload retained old package without warning; direct/forced discovery omitted it and emitted one warning |
+
+All ordinary small-tree loads except the future-cache control recorded zero XML
+reads. No phase reported an error callback or escaped exception; truncated-XML
+direct/forced parsing produced the two noted warning observations. Cache-directory
+I/O is swallowed by the library's inspected IOException paths, not evidence that
+the filesystem operation succeeded.
+
+Two further independent small trees tested deliberate **recomputed cache bytes**:
+after initial manager load, add a third package or remove the second, compute the
+new path digest, write it to the cache, and restore the cache timestamp. The added
+XML timestamp was set equal to that cache time. Both deep checks returned `false`;
+deep reload retained the original two-package list, with cache reads and zero XML
+reads. Direct discovery returned respectively three and one packages. This is
+ordinary recomputation of an unauthenticated digest, **not an MD5 collision attack**.
+It requires write authority over those disposable inputs/state and suitable times.
+
+The **full copied SDK** baseline contained **11,556 files / 2,899 directories**.
+After initial discovery, changed only the build-tools XML display-name and restored
+its original modification time. Deep invalidation returned `false`; deep reload
+still reported `Android SDK Build-Tools 36`; direct discovery reported the injected
+description. The path digest remained identical. A complete fresh scan found only
+that original XML changed plus the generated cache addition; every other original
+entry retained its inspected properties. `inspect_sdk_generation(before,root,{})`
+rejected **`sdk-input-changed`** before considering a witness. `sdk_capture` on the
+post-operation tree rejected **`sdk-preexisting-state`**. A separate fresh Java
+process with a new manager and that existing cache read the XML and returned the
+changed description: **no cold-start concealment observed**.
+
+### Actual JFR correspondence and negative observations
+
+Enabled `jdk.FileRead` and `jdk.FileWrite` at zero threshold with stack traces;
+used JFR stack depth **128**, workspace-local temporary storage, and process
+timeouts (240 seconds for the matrix, 120 for follow-ups, 60 for cold initialization). Separate recordings
+surrounded each library phase, excluding fixture mutation. Records were read with
+`RecordingFile`; selected recordings were independently exported with
+`jfr print --json --stack-depth 128`. All observed SDK event stacks were untruncated.
+
+Timestamp-preserved deep checks and stale deep reloads each recorded **two cache
+read events totaling 16 bytes**, zero XML reads and zero writes. The complete
+retained stacks include this library path (an excerpt, not a complete stack):
+
+```text
+Files.readAllBytes
+CancellableFileIo.readAllBytes
+LocalRepoLoaderImpl.updateKnownPackageHashFileIfNecessary
+LocalRepoLoaderImpl.needsUpdate
+```
+
+The reload recording additionally includes `RepoManagerImpl.reloadLocalIfNeeded`.
+Direct discovery's XML-read stacks include `SchemaModuleUtil.unmarshal`,
+`parsePackage`, `parsePackages`, `getPackages`; writes include `writeHashFile`.
+The small two-package fixture normally produced **14 XML-read events** and one
+cache write; the full SDK direct/cold discovery produced **64 XML-read events**
+and one cache write. Event counts include low-level/EOF operations and are not
+counts of logical files. Shallow checks produced no file-content events, consistent
+with metadata-only inspection. These negative observations do not prove absence
+of filesystem metadata queries, races, other native I/O or malicious host activity.
+
+Actual hard-link behavior was safely observed wholly inside a disposable tree.
+A Windows symlink creation attempt failed with privilege-not-held (**1314**);
+no privilege/security-setting change was attempted. Real symlink traversal,
+junctions, concurrent writers, clock rollback, timestamp-resolution collisions,
+oversized-cache exhaustion, default-expiration wall-clock waiting, remote refresh,
+fallback-loader behavior and APK-build impact remain **NOT RUN / Unknown**.
+
+### Inspector regressions, implications and next proof
+
+Only additive tests change in the existing checker. Every pre-existing function
+and admission detector remains source-identical (main only calls the added suite).
+Eight new specific negative/removal pairs cover valid/empty/truncated/wrong cache
+bytes and a directory already present at capture, timestamp-preserved XML and
+hidden-input byte mutations, and same-byte cache replacement identity. Real
+filesystem controls also require that path-digest bytes stay equal. Separate
+manifest controls isolate changed SHA-256 from timestamp/identity differences.
+Each AST detector removal must accept and make the original rejection assertion
+fail with its exact message; arbitrary exceptions do not count. These are Python
+fixtures, not substitute library-runtime evidence. Existing full-tree enumeration,
+link rejection, writer/witness checks and permanent no-admission result stay intact.
+
+Inference: immutable-input versus generated-state classification must depend on
+when and how state is consumed. A later cache read makes the generated file part
+of discovery's control inputs. Equal hashes or observed writes cannot prove fresh
+XML/payload discovery, authenticated origin, safe administration or absence of
+substitution. **Unsupported:** this cache alone is a secure trust boundary, a
+matching digest authenticates SDK contents, or the experiment qualifies an APK.
+
+The next proof must independently authenticate source/tool acquisition and
+administration; bind full original-input inventories to a protected pre-operation
+baseline; specify fresh-state creation, reuse/invalidation/expiration, concurrent
+write handling and link/identity policy; and independently witness actual reads,
+refresh and outputs. A prospective design must keep pre-existing/suspicious state
+fail-closed and prove that every original input remains checked, including payload
+and metadata that package discovery does not read. Locally consistent forged
+baselines/witnesses still cannot authenticate themselves. Any admission relaxation
+requires a separate reviewed **ADR-0003 amendment, Tony's explicit approval and
+the applicable designated independent reviews**; none is proposed as implemented.
+
+Validation: diagnostic source/signed/unsigned/README suites and the existing 36 SDK
+negative/removal pairs pass, as do the eight added pairs. Diagnostic JVM validation
+passes **190 assertions**, cleanup-removal rejection, Activity controls and API-37
+compilation. Execution-lock validation passes **600 denials / three JVMs / three
+rejected mutants**. Exact historical source baseline and README transition pass.
+Repository tests pass **148 with four existing Windows skips**; readiness/image/
+frame/Gradle-distribution/installed-tools pass **28/45/4/38/16**. Foundation/harness
+validation passes. Linux/native runtime and a new real Gradle STRICT run were not
+performed locally; successful baseline CI is separate. No new APK build.
+
+Read-only reinspection again confirmed PR #77's **complete original unsigned-APK
+equality** and genuine **`unsigned-execution-state` failure**. No historical input
+record, APK or PR #78 observation was repaired or reclassified. All fifteen
+historical signed-byte failures remain failures.
+
+### Remote preflight, publication and authority
+
+Live `ls-remote`, fetch, `origin/main` and REST canonical main agreed on the base
+above. PR #78 is merged. Connector and REST open-PR inventories were empty, so all
+requested open heads/bases/diffs/files/modes/checks/jobs/logs/reviews/comments/threads
+were an empty set. Exact-base [Foundation run 43802260146](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43802260146)
+passed foundation **133085024344** and Windows **133085024656**;
+[Android run 43802260121](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43802260121)
+passed **133085024042**. Completed step records and full job logs were retrieved and
+examined. [GitHub Status](https://www.githubstatus.com/api/v2/status.json) reported
+**Partially Degraded Service**, update `2026-11-16T15:46:44.983Z`; the required reads
+and fetch nevertheless completed. Initial sandbox network/ref-write denials were
+resolved with scoped access. Initial log retrieval refused terminal escape
+sequences; a separate retrieval retained complete logs privately. No failed
+retrieval was counted as evidence. No library experiment failed its observation
+assertions; the unavailable symlink control is explicitly retained above. A later
+stdin-driven nested-class bytecode export encountered a local permission error;
+the same read-only disassembly succeeded from a saved workspace script. No library
+experiment was repeated or inferred from that failed export.
+
+Reviewed governing requirements/ADRs, existing provenance/dependency/license and
+incident records, source controls and workflows. Existing local main, six prior
+worktrees, branches, ignored assets and retained evidence remain preserved; no
+stash existed. The research branch uses a separate worktree at verified main.
+Three existing regular **100644 text files** change: checker, companion evidence,
+index. No dependency, upstream code, binary, license grant, private path/hash,
+raw capture, receipt, signing material or personal information is published.
+Existing Apache-2.0 library, Temurin GPLv2/Classpath Exception, SDK terms and mixed
+transitive-license limitations remain; no independent rights clearance is inferred.
+Automatic CI is unchanged: Foundation and Android select these files; QEMU does
+not. New-head CI is **UNOBSERVED at publication**.
+
+Publish exactly one PR, attach natively to the originating chat, verify association
+once, then STOP without polling CI, reviews, comments, bots, badges or mergeability.
+Independent authentication/administration, Windows-incident disposition, designated
+reviewers, private signing custody, genuine signed builds, complete signed-byte
+equality, independent signature verification, backup, transfer and exact Samsung
+approval remain required. **Gate 0 Unresolved; Gates A–G Not reached.** ADR-0003
+expires no later than **December 8, 2026**, subject to earlier stop conditions.
+**Private backup UNVERIFIED; private evidence UNPRESERVED.**
+
 ## SDK generated-state investigation — 2026-11-15
 
 **Result: generated package-discovery state, for the specifically observed event.**

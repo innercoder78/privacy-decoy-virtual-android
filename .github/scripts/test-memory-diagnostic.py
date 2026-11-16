@@ -1940,6 +1940,99 @@ def sdk_state_tests():
               'live-input/cached-scan removal and real content/hardlink controls; no artifact admission')
 
 
+def sdk_cache_integrity_tests():
+    """Filesystem fixtures, not Android library/runtime or provenance evidence."""
+    def rejected(fn, code):
+        try:
+            fn()
+        except SdkStateRejection as error:
+            require(str(error) == code, 'wrong cache-integrity rejection')
+        else:
+            raise AssertionError('cache-integrity negative accepted')
+
+    def removed(name):
+        namespace = globals().copy()
+        node = ast.parse(inspect.getsource(globals()[name])).body[0]
+        node.body = [ast.Pass()]
+        exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])),
+                     '<cache-integrity-removal>', 'exec'), namespace)
+        return namespace[name]
+
+    def removal_fails(fn, code):
+        fn()  # Actual removed detector must accept; arbitrary exceptions fail.
+        try:
+            rejected(fn, code)
+        except AssertionError as error:
+            require(type(error) is AssertionError and str(error) == 'cache-integrity negative accepted',
+                    'wrong cache-integrity removal failure')
+        else:
+            raise AssertionError('ineffective cache-integrity removal')
+
+    with tempfile.TemporaryDirectory(prefix='pdva-cache-integrity-') as temp:
+        root = Path(temp) / 'sdk'
+        for p in SDK_PACKAGES:
+            (root / p).mkdir(parents=True)
+            (root / p / 'package.xml').write_bytes(b'original XML fixture')
+        (root / 'licenses').mkdir()
+        # Scanner coverage includes inputs that package discovery need not read.
+        payload = root / SDK_PACKAGES[0] / '.hidden-input'
+        payload.write_bytes(b'original binary fixture')
+        before = sdk_capture(root)
+        state = root / '.knownPackages'
+        expected = hashlib.md5(''.join(str(root / p) for p in SDK_PACKAGES).encode()).digest()
+        for raw in (expected, b'', expected[:7], b'x' * 16):
+            state.write_bytes(raw)
+            rejected(lambda: sdk_capture(root), 'sdk-preexisting-state')
+            removal_fails(lambda: removed('sdk_capture')(root), 'sdk-preexisting-state')
+        state.unlink()
+        state.mkdir()
+        rejected(lambda: sdk_capture(root), 'sdk-preexisting-state')
+        removal_fails(lambda: removed('sdk_capture')(root), 'sdk-preexisting-state')
+        state.rmdir()
+        state.write_bytes(expected)
+        for path in (root / SDK_PACKAGES[0] / 'package.xml', payload):
+            # Each disposable mutation gets its own pre-operation capture, so
+            # restoring an earlier fixture's bytes cannot supply a false positive.
+            state.unlink()
+            before = sdk_capture(root)
+            state.write_bytes(expected)
+            stamp = path.stat()
+            original = path.read_bytes()
+            path.write_bytes(b'X' + original[1:])
+            os.utime(path, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+            after = sdk_scan(root)
+            require(path.stat().st_mtime_ns == stamp.st_mtime_ns and state.read_bytes() == expected,
+                    'cache-integrity fixture must retain timestamp and path digest')
+            rejected(lambda: inspect_sdk_generation(before, root, {}), 'sdk-input-changed')
+            # Isolate content: retain every original field except the measured
+            # changed SHA-256. This is a manifest control, not runtime evidence.
+            projected = dict(before['entries'])
+            relative = path.relative_to(root).as_posix()
+            row = list(projected[relative]); row[6] = after[relative][6]
+            projected[relative] = tuple(row)
+            projected['.knownPackages'] = after['.knownPackages']
+            rejected(lambda: sdk_input_delta(before['entries'], projected), 'sdk-input-changed')
+            removal_fails(lambda: removed('sdk_input_delta')(before['entries'], projected), 'sdk-input-changed')
+            path.write_bytes(original)
+            os.utime(path, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+        # Cache substitution is separately checked even with matching bytes.
+        observed = sdk_scan(root)['.knownPackages']
+        state.rename(root / 'retained-cache')
+        state.write_bytes(expected)
+        replacement = sdk_scan(root)['.knownPackages']
+        require(replacement[1:3] != observed[1:3], 'cache replacement must have distinct identity')
+        witness = dict(schema=1, trust='UNTRUSTED', root=str(root), writer=SDK_WRITER,
+                       repository_sha256=SDK_REPOSITORY_SHA256, started_ns=before['captured_ns'],
+                       finished_ns=time.time_ns(), exit=0, bytes_written=16, state=observed,
+                       stack=[SDK_WRITER, 'com.android.repository.impl.manager.LocalRepoLoaderImpl.getPackages'])
+        rejected(lambda: sdk_generation(before, root, {'.knownPackages': replacement}, witness),
+                 'sdk-state-substituted')
+        removal_fails(lambda: removed('sdk_generation')(before, root, {'.knownPackages': replacement}, witness),
+                      'sdk-state-substituted')
+    print('PASS: cache integrity fixtures; 8 specific negatives / effective detector removals; '
+          'timestamp-preserved XML/hidden-input changes and same-byte cache substitution; no library-runtime claim')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--java-home', type=Path)
@@ -2010,6 +2103,7 @@ def main():
     signed_qualification_tests()
     unsigned_pair_tests()
     sdk_state_tests()
+    sdk_cache_integrity_tests()
     source_policy()
     adapter = (JAVA / 'AndroidOps.java').read_text()
     manifest = (MODULE / 'src/main/AndroidManifest.xml').read_text()
