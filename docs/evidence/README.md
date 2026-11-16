@@ -1,5 +1,12 @@
 # Evidence index
 
+[Exact README integration correction for draft PR #77](gate-0-companion-source-controls.md#exact-readme-integration-correction--2026-11-11),
+2026-11-11: merged current main while preserving its README; narrowly pinned the
+reviewed README-only transition without replacing historical protection evidence.
+11 additional source negatives/removal controls and historical recomputation pass
+locally. Original unsigned equality and SDK-state failure remain tied to `f272de8`;
+no rebuild. New-head hosted checks UNVERIFIED; no integration-success claim.
+
 [Fresh companion unsigned-pair experiment](gate-0-companion-source-controls.md#fresh-unsigned-pair-experiment--2026-11-11),
 2026-11-11: two fresh exact-main unsigned builds, 45 actionable tasks executed
 each, and complete original-byte equality PASSED. Both APKs are 16,036 bytes.

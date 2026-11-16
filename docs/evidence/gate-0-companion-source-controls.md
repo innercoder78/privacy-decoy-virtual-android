@@ -1,6 +1,8 @@
 # Companion diagnostic source controls
 
-**Current update:** the [fresh unsigned pair experiment](#fresh-unsigned-pair-experiment--2026-11-11)
+**Current update:** the [exact README integration correction](#exact-readme-integration-correction--2026-11-11)
+adds only the reviewed documentation transition to source admission; updated-head
+CI remains unverified at publication. The [fresh unsigned pair experiment](#fresh-unsigned-pair-experiment--2026-11-11)
 records exact original-byte equality and a separate failed SDK-directory stability
 assertion. The [authorized implementation and unsigned packaging evidence](#active-option-b-and-unsigned-packaging--2026-11-10)
 below supersedes the earlier unchanged-active-state statements for this separate
@@ -310,6 +312,166 @@ complete signed-byte equality, independent artifact review, private backup and
 transfer, and separate exact-artifact Samsung approval remain required.
 **Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.**
+
+## Exact README integration correction — 2026-11-11
+
+This is a revision of **existing draft PR #77**, on explicit owner instruction,
+not another PR or another APK experiment. **Local integrated-source validation
+passed; applicable new-head hosted checks are UNVERIFIED at publication.** The
+earlier integration-blocker text records the original publication state. This
+section supplies the precise source correction without declaring successful CI
+integration or readiness for merge. Gate 0 remains Unresolved; Gates A–G Not reached.
+
+### Reviewed transition and unchanged historical baseline
+
+Live main was `7bbdec67825d4c88d8789d3db643f3bc97ee777f`; existing PR head was
+`5cc2104f725901bafc01c80c86f5cd8e76303116`. The intervening main commit changes
+**only README.md**, regular 100644, with three added and 47 removed lines. It
+clarifies nonroot operation, shortens the introduction and retains experimental
+uncertainty. No Android, dependency, requirement, ADR, security or workflow file
+changes. Task review of that complete commit does not constitute independent
+supply-chain or security qualification.
+
+Main was merged into the existing branch without rewriting history:
+`afab19926dbc04081cd12ae249918bae7f6f5f05`, with parents `5cc2104` and `7bbdec6`.
+README.md matches main exactly; it was not reverted, rewritten or added to the
+three-file review exemption. Existing branches/worktrees/stashes/ignored assets
+and private records were preserved; the initial checkout was clean, with six
+registered worktrees and no stash.
+
+The [checker](../../.github/scripts/test-memory-diagnostic.py) keeps `SOURCE_BASE`,
+the complete historical `PROTECTED` mapping, `protected_evidence`, source modes,
+module byte fixtures, `REVIEWED_FILES` and the existing historical recomputation
+procedure unchanged. The new immutable transition pins identify the exact README
+commit, parent and whole README SHA-256, plus the **complete 109-file governance
+count/digest obtained from the historical baseline with only that README replaced**.
+All other protected groups retain their original expected count/digest.
+
+During admission, the new governance digest is selected only for that exact README
+hash. Every governance path and complete file body still participates in the
+length-delimited digest. No path is removed, normalized, wildcarded or generally
+exempted. A different README fails; an unrelated governance/security/requirement/
+ADR change still fails even with the correct README. The original historical
+state remains admissible for explicitly inspecting the old source commit; the
+default integrated-source regression additionally requires the exact updated
+README in the actual working tree. Existing 100644 mode enforcement is unchanged.
+
+The additive, read-only `--verify-readme-update` audit loads the immutable baseline,
+the exact reviewed parent and commit. It verifies parent identity, equal file
+inventories, a README-only byte/mode difference, the parent's original README,
+the pinned new README, and the recomputed complete protected evidence. It also
+checks both historical-parent and updated-commit admission. Missing Git objects
+fail rather than fetching or deriving replacement pins. Shallow normal CI uses
+the fixed pins and current source tests; it needs no historical fetch or workflow
+change. These public source fingerprints are review evidence, not authentication.
+
+### Actual tests and preserved experiment outcomes
+
+Windows x86_64, existing bundled CPython 3.12.14 and Temurin 17.0.21+9 with API-37
+compile stubs; all remain UNTRUSTED. No dependency or tool was installed/upgraded.
+The actual procedures, using the existing interpreter, included:
+
+```text
+python .github/scripts/test-memory-diagnostic.py
+python .github/scripts/test-memory-diagnostic.py --verify-source-baseline
+python .github/scripts/test-memory-diagnostic.py --verify-readme-update
+python .github/scripts/test-memory-diagnostic.py --check-source-ref HEAD
+python .github/scripts/test-memory-diagnostic.py --check-source-ref f272de8207586ee2ec84412f6057ea580f0d0611
+python .github/scripts/test-memory-diagnostic.py --java-home <existing-JDK> --android-jar <existing-API-37-JAR>
+python .github/scripts/test-execution-lock.py --android-jar <existing-API-37-JAR>
+```
+
+- Accepted the exact README update in the integrated working source, actual Git
+  transition audit and isolated Git CLI. Historical baseline recomputation and
+  old experimental source admission passed independently; no old receipt changed.
+- **11 new negatives and 11 effective AST detector-removal assertion failures**:
+  altered, missing, renamed or executable README; changed governance, requirements,
+  ADR, security boundaries, host configuration, execution lock or dependency pins.
+  A one-byte newline addition is enough to reject each content mutation. Detector
+  deletion must admit that same bad fixture, making the negative assertion fail;
+  arbitrary exceptions do not count.
+- All existing **60 source negatives / 60 removal assertions** ran on the integrated
+  source, as did **60 signed-structure negatives / 60 removal assertions**, eight
+  file/CLI/admission negatives, six unsigned metadata negatives and the previous
+  **24 unsigned observation negatives / 24 removal assertions**. The signed
+  authority rejection and final fail-closed admission boundary are unchanged.
+- Diagnostic JVM: **190 assertions**, cleanup-removal rejection, Activity bytecode
+  controls and API-37 compilation passed. Execution lock: **600 denials in three
+  JVMs and three rejected mutants**. No Android runtime result is claimed.
+- Foundation/harness validation passed: **183 files, 112 Markdown files, 54
+  requirements, four ADRs**. Repository regression: **152 tests, 148 passed and four
+  existing Windows skips**. Readiness, offline-image, frame-copy, Gradle-distribution
+  and installed-tools suites passed **28, 45, 4, 38 and 16** tests respectively.
+  Linux/native/real-Gradle runtime and device controls were not rerun locally.
+
+The first new mode-removal control failed because a redundant 100644 condition
+in the proposed digest selector still rejected its fixture after deletion of the
+existing mode detector. The selector was corrected to leave modes to the original
+mode detector. The unchanged mode rule and its effective removal control then
+passed. This initial test failure is retained; no source mode was relaxed.
+
+Read-only inspection rechecked both retained original APK identities and whole
+bytes against the original private execution records. **Original unsigned equality
+remains PASSED for `f272de8` only**, and the original **combined SDK-state result
+remains FAILED** at `unsigned-execution-state` because `.knownPackages` was added.
+The corrected source verifier still reproduces that failure. No artifact or private
+record was rewritten, no build rerun occurred, and neither build is relabeled as
+originating from `7bbdec6` or the integrated PR. No signing or device operations.
+
+### Live preflight and publication boundary
+
+Connector/REST and fetched refs agreed on the exact head/base above. PR #77 was
+the only open PR and remained a draft. Full diff, three changed regular-file modes,
+check/job/step records and completed logs were reviewed; reviews, comments and
+review threads were empty. Main's real Foundation failure remains recorded:
+[run 43071019706](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43071019706),
+foundation **130698583492 failed** at `protected-governance`, Windows
+**130698584073 passed**. No Android run existed for that README-only change.
+
+PR #77's old-head [Foundation run 43071905566](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43071905566)
+passed foundation **130701737955** and Windows **130701737401**;
+[Android run 43071905616](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43071905616)
+passed **130701737689**. Their checkout logs identify **`5cc2104`**, which did not
+contain the concurrent README edit. Those successes cannot verify the integrated
+source or retroactively turn main's failure into a pass.
+[GitHub Status](https://www.githubstatus.com/api/v2/summary.json), update
+`2026-11-11T17:54:12.114Z`, reported All Systems Operational, no incidents.
+
+Requirements, ADR decisions, acceptance/provenance/dependency records, source
+protection, relevant history and all workflows were rechecked. The revision adds
+original standard-library Python only, with no dependency, binary, license grant
+or new rights claim. The final PR diff against current main remains exactly the
+existing checker and two focused evidence files, all 100644; README.md, Android,
+configuration, requirements, ADRs and workflow files match current main. Full diff,
+historical pins, source admission, modes, links, whitespace and public-data hygiene
+are checked before push. No private paths, artifacts, inventories or hashes are
+published; the new hashes identify public source only.
+
+Foundation and Android already check out the exact PR head and call this checker;
+the merged ancestry now makes their next normal runs exercise integrated source.
+Triggers, check requirements and failure propagation remain unchanged; QEMU filters
+do not select this change. **Applicable new-head checks are UNVERIFIED at push;
+successful integration is not claimed.** Update only PR #77, keep it draft, attach
+it to this chat and verify association once, then STOP without polling CI, reviews,
+comments, bots, badges or mergeability. Renewed review must verify those exact-head
+results before an integration-success claim.
+
+**Publication resumed 2026-11-15, America/Fortaleza.** The interruption left the
+merge commit and three uncommitted correction/evidence files intact; no push had
+occurred. On resume, main remained `7bbdec6` and PR #77 remained the sole open PR,
+draft at `5cc2104`, with empty comments/review threads and the same three completed
+successful old-head checks. Completed implementation/JVM/regression work was
+retained without rerunning the APK experiment or repeating those suites. Final
+source admission, unchanged historical pins/signed functions, exact README bytes,
+main ancestry, three-file scope, privacy, documentation and whitespace were
+rechecked. GitHub Status reported All Systems Operational at snapshot
+`2026-11-16T00:09:19.907Z`. Those pre-push observations are not new-head CI evidence.
+
+All independent authentication/administration, Windows-incident disposition,
+reviewer, signing-custody, signed-byte equality, backup, transfer and exact phone
+approval requirements remain separate. ADR-0003's December 8, 2026 deadline and
+earlier termination conditions remain binding. **Physical testing NOT READY;
+independent backup UNVERIFIED; private evidence UNPRESERVED.**
 
 ## Strict signed-APK prequalification — 2026-11-10
 

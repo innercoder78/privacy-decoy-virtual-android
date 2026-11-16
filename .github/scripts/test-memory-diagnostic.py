@@ -42,6 +42,13 @@ PROTECTED = {
     'host': (22, 'dd352694ada63116991b5e8743f36b23e170b435c49d1614e1beb7ba77e703da'),
     'lock': (1, '9fee0fc620a37c57b9fa5be64d24ecdda0335d024486697fa54e4aaa3404b751'),
 }
+# One reviewed documentation-only transition, not a new historical baseline.
+# Derived from SOURCE_BASE with ONLY this commit's README.md blob substituted.
+# --verify-readme-update recomputes the transition from immutable Git objects.
+README_UPDATE_COMMIT = '7bbdec67825d4c88d8789d3db643f3bc97ee777f'
+README_UPDATE_PARENT = 'f272de8207586ee2ec84412f6057ea580f0d0611'
+README_UPDATE_SHA256 = 'dd73f7da0c2f9cbb3a647c4e8452a79d7fdfb7e4d6f2865ba2392d0f8705bfe4'
+README_UPDATE_GOVERNANCE = (109, '27162b9af9a45f36a674d76895817ea37285f6ef38487332325f0127f11400ab')
 BASE_BUILD = b"""plugins { id 'com.android.application' }
 android {
     namespace 'org.pdva.memorydiagnostic'
@@ -152,6 +159,12 @@ def check_metadata_delta(snapshot):
 def check_protected_source(snapshot):
     actual = protected_evidence(snapshot)
     for group, expected in PROTECTED.items():
+        # Still hash every protected path and byte. Neither the README nor any
+        # other governance file is omitted, normalized or generally exempted.
+        # check_source_modes independently enforces the unchanged 100644 rule.
+        if (group == 'governance' and 'README.md' in snapshot
+                and hashlib.sha256(snapshot['README.md'][1]).hexdigest() == README_UPDATE_SHA256):
+            expected = README_UPDATE_GOVERNANCE
         source_require(actual[group] == expected, 'protected-' + group)
 
 
@@ -221,6 +234,32 @@ def working_source():
             mode = '100755'
         snapshot[path] = (mode, file.read_bytes())
     return snapshot
+
+
+def verify_readme_update():
+    """Audit the exact one-file transition; never derive new accepted pins."""
+    source_require(git_source('rev-parse', README_UPDATE_COMMIT + '^').decode().strip()
+                   == README_UPDATE_PARENT, 'readme-update-parent')
+    baseline = committed_source(SOURCE_BASE)
+    parent = committed_source(README_UPDATE_PARENT)
+    updated = committed_source(README_UPDATE_COMMIT)
+    for snapshot in (baseline, parent, updated):
+        check_source_modes(snapshot)
+    source_require(protected_evidence(baseline) == PROTECTED
+                   and baseline[BUILD_PATH][1] == BASE_BUILD, 'readme-historical-baseline')
+    source_require(parent.keys() == updated.keys()
+                   and [p for p in parent if parent[p] != updated[p]] == ['README.md']
+                   and parent['README.md'] == baseline['README.md'], 'readme-only-transition')
+    source_require(hashlib.sha256(updated['README.md'][1]).hexdigest()
+                   == README_UPDATE_SHA256, 'readme-update-bytes')
+    only_readme = baseline.copy()
+    only_readme['README.md'] = updated['README.md']
+    expected = dict(PROTECTED, governance=README_UPDATE_GOVERNANCE)
+    source_require(protected_evidence(only_readme) == expected
+                   and protected_evidence(updated) == expected, 'readme-update-protected-evidence')
+    for snapshot in (parent, updated):
+        verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+    print('PASS: exact reviewed README-only Git transition; immutable historical baseline preserved')
 
 
 def expect_source_rejection(verifier, snapshot, evidence, code, name):
@@ -408,6 +447,49 @@ def companion_source_tests():
     print(f'PASS: exact active companion delta; {len(cases)} specific negatives; '
           f'{len(cases)} detector-removal assertion failures ({len(mutants)} detector bodies)')
     source_cli_tests(positive)
+
+
+def readme_update_tests():
+    positive = working_source()
+    evidence = (SOURCE_BASE, PROTECTED.copy())
+    require(hashlib.sha256(positive['README.md'][1]).hexdigest() == README_UPDATE_SHA256,
+            'actual integrated README must match reviewed update')
+    verify_companion_delta(positive, evidence)
+    require(protected_evidence(positive)['governance'] == README_UPDATE_GOVERNANCE,
+            'complete updated governance remains pinned')
+    cases = []
+    for name, path in (
+        ('altered-readme', 'README.md'), ('unrelated-governance', 'docs/governance.md'),
+        ('requirements', 'docs/requirements.md'),
+        ('adr', 'docs/decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md'),
+        ('security', 'docs/security-boundaries.md'), ('host', 'android/gate0-harness/build.gradle'),
+        ('lock', 'android/gate0-harness/src/main/java/org/pdva/gate0/Session.java'),
+        ('dependencies', 'android/gradle/verification-metadata.xml')):
+        changed = positive.copy()
+        mode, data = changed[path]
+        changed[path] = (mode, data + b'\n')  # even one extra byte is unauthorized
+        cases.append((name, changed, 'protected-' + protected_group(path), 'check_protected_source'))
+    missing = positive.copy(); del missing['README.md']
+    cases.append(('missing-readme', missing, 'protected-governance', 'check_protected_source'))
+    renamed = positive.copy(); renamed['README-renamed.md'] = renamed.pop('README.md')
+    cases.append(('renamed-readme', renamed, 'protected-governance', 'check_protected_source'))
+    mode = positive.copy(); mode['README.md'] = ('100755', mode['README.md'][1])
+    cases.append(('readme-mode', mode, 'regular-source-modes', 'check_source_modes'))
+    mutants = {detector: detector_removed(detector) for *_, detector in cases}
+    for mutant in mutants.values():
+        mutant(positive, evidence)
+    for name, snapshot, code, detector in cases:
+        expect_source_rejection(verify_companion_delta, snapshot, evidence, code, name)
+        mutant = mutants[detector]
+        mutant(snapshot, evidence)
+        try:
+            expect_source_rejection(mutant, snapshot, evidence, code, name)
+        except AssertionError as failure:
+            require(type(failure) is AssertionError and str(failure) == 'negative accepted: ' + name,
+                    'wrong README detector-removal outcome')
+        else:
+            raise AssertionError('ineffective README detector-removal assertion')
+    print('PASS: exact integrated README; 11 negatives / 11 effective detector-removal assertions')
 
 
 def require(condition, message):
@@ -1563,6 +1645,8 @@ def main():
     source_mode = parser.add_mutually_exclusive_group()
     source_mode.add_argument('--verify-source-baseline', action='store_true',
                              help='recompute the pinned public evidence from the exact base Git object')
+    source_mode.add_argument('--verify-readme-update', action='store_true',
+                             help='recompute the exact reviewed README-only transition without changing historical pins')
     source_mode.add_argument('--check-source-ref',
                              help='check an existing local commit for the exact proposed source delta only')
     args = parser.parse_args()
@@ -1571,7 +1655,7 @@ def main():
             qualification_require(args.unsigned_source_ref and args.unsigned_executions
                                   and not (args.signed_pair or args.build_receipts or args.java_home
                                            or args.android_jar or args.apk or args.verify_source_baseline
-                                           or args.check_source_ref), 'unsigned-options')
+                                           or args.check_source_ref or args.verify_readme_update), 'unsigned-options')
             compare_unsigned_pair(args.unsigned_pair, args.unsigned_source_ref, read_build_receipts(args.unsigned_executions))
         except QualificationRejection as failure:
             print('FAIL/Unknown unsigned observation: ' + str(failure))
@@ -1581,6 +1665,11 @@ def main():
             raise SystemExit(1) from None
         return
     require(not (args.unsigned_source_ref or args.unsigned_executions), 'unsigned options require unsigned pair')
+    if args.verify_readme_update:
+        require(not (args.signed_pair or args.build_receipts or args.java_home or args.android_jar or args.apk),
+                'README audit cannot build/inspect packages')
+        verify_readme_update()
+        return
     if args.signed_pair:
         try:
             qualification_require(not (args.java_home or args.android_jar or args.apk or args.verify_source_baseline
@@ -1607,6 +1696,7 @@ def main():
             print('PASS: exact proposed source delta only; independent review and qualification still required')
         return
     companion_source_tests()
+    readme_update_tests()
     metadata_package_tests()
     signed_qualification_tests()
     unsigned_pair_tests()
