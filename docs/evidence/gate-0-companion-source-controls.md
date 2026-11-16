@@ -1,6 +1,10 @@
 # Companion diagnostic source controls
 
-**Current update:** the [authorized implementation and unsigned packaging evidence](#active-option-b-and-unsigned-packaging--2026-11-10)
+**Current update:** the [exact README integration correction](#exact-readme-integration-correction--2026-11-11)
+adds only the reviewed documentation transition to source admission; updated-head
+CI remains unverified at publication. The [fresh unsigned pair experiment](#fresh-unsigned-pair-experiment--2026-11-11)
+records exact original-byte equality and a separate failed SDK-directory stability
+assertion. The [authorized implementation and unsigned packaging evidence](#active-option-b-and-unsigned-packaging--2026-11-10)
 below supersedes the earlier unchanged-active-state statements for this separate
 diagnostic only. The following original source-control record is retained as history.
 
@@ -309,6 +313,166 @@ transfer, and separate exact-artifact Samsung approval remain required.
 **Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.**
 
+## Exact README integration correction — 2026-11-11
+
+This is a revision of **existing draft PR #77**, on explicit owner instruction,
+not another PR or another APK experiment. **Local integrated-source validation
+passed; applicable new-head hosted checks are UNVERIFIED at publication.** The
+earlier integration-blocker text records the original publication state. This
+section supplies the precise source correction without declaring successful CI
+integration or readiness for merge. Gate 0 remains Unresolved; Gates A–G Not reached.
+
+### Reviewed transition and unchanged historical baseline
+
+Live main was `7bbdec67825d4c88d8789d3db643f3bc97ee777f`; existing PR head was
+`5cc2104f725901bafc01c80c86f5cd8e76303116`. The intervening main commit changes
+**only README.md**, regular 100644, with three added and 47 removed lines. It
+clarifies nonroot operation, shortens the introduction and retains experimental
+uncertainty. No Android, dependency, requirement, ADR, security or workflow file
+changes. Task review of that complete commit does not constitute independent
+supply-chain or security qualification.
+
+Main was merged into the existing branch without rewriting history:
+`afab19926dbc04081cd12ae249918bae7f6f5f05`, with parents `5cc2104` and `7bbdec6`.
+README.md matches main exactly; it was not reverted, rewritten or added to the
+three-file review exemption. Existing branches/worktrees/stashes/ignored assets
+and private records were preserved; the initial checkout was clean, with six
+registered worktrees and no stash.
+
+The [checker](../../.github/scripts/test-memory-diagnostic.py) keeps `SOURCE_BASE`,
+the complete historical `PROTECTED` mapping, `protected_evidence`, source modes,
+module byte fixtures, `REVIEWED_FILES` and the existing historical recomputation
+procedure unchanged. The new immutable transition pins identify the exact README
+commit, parent and whole README SHA-256, plus the **complete 109-file governance
+count/digest obtained from the historical baseline with only that README replaced**.
+All other protected groups retain their original expected count/digest.
+
+During admission, the new governance digest is selected only for that exact README
+hash. Every governance path and complete file body still participates in the
+length-delimited digest. No path is removed, normalized, wildcarded or generally
+exempted. A different README fails; an unrelated governance/security/requirement/
+ADR change still fails even with the correct README. The original historical
+state remains admissible for explicitly inspecting the old source commit; the
+default integrated-source regression additionally requires the exact updated
+README in the actual working tree. Existing 100644 mode enforcement is unchanged.
+
+The additive, read-only `--verify-readme-update` audit loads the immutable baseline,
+the exact reviewed parent and commit. It verifies parent identity, equal file
+inventories, a README-only byte/mode difference, the parent's original README,
+the pinned new README, and the recomputed complete protected evidence. It also
+checks both historical-parent and updated-commit admission. Missing Git objects
+fail rather than fetching or deriving replacement pins. Shallow normal CI uses
+the fixed pins and current source tests; it needs no historical fetch or workflow
+change. These public source fingerprints are review evidence, not authentication.
+
+### Actual tests and preserved experiment outcomes
+
+Windows x86_64, existing bundled CPython 3.12.14 and Temurin 17.0.21+9 with API-37
+compile stubs; all remain UNTRUSTED. No dependency or tool was installed/upgraded.
+The actual procedures, using the existing interpreter, included:
+
+```text
+python .github/scripts/test-memory-diagnostic.py
+python .github/scripts/test-memory-diagnostic.py --verify-source-baseline
+python .github/scripts/test-memory-diagnostic.py --verify-readme-update
+python .github/scripts/test-memory-diagnostic.py --check-source-ref HEAD
+python .github/scripts/test-memory-diagnostic.py --check-source-ref f272de8207586ee2ec84412f6057ea580f0d0611
+python .github/scripts/test-memory-diagnostic.py --java-home <existing-JDK> --android-jar <existing-API-37-JAR>
+python .github/scripts/test-execution-lock.py --android-jar <existing-API-37-JAR>
+```
+
+- Accepted the exact README update in the integrated working source, actual Git
+  transition audit and isolated Git CLI. Historical baseline recomputation and
+  old experimental source admission passed independently; no old receipt changed.
+- **11 new negatives and 11 effective AST detector-removal assertion failures**:
+  altered, missing, renamed or executable README; changed governance, requirements,
+  ADR, security boundaries, host configuration, execution lock or dependency pins.
+  A one-byte newline addition is enough to reject each content mutation. Detector
+  deletion must admit that same bad fixture, making the negative assertion fail;
+  arbitrary exceptions do not count.
+- All existing **60 source negatives / 60 removal assertions** ran on the integrated
+  source, as did **60 signed-structure negatives / 60 removal assertions**, eight
+  file/CLI/admission negatives, six unsigned metadata negatives and the previous
+  **24 unsigned observation negatives / 24 removal assertions**. The signed
+  authority rejection and final fail-closed admission boundary are unchanged.
+- Diagnostic JVM: **190 assertions**, cleanup-removal rejection, Activity bytecode
+  controls and API-37 compilation passed. Execution lock: **600 denials in three
+  JVMs and three rejected mutants**. No Android runtime result is claimed.
+- Foundation/harness validation passed: **183 files, 112 Markdown files, 54
+  requirements, four ADRs**. Repository regression: **152 tests, 148 passed and four
+  existing Windows skips**. Readiness, offline-image, frame-copy, Gradle-distribution
+  and installed-tools suites passed **28, 45, 4, 38 and 16** tests respectively.
+  Linux/native/real-Gradle runtime and device controls were not rerun locally.
+
+The first new mode-removal control failed because a redundant 100644 condition
+in the proposed digest selector still rejected its fixture after deletion of the
+existing mode detector. The selector was corrected to leave modes to the original
+mode detector. The unchanged mode rule and its effective removal control then
+passed. This initial test failure is retained; no source mode was relaxed.
+
+Read-only inspection rechecked both retained original APK identities and whole
+bytes against the original private execution records. **Original unsigned equality
+remains PASSED for `f272de8` only**, and the original **combined SDK-state result
+remains FAILED** at `unsigned-execution-state` because `.knownPackages` was added.
+The corrected source verifier still reproduces that failure. No artifact or private
+record was rewritten, no build rerun occurred, and neither build is relabeled as
+originating from `7bbdec6` or the integrated PR. No signing or device operations.
+
+### Live preflight and publication boundary
+
+Connector/REST and fetched refs agreed on the exact head/base above. PR #77 was
+the only open PR and remained a draft. Full diff, three changed regular-file modes,
+check/job/step records and completed logs were reviewed; reviews, comments and
+review threads were empty. Main's real Foundation failure remains recorded:
+[run 43071019706](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43071019706),
+foundation **130698583492 failed** at `protected-governance`, Windows
+**130698584073 passed**. No Android run existed for that README-only change.
+
+PR #77's old-head [Foundation run 43071905566](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43071905566)
+passed foundation **130701737955** and Windows **130701737401**;
+[Android run 43071905616](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43071905616)
+passed **130701737689**. Their checkout logs identify **`5cc2104`**, which did not
+contain the concurrent README edit. Those successes cannot verify the integrated
+source or retroactively turn main's failure into a pass.
+[GitHub Status](https://www.githubstatus.com/api/v2/summary.json), update
+`2026-11-11T17:54:12.114Z`, reported All Systems Operational, no incidents.
+
+Requirements, ADR decisions, acceptance/provenance/dependency records, source
+protection, relevant history and all workflows were rechecked. The revision adds
+original standard-library Python only, with no dependency, binary, license grant
+or new rights claim. The final PR diff against current main remains exactly the
+existing checker and two focused evidence files, all 100644; README.md, Android,
+configuration, requirements, ADRs and workflow files match current main. Full diff,
+historical pins, source admission, modes, links, whitespace and public-data hygiene
+are checked before push. No private paths, artifacts, inventories or hashes are
+published; the new hashes identify public source only.
+
+Foundation and Android already check out the exact PR head and call this checker;
+the merged ancestry now makes their next normal runs exercise integrated source.
+Triggers, check requirements and failure propagation remain unchanged; QEMU filters
+do not select this change. **Applicable new-head checks are UNVERIFIED at push;
+successful integration is not claimed.** Update only PR #77, keep it draft, attach
+it to this chat and verify association once, then STOP without polling CI, reviews,
+comments, bots, badges or mergeability. Renewed review must verify those exact-head
+results before an integration-success claim.
+
+**Publication resumed 2026-11-15, America/Fortaleza.** The interruption left the
+merge commit and three uncommitted correction/evidence files intact; no push had
+occurred. On resume, main remained `7bbdec6` and PR #77 remained the sole open PR,
+draft at `5cc2104`, with empty comments/review threads and the same three completed
+successful old-head checks. Completed implementation/JVM/regression work was
+retained without rerunning the APK experiment or repeating those suites. Final
+source admission, unchanged historical pins/signed functions, exact README bytes,
+main ancestry, three-file scope, privacy, documentation and whitespace were
+rechecked. GitHub Status reported All Systems Operational at snapshot
+`2026-11-16T00:09:19.907Z`. Those pre-push observations are not new-head CI evidence.
+
+All independent authentication/administration, Windows-incident disposition,
+reviewer, signing-custody, signed-byte equality, backup, transfer and exact phone
+approval requirements remain separate. ADR-0003's December 8, 2026 deadline and
+earlier termination conditions remain binding. **Physical testing NOT READY;
+independent backup UNVERIFIED; private evidence UNPRESERVED.**
+
 ## Strict signed-APK prequalification — 2026-11-10
 
 Scope: the separate Android 17 memory diagnostic under PDVA-REQ-036–043, 048,
@@ -538,3 +702,212 @@ no open PR or existing PR for this branch was found. Its three baseline checks
 remained successful. Completed implementation tests were not repeated; only this
 publication disposition was added and documentation/whitespace checks rerun.
 The same one-PR publication and single association-verification procedure applies.
+
+## Fresh unsigned pair experiment — 2026-11-11
+
+**Direct observation: complete original unsigned APK equality PASSED.** Two fresh,
+separately executed release builds each produced **16,036 bytes**, and the existing
+`original_pair` / `exact_original_bytes` control compared every original byte
+directly. No normalization, repackaging, ignored regions, signature processing or
+comparison exception was used. Both original files remain locally retained.
+This is **bounded unsigned-development reproducibility only** on one untrusted
+Windows administration/toolchain, not independently authenticated builders,
+signed reproducibility, supply-chain qualification or Samsung readiness.
+
+**Separate result: the combined observation route FAILED** with
+`unsigned-execution-state`: both SDK directory inventories gained `.knownPackages`.
+No original SDK file changed or disappeared. The whole-directory-unchanged claim
+is false and remains false; its check, records and nonzero CLI result were not
+weakened or converted into success. This does not alter the separately measured
+original-byte equality. No claim that all environment state stayed unchanged is
+supported. Independent provenance and administration remain **Unknown**.
+
+Scope: PDVA-REQ-036–043, 048, 051 and 054. **Gate 0 Unresolved; Gates A–G Not reached;
+physical testing NOT READY — STOP.** This new experiment is neither the earlier
+single-build packaging research nor a rerun of the fifteen signed-byte failures.
+
+### Exact source, inputs and execution
+
+Both exports contain all **183** regular source files from reviewed canonical main
+`f272de8207586ee2ec84412f6057ea580f0d0611`, the PR #76 merge. The Android tree remains
+`a844105b1373ef121401718e1c5d08cf1d6ca3ce`. Each export was initialized separately
+from exact Git blob bytes/modes, with exclusive new directories and files; no
+working-tree edits were substituted. All exported source bytes matched before
+and after each build. The new comparison code runs from this PR against those
+unchanged main-source artifacts; it was not injected into either build export.
+
+Environment: Codex Desktop LOCAL, Windows x86_64, existing bundled CPython
+**3.12.14**, Temurin **17.0.21+9**, Gradle **9.6.0**, AGP **9.4.0**, SDK Platform
+**37.0** and Build Tools **36.0.0**. Everything is explicitly **UNTRUSTED**.
+Existing exact pins and verification metadata remain unchanged; no installation,
+upgrade, replacement tooling or dependency-policy change occurred. Existing
+source/provenance, adoption and dependency ledgers remain controlling, including
+TOFU and unresolved Windows-incident limitations. No independent rights or
+security clearance is inferred from a successful build.
+
+Each side had different source, Gradle home, SDK (`ANDROID_HOME` and
+`ANDROID_SDK_ROOT`), Android user home, temporary directory, project build directory
+and APK output path. Only original installed SDK inputs, the existing pinned
+Gradle distribution archive, and the existing `modules-2` dependency-input cache
+were copied separately from their common input sources. No APK, task output,
+transformed dependency cache, project cache or configuration cache was copied
+between builders. JDK and OS administration were shared. Prebuild JDK/SDK/dependency
+regular-file inventories matched across sides; private inventories and paths are
+not published. SDK postbuild inventory differences were recorded as above.
+
+Each source export used the unchanged bootstrap, which supplies
+`--no-daemon --dependency-verification=strict`, with these exact additional options:
+
+```text
+python android/build.py --offline --configure-on-demand --no-build-cache \
+  --no-configuration-cache --rerun-tasks --console=plain \
+  :memory-diagnostic:assembleRelease :memory-diagnostic:diagnosticTest \
+  :memory-diagnostic:lintRelease
+```
+
+| Observation | Build A | Build B |
+|---|---|---|
+| Initial project build and project cache | Absent | Absent |
+| Real Gradle result | Exit 0, 1m 32s | Exit 0, 1m 34s |
+| Actionable tasks | 45 executed of 45 | 45 executed of 45 |
+| Original APK | 16,036 bytes; new file identity and generation time within execution interval | 16,036 bytes; distinct file identity and generation time within its own execution interval |
+| Source correspondence | All exact reviewed source bytes preserved | All exact reviewed source bytes preserved |
+| SDK directory stability | FAILED: added `.knownPackages`; no original input changed/deleted | FAILED: same added filename; no original input changed/deleted |
+
+Private process IDs, start/finish times, absent-output checks, exact commands,
+input inventories, task logs and original output identities support **observed
+separate local execution**. Neither build returned cached compilation, DEX or
+packaging output. The three empty lifecycle tasks `preBuild`, `preReleaseBuild`
+and `generateReleaseAssets` displayed `UP-TO-DATE`; they are not counted among the
+45 actionable tasks. Native/Java-resource tasks with no source displayed
+`NO-SOURCE`. AGP skipped `lintVitalReportRelease` / `lintVitalRelease` while the
+requested full `lintAnalyzeRelease`, `lintReportRelease` and `lintRelease` ran.
+These statuses are retained; no task was excluded or altered. Gradle emitted its
+configuration-on-demand and deprecation notices. Local records cannot prove
+absence of malicious host activity or authenticate their own independence.
+
+### Inspection, controls and real failures
+
+Both originals passed the existing unsigned package/manifest/API/version/release,
+DEX capability, extraction-rule, native/asset/permission/signature inventory and
+metadata-output controls. The exact package inventory/DEX checks were also reused
+from `signed_package`; that function is a content screen, not signing or signature
+verification. Source inspection confirms the diagnostic-only Option B setting,
+null signing configurations and unchanged host metadata policy. Neither original
+was repaired or rewritten. No encrypted SDK dependency output or APK signing block
+was found. The DEX/resource screens are not proof of runtime semantics or an
+independently authenticated source-to-binary reconstruction.
+
+The existing allowlisted checker adds `--unsigned-pair`, `--unsigned-source-ref`
+and `--unsigned-executions`. It reuses original-file identity/complete-byte equality,
+source protection, package inspection, duplicate-key/size-bounded JSON reading
+and final original re-read controls. It checks local record contradictions,
+disjoint workspace/home paths, output/time/identity correspondence, exact exported
+source and executed essential tasks. Private records and logs remain **claims**;
+consistent forged records cannot establish independence or authority. No signing
+function, permanent `qualified_authority` rejection or final admission boundary
+was changed. The route reports equality before the later checks, so a failed
+combined observation cannot obscure the raw byte result.
+
+- Real positive controls: the two separately generated original APKs passed direct
+  equality; both packages, source exports and essential task logs passed their
+  individual checks. Before/after file identity and original-byte checks passed.
+- Four disposable copies derived from the actual APK were rejected: a one-byte
+  mutation, changed ZIP timestamp metadata, truncation, and appended data. Each
+  failed `original_pair` with `original-bytes-differ`. The same original supplied
+  twice failed `same-original-file`. None is a third genuine build.
+- Synthetic copies of the local claim records exercised swapped/stale outputs and
+  shared SDK/Gradle/Android-home claims. They never replaced real records. Swapping
+  the genuine outputs was rejected by execution-time correspondence first.
+  Added native inventory, invalid DEX and missing exported source were rejected;
+  actual AST removal of the source-correspondence detector made its negative
+  assertion fail. Original APKs stayed unchanged throughout.
+- Permanent default regression additions: **16 execution-record negatives, six
+  task-log negatives and two source-export negatives**, with **24 effective AST
+  detector-removal assertion failures** across three detector bodies. Arbitrary
+  exceptions do not count. Existing byte/ZIP/package mutation controls are reused.
+- The genuine combined route and actual CLI **failed**, as required, on the
+  unchanged false SDK-stability records. No successful end-to-end combined receipt
+  is claimed. Signed qualification, actual signature negatives and Android runtime
+  execution remain **NOT RUN / Unknown**.
+
+Two private control-driver issues are retained: its initial filename shadowed
+Python's `inspect` module; a later swapped-output assertion expected the artifact
+identity reason but encountered the earlier valid time rejection. Separate
+continuation scripts corrected the driver/import and expected reason, preserving
+the original failure logs, records, sources and artifacts. Neither issue caused
+a rebuild or changed the equality standard. The normal `python` app alias was
+unavailable; the existing bundled interpreter was used without installation.
+A redundant, inefficient read-only SDK inventory scan was stopped; the completed
+per-file comparison above supplies the recorded finding. An initial ad hoc privacy
+pattern matched HTTPS syntax; the corrected drive-prefix boundary check passed.
+
+### Regressions, publication and next proof
+
+The final diagnostic suite passed all existing **60 source negatives / 60 removal
+assertions**, **60 signed-structure negatives / 60 removal assertions**, **eight
+file/CLI/admission negatives**, six unsigned metadata negatives, the isolated Git
+CLI controls, and the 24 new negative/removal pairs. Exact historical source-baseline
+recomputation and exact-main source admission passed without regenerating any
+protected digest. Diagnostic JVM validation passed **190 assertions**, compiled
+cleanup-removal rejection, Activity bytecode controls and API-37 compilation.
+Execution-lock validation passed **600 denials in three JVMs and three mutants**.
+
+Foundation/harness validators passed: **183 files, 112 Markdown files, 54 requirements,
+four ADRs**. Repository regression passed **148 of 152 tests with four existing
+Windows skips**. Desktop-readiness, offline-image, frame-copy, Gradle-distribution
+and installed-tools suites passed **28, 45, 4, 38 and 16** tests respectively.
+Installed-tools needed no retry in this experiment. Linux/native runtime controls,
+real Linux STRICT fixture suite, host APK rebuilding and device packaging controls
+were not run locally; existing baseline/automatic workflow evidence is separate.
+
+Live REST main agreed with local Git; connector and paginated REST open-PR inventories
+were empty, so requested open heads/bases/diffs/files/checks/jobs/logs/reviews/comments/
+threads were an empty set. PR #76's merge identity was reverified.
+[Foundation run 43066504275](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43066504275)
+passed foundation job **130682759507** and Windows job **130682759031**;
+[Android run 43066504286](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43066504286)
+passed job **130682760367**. Completed job/step records and logs were retrieved and
+inspected. [GitHub Status](https://www.githubstatus.com/api/v2/status.json) reported
+All Systems Operational, update `2026-11-11T16:59:11.503Z`. Initial sandbox network
+and branch-write restrictions were resolved with scoped execution access.
+
+**Pre-publication main advance:** a final live check found main at
+`7bbdec67825d4c88d8789d3db643f3bc97ee777f`, a concurrent README-only commit after
+the reviewed build base. The exact intervening diff was read; no build source
+changed. It is preserved without rebasing, overwriting the README or regenerating
+the protected governance digest. The new main fails the existing source admission
+with `protected-governance`, reproduced locally.
+[Its Foundation run 43071019706](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43071019706)
+completed with foundation job **130698583492 failed** and Windows job
+**130698584073 successful**; completed logs confirm that source-protection failure.
+No Android run was listed for this README-only change. Open PRs were still an empty
+set. The earlier three successful jobs apply only to `f272de8`, not the new main.
+This PR retains the exact tested parent and is **not ready for integration into
+the advanced main** until its protected-source discrepancy is separately reviewed
+and resolved. No check bypass or baseline update is supplied here. The measured
+pair remains an experiment of `f272de8`, never a claimed build of `7bbdec6`.
+
+Reviewed requirements, ADRs, source controls, provenance/adoption/dependency records,
+relevant incident/independent-chain/history evidence and all workflows. The six
+existing worktrees, branches, ignored/private outputs and initially clean checkout
+were preserved; no stash existed. Only the existing checker, this evidence record
+and index change, as regular **100644** text. No new dependency, third-party code,
+binary or license grant. Full diff, source admission, modes, links, whitespace and
+public-data hygiene are reviewed before publication. Foundation and Android select
+the change unchanged; QEMU filters do not. New-head CI is **UNOBSERVED at publication**.
+Publish exactly one PR, attach natively, verify association once, then STOP without
+CI/review/comment/bot/badge/mergeability polling.
+
+The next necessary proof remains independently authenticated source/tools/OS and
+administration, designated reviewers, Windows-incident disposition or a qualified
+replacement chain, private signing custody and an authenticated receipt authority.
+Future signed work requires separate authorization, genuine signed original-byte
+equality and real signature controls; this unsigned result supplies none of them.
+Independent backup, recoverable evidence, artifact transfer and exact Samsung
+approval remain separate. The SDK-directory failure would require a separately
+reviewed input-versus-generated-state contract before any different combined
+stability assertion; this PR does not implement that change or waive the failure.
+All fifteen historical signed-byte failures remain failures. ADR-0003's
+**December 8, 2026 deadline and earlier termination conditions remain binding**.
+**Independent backup UNVERIFIED; private evidence UNPRESERVED.**

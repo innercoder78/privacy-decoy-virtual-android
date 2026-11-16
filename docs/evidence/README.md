@@ -1,5 +1,21 @@
 # Evidence index
 
+[Exact README integration correction for draft PR #77](gate-0-companion-source-controls.md#exact-readme-integration-correction--2026-11-11),
+2026-11-11: merged current main while preserving its README; narrowly pinned the
+reviewed README-only transition without replacing historical protection evidence.
+11 additional source negatives/removal controls and historical recomputation pass
+locally. Original unsigned equality and SDK-state failure remain tied to `f272de8`;
+no rebuild. New-head hosted checks UNVERIFIED; no integration-success claim.
+
+[Fresh companion unsigned-pair experiment](gate-0-companion-source-controls.md#fresh-unsigned-pair-experiment--2026-11-11),
+2026-11-11: two fresh exact-main unsigned builds, 45 actionable tasks executed
+each, and complete original-byte equality PASSED. Both APKs are 16,036 bytes.
+Separate combined observation FAILED because each SDK directory gained
+`.knownPackages`; original SDK input bytes stayed unchanged. Real byte mutations,
+package/source/record controls and 24 new detector-removal pairs are recorded.
+Only bounded untrusted local unsigned reproducibility; no signed qualification,
+independent administration or Samsung readiness. Private backup UNVERIFIED.
+
 [Strict companion signed-APK prequalification controls](gate-0-companion-source-controls.md#strict-signed-apk-prequalification--2026-11-10),
 2026-11-10: complete-byte comparison, bounded signing/ZIP/package inspection,
 receipt contradiction checks and 60 synthetic negatives with detector-removal
