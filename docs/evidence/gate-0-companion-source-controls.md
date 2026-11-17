@@ -1751,6 +1751,12 @@ are necessary. No dummy successes, weakened filters or CI suppression proposed.
 
 ### One minimal proposal for Tony — NOT APPROVED
 
+**Historical proposal from PR #81.** The later
+[owner-approved interim decision](#owner-approved-interim-main-protection--2026-11-17)
+below governs the current direction. The independent-review approach here is
+deferred; its instruction against substituting zero approvals describes that
+original proposal and does not override Tony's subsequent explicit decision.
+
 Create one **active branch ruleset**, name `main-review-and-ci`, include exactly
 `refs/heads/main`, no exclusions and **empty bypass actors**, with:
 
@@ -1851,3 +1857,300 @@ public-data/provenance review and exact committed-head admission are checked for
 publication. The initial evidence-file write was denied by sandbox permissions;
 scoped retry succeeded without changing security settings. No failure is counted
 as a pass. No additional tests or workflow changes were needed for Markdown.
+
+## Owner-approved interim main protection — 2026-11-17
+
+**Owner decision: APPROVED INTERIM DIRECTION. Stage 1: document, verify and
+prepare only. Activation NOT AUTHORIZED UNTIL RESOLVED: mandatory ADR/source
+admission is blocked below. No protection is enabled by this record.**
+Date: 2026-11-17, America/Fortaleza. Authority: Tony's explicit instruction in
+the continuing Codex Desktop LOCAL conversation. Scope: repository governance,
+PDVA-REQ-008, 036–042, 048, 050–051 and 054; no product or gate advancement.
+
+Tony chose requiring PRs and passing universal CI now, with **zero required
+GitHub approving reviews during the interim period**, because the owner is
+currently the only eligible collaborator. This supersedes the earlier
+independent-review-only proposal as the selected direction. It authorizes this
+documentation PR, not administration, an experimental ruleset or activation.
+
+**Handoff instruction:** future chats must carry this forward as Tony's current
+approved interim decision, not reopen it as an unanswered choice. Preserve the
+ADR blocker and separate Stage 2 authorization requirement. A PR merge alone
+does not authorize activation or waive the ADR. ChatGPT review remains required
+before Tony merges every PR, including this one; it is not an independent GitHub
+approval or a qualified independent security review.
+
+### Fresh remote preflight and historical reconciliation
+
+**Repository/API facts:** `git ls-remote origin refs/heads/main`, `git fetch
+origin main`, `git rev-parse origin/main` and live branch metadata agreed on
+`6b59d9469017bfb3fc490164edb127c2e0701b54`. Work started at that commit in a
+separate local worktree; local main was not synchronized, reset or rebased.
+The paginated open-PR endpoint returned `[]`, corroborated by connector search:
+all open heads/bases, full diffs/files/modes, checks/jobs/logs, reviews/comments
+and threads were an empty set. No applicable repository AGENTS.md was found.
+
+[PR #81](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/81)
+is merged into main: base `e79d74b7b5724d6326793810c479a3204f7739ab`, head
+`31348cb82cd2027d1601fafb271f2a3101762b60`, merge commit equal to verified main.
+Its complete diff has 248 additions and no deletions in this record and index;
+both remain mode 100644. Submitted reviews, issue comments, review comments
+and review threads returned empty collections. This says nothing about absence
+of conversational review. The earlier audit remains historical evidence;
+its one-approval proposal was not activated or implicitly accepted by merge.
+
+Authenticated read-only API observations reproduced its configuration findings:
+
+| Surface | Current observation |
+|---|---|
+| Repository and permissions | Public, user-owned, default main; connected account reports admin/maintain/push/pull. Local CLI can read the detailed protection endpoint. No permission grant made. |
+| Main and classic protection | `protected=false`, protection disabled, status enforcement off with empty checks/contexts; detailed endpoint returns explicit 404 `Branch not protected`. |
+| Parent-inclusive rulesets and effective main rules | Both paginated collections return `[]`; no existing ruleset or bypass list to modify. |
+| Collaborators | Only `innercoder78`, role admin. No qualified independent approving collaborator is established. |
+| Repository merge methods | Merge, squash and rebase all enabled; auto-merge disabled. Preserve these settings. |
+
+These are point-in-time reads, not enforcement experiments. Repository admin
+permission is not proof that the particular credential can successfully create
+this exact ruleset. Mutation capability and server acceptance remain **Unknown**.
+Initial sandbox network/Git-metadata restrictions were resolved by scoped
+execution; no host privilege or security-setting change was performed.
+
+**GitHub runtime observation:** post-merge
+[Foundation run 44010607205](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44010607205)
+is completed/success on `push` at exact verified main. Jobs `foundation`
+**133796452914** and `offline-image-windows` **133796452690** have successful
+substantive steps. Retrieved completed logs show Foundation source validation,
+152 repository tests, companion source/negative/removal controls, native 7/1
+controls, modeled bootstrap, Linux lifetime, seccomp and revocation receipts;
+Windows shows the 45/4/38/16-test suites. Initial CLI log output refused terminal
+escapes; retrieval with escape stripping enabled inspection. These are existing
+baseline receipts, not new-head tests or product-security qualification.
+Exact-main check runs identify contexts `foundation` and `offline-image-windows`,
+producer slug `github-actions`, app ID **15368**. No Android/QEMU run was returned
+for this SHA; those jobs were not selected, not successful executions.
+[GitHub Status](https://www.githubstatus.com/api/v2/status.json) reported All
+Systems Operational, page update `2026-11-17T02:39:29.774Z`; snapshot only.
+
+Requirements, governance, ADRs, acceptance/gate criteria, source policy/catalog,
+relevant evidence and history were reviewed. All three workflow definitions match
+verified main. Existing reviewed checkout pin
+`3d3c42e5aac5ba805825da76410c181273ba90b1` and dependency inventories are unchanged.
+No source adoption, new dependency, binary, redistribution right or private
+evidence is introduced. This is an original analysis extension, not a new survey.
+
+### Exact interim settings prepared for separate authorization
+
+**Documentation basis, checked 2026-11-17:** GitHub's
+[rules reference](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+documents PR requirements without mandatory approval and public-repository
+ruleset availability, including GitHub Free. The paid account tier is Unknown
+and is not assumed. The
+[REST rules schema](https://docs.github.com/en/rest/repos/rules#create-a-repository-ruleset)
+defines the fields below and requires Administration: write for creation.
+These establish documented semantics, **not acceptance of this combination on
+this repository**. The live settings UI was not exercised; exact UI availability,
+saved normalization and enforcement require the authorized Stage 2 test/readback.
+
+| Setting / API field | Prepared value and boundary |
+|---|---|
+| Name, target, intended enforcement | `main-review-and-ci`, `branch`, `active` only after Stage 2 approval/tests. Nothing submitted now. |
+| `conditions.ref_name` | `include: ["refs/heads/main"]`, `exclude: []`; no wildcard or default-branch token. |
+| `bypass_actors` | `[]`, including no administrator, repository-role, app or emergency standing bypass. |
+| `pull_request.required_approving_review_count` | `0`; require a PR, with no mandatory independent GitHub approval in the interim. |
+| Other PR parameters | `dismiss_stale_reviews_on_push: false`, `require_code_owner_review: false`, `require_last_push_approval: false`, `required_review_thread_resolution: false`. No required teams/reviewers or additional approval rule. Manual review must still resolve objections. |
+| PR allowed merge methods | Preserve `merge`, `squash`, `rebase`; do not alter repository methods. |
+| `required_status_checks.required_status_checks` | Exactly `{context: "foundation", integration_id: 15368}` and `{context: "offline-image-windows", integration_id: 15368}`, subject to fresh producer verification and server readback. No silent fallback to any-source checks. |
+| `strict_required_status_checks_policy` | `true`; PR must be current with base. `do_not_enforce_on_create: false`; no creation exemption. |
+| Additional rule types | `non_fast_forward` and `deletion` only: block force pushes and restrict deletion. |
+| Excluded rules | No `update` (Restrict updates), creation restriction, signing, deployment, linear history, merge queue or extra approval requirement. |
+
+This table is a reviewable specification, not an executable administration
+request. In the UI, verify the PR checkbox remains enabled when the approval
+count is zero and last-push/code-owner approval options are off. Check all
+defaults and newly introduced options against this specification. In particular,
+GitHub documents the extra unattributed-Copilot approval default as ineffective
+at zero approvals; it must not introduce an additional approval here. Any
+unsupported field, hidden default or rejected combination is **STOP/Unknown**,
+not permission to improvise a bypass or stronger/weaker settings.
+
+The expected benefit is a server-side PR/CI barrier before ordinary main
+updates, plus protection against force pushes and deletion. Current absence of
+protection is not evidence of unauthorized activity. Default-branch deletion
+restrictions are separate from the proposed explicit deletion rule.
+
+### Manual review, alternatives and remaining risks
+
+Every PR still requires complete ChatGPT review before Tony merges: verify exact
+head/base and all changed bytes/modes; workflows and applicability; check producer
+and checkout identity; substantive job steps/logs; security, source rights and
+evidence. Re-review changed heads/bases. A successful-looking label or step count
+is insufficient. GitHub cannot enforce this conversational obligation here.
+
+[GitHub check semantics](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
+accept skipped/neutral as well as success and distinguish head from test-merge
+results. PDVA must not call skipped, neutral, cancelled, timed-out, missing,
+pending, failed, zero-step or unverifiable work a successful security check.
+Path-filtered Android and QEMU remain conditional; do not globally require them
+or call non-applicability execution success. Only the universal Foundation and
+Windows jobs apply to these two evidence files. The earlier workflow table
+remains current. No workflow or filter is changed.
+
+Binding to app 15368 attributes the producer, not an immutable workflow or trusted
+checker. A PR can modify a same-app workflow/checker; manual full-diff review is
+still essential. Strict freshness does not convert the workflows' explicit
+PR-head checkout into testing a synthetic merge tree. The owner can still edit
+rules through administration; no-bypass does not remove that power. Compromised
+owner credentials, mistakes, CI outages and unverified specialized obligations
+remain risks. This interim policy enforces neither independent review nor every
+specialized CI/evidence requirement and warrants no full-repository-security claim.
+
+| Alternative | Owner disposition / reopening condition |
+|---|---|
+| Approach 1: mandatory independent GitHub approval | Deferred, not rejected permanently. Requires a named, trusted, qualified independent reviewer who actually can approve owner-authored/latest-owner-pushed PRs, any separately authorized access grant, and separate Tony approval of final stronger settings. ChatGPT feedback and self-approval do not fill this role. |
+| Wait without protection until such a reviewer exists | Not the selected direction; leaves the observed PR/CI prevention gap. Present ADR/test blockers still prohibit premature activation. |
+| Interim PR + universal CI, zero approvals | Tony's selected direction, with continued complete ChatGPT review and acknowledged residual risk. |
+| Standing admin bypass or Restrict updates with bypass | Not selected; would either evade the intended gates or prevent ordinary sole-owner merges. |
+| Globally required Android/QEMU or a new admission workflow | Not selected now: path-filter deadlock or additional implementation/authority needed. No dummy successes, filter weakening or workflow edits. |
+
+### Mandatory ADR and immutable source-admission blocker
+
+**Governance interpretation:** this material repository evidence-enforcement
+decision must have a new PDVA ADR under [governance](../governance.md) and the
+owner's Stage 1 instruction. The next sequential candidate is
+`docs/decisions/ADR-0005-interim-main-branch-protection.md`. Its final ADR would
+need the owner/date, selected scope/settings, alternatives, affected obligations,
+consequences, preserved/invalidated evidence, tests and recovery requirements.
+No accepted ADR-0005 exists; this evidence extension is not a substitute.
+
+**Source observation:** unchanged
+[source checker](../../.github/scripts/test-memory-diagnostic.py) pins
+`SOURCE_BASE=69a7165043e1e7fc565a9ff10f044adc4874c595`. `REVIEWED_FILES` contains
+only that checker, this evidence record and its index. `protected_group` assigns
+other documentation to governance; `protected_evidence` hashes the sorted exact
+paths and bytes and counts files. `check_protected_source` permits only the
+original governance pin or the exact reviewed README transition. Neither allows
+another ADR: original count 109/hash
+`384c3a4289c41a25e00a5a90f5eaee5f5a8b7208438fe8de099ad359cb57c45c`;
+README-transition count 109/hash
+`27162b9af9a45f36a674d76895817ea37285f6ef38487332325f0127f11400ab`.
+
+**Local runtime observation:** loaded the unchanged checker using standard-library
+`runpy`, read the exact-main snapshot with `committed_source('HEAD')`, and called
+`verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))`: **PASS**.
+Added only the candidate ADR path at mode 100644 to an in-memory copy, with bytes
+`b'# ADR-0005: Interim main branch protection\n\nOwner direction selected 2026-11-17; activation blocked.\n'`.
+The governance count became 110/hash
+`3301f6b70ca16b313b74eddef38848fc4f733aef8a75c6e0d6e959c712ff7838`;
+the same unmodified verifier raised **`SourceRejection: protected-governance`**.
+Rechecking the original snapshot passed. No ADR file, baseline, allowlist or
+checker was changed; this is a local source-admission witness, not a GitHub test
+or a complete proposed ADR. Adding any ordinary sequential ADR changes the pinned
+inventory; changing its prose cannot preserve the 109-file count.
+
+**Disposition: activation NOT AUTHORIZED UNTIL RESOLVED.** Do not weaken, bypass,
+repin or silently amend source protections to admit ADR-0005. A separately
+reviewed, explicitly authorized resolution must preserve historical invariants
+and satisfy ADR admission/approval before Stage 2. No resolution is presumed or
+implemented here. Passing this evidence-only diff does not satisfy that blocker.
+The earlier unapproved proposal is superseded as direction only; old empirical
+failures and original source receipts are not invalidated or relabeled.
+
+### Stage 2 procedure — separately authorized, NOT EXECUTED
+
+1. Reverify live main, all open PRs/conflicts, parent and effective rules,
+   classic protection, current administrative identity/authority, producer app
+   and recent genuine universal job successes. Export old configuration and
+   exact refs/identities to reviewed public-safe evidence. Stop on drift or gaps.
+2. Confirm the admitted, explicitly approved ADR and final exact settings above.
+   Obtain separate Tony authorization naming disposable branch, test ruleset,
+   permitted test commits/PRs, actors, bounded cleanup/recovery and eventual main
+   activation. This Stage 1 request authorizes none of those mutations.
+3. Create the explicitly authorized disposable target before applying its
+   matching interim rule; differ only in name/target as approved. Do not target
+   main, a wildcard or any existing protected branch. Read back normalized rules,
+   empty bypass list and effective applicability; record server acceptance or
+   rejection. Verify an unrelated control branch is outside the rule.
+4. On that disposable target, demonstrate a legitimate sole-owner PR with
+   **zero approving reviews**, current base, genuine successful required checks
+   from the verified app and substantive expected logs. Observe an actual
+   authorized merge, not only a mergeable badge. Cover each preserved merge
+   method with separate fresh cases if authorized; an untested method is Unknown.
+   Complete ChatGPT review remains a prerequisite even for test PRs.
+5. Attempt only authorized non-destructive negative cases against that target;
+   capture attempted ref/OIDs, actor, API/transport response and unchanged target
+   after rejection. Test an unassociated direct update (including web-edit/API
+   routes where authorized), non-fast-forward force update, deletion, missing,
+   pending and failed checks, and a stale PR head. Advance the disposable base
+   via a compliant test PR for the stale-head case; demonstrate recovery by a
+   legitimate head update and fresh checks. Do not assume every Git transport
+   push is prohibited: GitHub documents some PR-associated local merge pushes.
+   Verify prohibited unassociated updates and record any allowed merge route.
+6. Exercise wrong-source and wrong-SHA receipts and cancelled/timed-out results
+   only where an authorized producer/fixture can safely create them. Do not
+   impersonate GitHub Actions, grant app permissions or alter production workflows
+   for tests. If valid fixtures cannot be produced within authority, record
+   **Unknown**, not simulated rejection. Observe skipped/neutral and zero-step
+   limitations where safely testable; acceptance is a limitation, never a PDVA
+   security pass. In-filter APK/QEMU execution needs separate authority and is
+   not licensed by this plan. Preserve all specialized manual-review obligations.
+7. Establish recovery before main activation: retain work on topic branches;
+   diagnose CI/configuration and prefer a legitimate reviewed repair PR. An
+   outage or blocked PR does not authorize fake checks or workflow weakening.
+   Confirm an authorized administrator retains settings-edit capability outside
+   the branch merge path and rehearse only the approved disposable-rule recovery.
+   Any emergency main relaxation/disablement needs separate explicit Tony approval
+   of exact old/new configuration, reason, affected refs, bounded duration,
+   reviewer and restoration/verification steps. No standing bypass, automatic
+   disablement, routine force push or deletion. If no legitimate recovery route
+   or required independent recovery review is available, STOP before activation.
+8. Review the test evidence and all Unknowns with Tony. Unexpected successful
+   prohibited updates, blocked valid zero-review PRs, missing source binding,
+   mandatory test gaps or unresolved ADR admission block activation. Only after
+   successful applicable tests, review and explicit final authorization activate
+   the exact approved single main ruleset. No destructive test against main.
+9. Read back the saved ruleset with sufficient authority to see bypass actors;
+   independently query effective main rules and all parent/classic protections.
+   Compare every field/target and merge-method setting to the approved record;
+   record rule ID, identity, timestamp, old/new settings, source/check identities,
+   test outcomes and limitations. Verify actual applicability rather than relying
+   on creation response or UI badge. If readback disagrees, halt merges and use
+   only the separately authorized recovery. Remove disposable resources only
+   within their explicit cleanup authorization, preserving evidence.
+
+All Stage 2 enforcement, mergeability and recovery outcomes are **NOT RUN /
+Unknown**. No test branch, test PR or test ruleset was created in Stage 1.
+The one documentation publication branch/PR is not an enforcement experiment.
+
+### Stage 1 validation and preserved boundaries
+
+The publication is limited to this existing record and index, regular Markdown
+mode 100644. Source/foundation validation, historical-pin recomputation, complete
+diff/mode/link/privacy review and exact committed-head admission are required
+before publication. Local results are recorded below. Hosted results for the
+new PR remain **UNOBSERVED**: publish one PR, attach natively to this conversation,
+verify association once, then STOP without CI/review/comment/bot/badge/mergeability
+polling. Association failure must be reported UNVERIFIED and UNPRESERVED pending
+repair using the same PR, under governance.
+
+ADR-0004 Option A, ADR-0003's bounded decisions/deadline, all fifteen historical
+signed-byte failures, diagnostic execution lock and source safeguards remain
+unchanged. No Android CLI, APK build/signing, signing keys, device/USB/ADB access,
+VM execution, tool installation, host privilege or system-security changes.
+No GitHub administration, visibility, collaborator, merge-method or workflow
+changes. **Gate 0 Unresolved; Gates A–G Not reached. Independent build/signing
+qualification and phone testing remain blocked.** This governance work establishes
+neither Android isolation nor product feasibility; existing private-evidence and
+independent-backup gaps remain unresolved.
+
+**Local validation results:** existing bundled Python on Windows x86_64;
+`validate-foundation.py` **PASS** (183 files, 112 Markdown, 54 requirements,
+four ADRs). Unchanged `test-memory-diagnostic.py` **PASS**, including 60 source
+negatives/removals, 11 README-transition negatives/removals and existing synthetic
+package, unsigned/signed-claim, SDK-state and cache-integrity controls. Separate
+`--verify-source-baseline` and `--verify-readme-update` recomputation **PASS**.
+Both evidence files' local links and heading fragments resolve. Complete diff,
+100644 modes, whitespace, exact two-file scope and public-data/provenance review
+passed. No new dependency or binary; protected files remain byte-identical to
+verified main. These source/fixture results do not qualify signed artifacts or
+establish Android execution. Final committed-head source admission is a required
+publication check, reported with the PR; this text does not predict hosted CI.
