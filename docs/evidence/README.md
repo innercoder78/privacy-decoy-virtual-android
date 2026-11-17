@@ -1,7 +1,17 @@
 # Evidence index
 
+[Owner-approved interim main protection](gate-0-companion-source-controls.md#owner-approved-interim-main-protection--2026-11-17),
+2026-11-17: Tony selected PRs plus universal CI, zero required GitHub approvals,
+strict current-base checks and no bypass while no qualified independent reviewer
+is available. Stage 1 only; main remains unprotected. ADR-0005 admission is blocked
+by the unchanged immutable governance inventory: **activation NOT AUTHORIZED UNTIL
+RESOLVED**. Exact settings, continuing ChatGPT review, limitations and separately
+authorized Stage 2 test/recovery procedure are recorded. This is the current
+approved direction, not an undecided alternative; no administration changed.
+
 [Main branch governance enforcement audit](gate-0-companion-source-controls.md#main-branch-governance-enforcement-audit--2026-11-17),
-2026-11-17: authenticated local API resolves the connector's 403: main is not
+2026-11-17 historical investigation (owner disposition continued above): authenticated
+local API resolves the connector's 403: main is not
 protected and effective rules are empty. The direct-main README witness reached
 main before Foundation rejected protected governance. One unapproved ruleset
 proposal requires fresh independent review and universal Foundation/Windows checks,
