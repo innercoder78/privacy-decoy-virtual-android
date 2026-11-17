@@ -303,3 +303,9 @@ requirements. Use the terminology and record fields in
 No VM or Android runtime has been executed in this bootstrap. There is no direct
 PDVA guest boot, isolation, VPN-route or physical-device evidence. Historical
 experiments remain under [historical reference](../reference/privacy-decoy-history/README.md).
+
+
+Disposable ADR-0005 current-base control, 2026-11-17: this test-only index
+annotation starts from the verified original disposable base. Its required
+checks must be refreshed after another reviewed PR advances that base.
+It does not activate main protection or advance any product gate.
