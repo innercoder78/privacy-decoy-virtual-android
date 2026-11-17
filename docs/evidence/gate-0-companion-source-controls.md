@@ -1,6 +1,6 @@
 # Companion diagnostic source controls
 
-## Gradle installation-level precedence — 2026-11-16
+## Gradle installation-level precedence â€” 2026-11-16
 
 **Runtime Observation:** installation `gradle.properties` selected OFF or LENIENT
 when the trusted CLI selection was absent. With `--dependency-verification=strict`
@@ -14,7 +14,7 @@ This extends the [existing Gradle runtime record](gate-0-gradle-strict-runtime.m
 specifically PR #64's installation-level **NOT RUN** row. Its ten historical
 project/user-home controls and PR #59's synthetic integrity experiments were not
 repeated as new runtime evidence. The existing regression suite was run unchanged.
-Traceability: PDVA-REQ-010, 036–042, 048, 051 and 054.
+Traceability: PDVA-REQ-010, 036â€“042, 048, 051 and 054.
 
 ### Exact baseline, publication boundary and tools
 
@@ -126,8 +126,8 @@ snapshot were checked after every invocation.
 
 ### Actual outcomes and falsifiers
 
-Four invocations completed **18:44:26–18:45:33 America/Fortaleza** on 2026-11-16
-(21:44:26–21:45:33 UTC). All reported 9.6.0, Java 17.0.21, Eclipse Adoptium and
+Four invocations completed **18:44:26â€“18:45:33 America/Fortaleza** on 2026-11-16
+(21:44:26â€“21:45:33 UTC). All reported 9.6.0, Java 17.0.21, Eclipse Adoptium and
 offline true. No generic exit or build-failure message alone counted as evidence.
 
 | Installation property | Trusted STRICT | Actual mode / exit | Observed dependency behavior |
@@ -194,7 +194,7 @@ approval remain separate blockers. No hostile-build-code, same-user-race,
 build-system isolation, signed reproducibility or phone-readiness claim follows.
 Historical SDK cache observations and their failed combined SDK-stability result
 remain unchanged; all fifteen signed-byte failures remain failures.
-**Gate 0 Unresolved; Gates A–G Not reached.** ADR-0003 expires no later than
+**Gate 0 Unresolved; Gates Aâ€“G Not reached.** ADR-0003 expires no later than
 **December 8, 2026**, subject to earlier conditions. Independent private backup
 remains **UNVERIFIED**; private evidence durability remains **UNPRESERVED**.
 Publish one evidence PR, attach it natively to this chat, verify association once,
@@ -211,7 +211,7 @@ diagnostic only. The following original source-control record is retained as his
 Date: **2026-11-10, America/Fortaleza**. Source baseline: canonical main
 `69a7165043e1e7fc565a9ff10f044adc4874c595`. Scope: implement the source controls in
 [ADR-0003's bounded preparation plan](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md#companion-only-acceptance-and-preparation--recorded-2026-11-10).
-Traceability: PDVA-REQ-008, 036–042, 048, 051 and 054.
+Traceability: PDVA-REQ-008, 036â€“042, 048, 051 and 054.
 
 The owner explicitly authorized this source implementation, local tests and one
 public PR, including normal automatic existing CI. That resolves the earlier
@@ -351,7 +351,7 @@ that qualification packet. No new dependency, third-party source, binary, licens
 grant, rights clearance or runtime adoption is introduced by this original
 standard-library extension.
 
-**Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
+**Gate 0 Unresolved; Gates Aâ€“G Not reached; physical testing NOT READY â€” STOP.**
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.** No private paths,
 hashes, inventories, keys, receipts, binaries or APKs are published. Existing
 worktrees, branches, ignored assets and private evidence are preserved. No local
@@ -365,7 +365,7 @@ PR, attach it natively to this chat, verify association once and stop without
 polling CI, reviews, comments, bots, badges or mergeability. PR publication is not
 merge into canonical main or independent private preservation.
 
-## Active Option B and unsigned packaging — 2026-11-10
+## Active Option B and unsigned packaging â€” 2026-11-10
 
 The owner explicitly authorized the exact three-line companion-only metadata
 change, existing source/package control updates, local development validation and
@@ -510,10 +510,10 @@ Independent source/toolchain authentication, Windows-incident disposition,
 qualified signing custody, two genuinely independent signed builds, strict
 complete signed-byte equality, independent artifact review, private backup and
 transfer, and separate exact-artifact Samsung approval remain required.
-**Gate 0 Unresolved; Gates A–G Not reached; physical testing NOT READY — STOP.**
+**Gate 0 Unresolved; Gates Aâ€“G Not reached; physical testing NOT READY â€” STOP.**
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.**
 
-## SDK cache-integrity adversarial experiment — 2026-11-16
+## SDK cache-integrity adversarial experiment â€” 2026-11-16
 
 **Runtime Observation: a generated cache can become an invalidation input and
 postpone discovery of changed SDK inputs by an already-loaded manager.** With
@@ -764,11 +764,11 @@ once, then STOP without polling CI, reviews, comments, bots, badges or mergeabil
 Independent authentication/administration, Windows-incident disposition, designated
 reviewers, private signing custody, genuine signed builds, complete signed-byte
 equality, independent signature verification, backup, transfer and exact Samsung
-approval remain required. **Gate 0 Unresolved; Gates A–G Not reached.** ADR-0003
+approval remain required. **Gate 0 Unresolved; Gates Aâ€“G Not reached.** ADR-0003
 expires no later than **December 8, 2026**, subject to earlier stop conditions.
 **Private backup UNVERIFIED; private evidence UNPRESERVED.**
 
-## SDK generated-state investigation — 2026-11-15
+## SDK generated-state investigation â€” 2026-11-15
 
 **Result: generated package-discovery state, for the specifically observed event.**
 The exact repository library used with AGP 9.4.0 writes `.knownPackages` during
@@ -995,7 +995,7 @@ it does not establish which Gradle/AGP caller performed the historical writes.
 Any proposal to substitute this distinction for mandatory whole-SDK stability or
 artifact admission needs explicit project-owner approval of an **ADR-0003 amendment
 to the companion qualification/evidence contract**, assessed under **ADR-0004
-Option A**, with PDVA-REQ-036, 039–042 and 054 traced and designated independent
+Option A**, with PDVA-REQ-036, 039â€“042 and 054 traced and designated independent
 provisioning/security/build reviewers. No such admission change is implemented.
 Independent provisioning, Windows-incident disposition, reviewers, qualified signer
 custody, genuine signed builds, strict complete signed-byte equality, independent
@@ -1004,7 +1004,7 @@ Samsung approval remain separate prerequisites. All fifteen signed-byte failures
 remain failures. No signing, keys, device/ADB/USB, installation, native activation,
 VM execution, privilege or environment-security changes occurred.
 
-**Gate 0 Unresolved; Gates A–G Not reached. ADR-0003's December 8, 2026 deadline
+**Gate 0 Unresolved; Gates Aâ€“G Not reached. ADR-0003's December 8, 2026 deadline
 and earlier termination conditions remain binding. Independent backup UNVERIFIED;
 private evidence UNPRESERVED.** Public implementation preservation does not back up
 the private records. Next proof is independent review of this exact input/state
@@ -1013,14 +1013,14 @@ missing historical modes cannot be manufactured. Publish one focused PR, attach
 to this chat, verify association once, then STOP without polling new-head CI,
 comments, reviews, bots, badges or mergeability. New-head CI is UNOBSERVED.
 
-## Exact README integration correction — 2026-11-11
+## Exact README integration correction â€” 2026-11-11
 
 This is a revision of **existing draft PR #77**, on explicit owner instruction,
 not another PR or another APK experiment. **Local integrated-source validation
 passed; applicable new-head hosted checks are UNVERIFIED at publication.** The
 earlier integration-blocker text records the original publication state. This
 section supplies the precise source correction without declaring successful CI
-integration or readiness for merge. Gate 0 remains Unresolved; Gates A–G Not reached.
+integration or readiness for merge. Gate 0 remains Unresolved; Gates Aâ€“G Not reached.
 
 ### Reviewed transition and unchanged historical baseline
 
@@ -1173,9 +1173,9 @@ approval requirements remain separate. ADR-0003's December 8, 2026 deadline and
 earlier termination conditions remain binding. **Physical testing NOT READY;
 independent backup UNVERIFIED; private evidence UNPRESERVED.**
 
-## Strict signed-APK prequalification — 2026-11-10
+## Strict signed-APK prequalification â€” 2026-11-10
 
-Scope: the separate Android 17 memory diagnostic under PDVA-REQ-036–043, 048,
+Scope: the separate Android 17 memory diagnostic under PDVA-REQ-036â€“043, 048,
 051 and 054. Verified main/base `e0e088e27d435e999cc339e52ad23bd7cf25cee5`.
 Implementation commit `052f4a6338f49d63d572560bd47af120137d11ab` adds read-only
 controls and disposable synthetic tests to the existing
@@ -1389,10 +1389,10 @@ Publish exactly one PR, attach to the originating Codex chat, verify that associ
 once, then stop without polling new-head CI, reviews, comments, bots, badges or
 mergeability. New-head CI is **UNOBSERVED at publication**. All fifteen historical
 signed-byte failures remain failures. ADR-0003 expires no later than **2026-12-08**,
-subject to earlier termination. **Gate 0 Unresolved; Gates A–G Not reached; physical
+subject to earlier termination. **Gate 0 Unresolved; Gates Aâ€“G Not reached; physical
 testing NOT READY. Independent backup UNVERIFIED; private evidence UNPRESERVED.**
 
-### Publication continuation — 2026-11-11
+### Publication continuation â€” 2026-11-11
 
 The initial push was not executed: automatic approval review could not complete
 because its usage limit was reached, not because it found the action unsafe.
@@ -1403,7 +1403,7 @@ remained successful. Completed implementation tests were not repeated; only this
 publication disposition was added and documentation/whitespace checks rerun.
 The same one-PR publication and single association-verification procedure applies.
 
-## Fresh unsigned pair experiment — 2026-11-11
+## Fresh unsigned pair experiment â€” 2026-11-11
 
 **Direct observation: complete original unsigned APK equality PASSED.** Two fresh,
 separately executed release builds each produced **16,036 bytes**, and the existing
@@ -1422,8 +1422,8 @@ weakened or converted into success. This does not alter the separately measured
 original-byte equality. No claim that all environment state stayed unchanged is
 supported. Independent provenance and administration remain **Unknown**.
 
-Scope: PDVA-REQ-036–043, 048, 051 and 054. **Gate 0 Unresolved; Gates A–G Not reached;
-physical testing NOT READY — STOP.** This new experiment is neither the earlier
+Scope: PDVA-REQ-036â€“043, 048, 051 and 054. **Gate 0 Unresolved; Gates Aâ€“G Not reached;
+physical testing NOT READY â€” STOP.** This new experiment is neither the earlier
 single-build packaging research nor a rerun of the fifteen signed-byte failures.
 
 ### Exact source, inputs and execution
@@ -1612,11 +1612,11 @@ All fifteen historical signed-byte failures remain failures. ADR-0003's
 **December 8, 2026 deadline and earlier termination conditions remain binding**.
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.**
 
-## Main branch governance enforcement audit — 2026-11-17
+## Main branch governance enforcement audit â€” 2026-11-17
 
 **Outcome: missing main protection confirmed at this snapshot; one unapproved
 correction proposed.** Codex Desktop LOCAL, Windows x86_64; read-only remote
-investigation and documentation. Scope: PDVA-REQ-008, 036–042, 048, 050–051, 054.
+investigation and documentation. Scope: PDVA-REQ-008, 036â€“042, 048, 050â€“051, 054.
 This extends the earlier protection Unknown and README-transition evidence here;
 it does not rewrite their historical dispositions.
 
@@ -1699,7 +1699,7 @@ prevent this update. Historical protection settings, intent and use of any bypas
 remain **Unknown**. Current settings cannot establish the historical settings.
 The subsequent exact README integration correction did not erase that failure.
 
-Live merged PR metadata #76–80 targets main, with merge SHAs `f272de8`, `2c64fc1`,
+Live merged PR metadata #76â€“80 targets main, with merge SHAs `f272de8`, `2c64fc1`,
 `2bd1fc1`, `4c2ebd5`, `e79d74b`, matching local history. Each submitted-review
 collection returned `[]`. This proves no submitted GitHub approval was returned,
 not absence of off-platform or conversational review. Merges and green jobs do
@@ -1749,7 +1749,7 @@ coverage. This is a precise future design obligation, **not an implemented check
 or part of the settings-only proposal**; separate approval and adversarial tests
 are necessary. No dummy successes, weakened filters or CI suppression proposed.
 
-### One minimal proposal for Tony — NOT APPROVED
+### One minimal proposal for Tony â€” NOT APPROVED
 
 **Historical proposal from PR #81.** The later
 [owner-approved interim decision](#owner-approved-interim-main-protection--2026-11-17)
@@ -1840,7 +1840,7 @@ administration changes; no APK/build/signing, keys, phone/ADB, VM or installatio
 Local checks and committed-source admission are recorded before publication.
 New-PR hosted results remain **UNOBSERVED**. Publish one PR, attach natively,
 verify association once, then STOP without CI/review/comment/bot/badge/mergeability
-polling. **Gate 0 Unresolved; Gates A–G Not reached. Independent build/signing
+polling. **Gate 0 Unresolved; Gates Aâ€“G Not reached. Independent build/signing
 qualification and physical testing remain blocked.** Existing private evidence
 and backup gaps are not resolved by this public record.
 
@@ -1858,14 +1858,14 @@ publication. The initial evidence-file write was denied by sandbox permissions;
 scoped retry succeeded without changing security settings. No failure is counted
 as a pass. No additional tests or workflow changes were needed for Markdown.
 
-## Owner-approved interim main protection — 2026-11-17
+## Owner-approved interim main protection â€” 2026-11-17
 
 **Owner decision: APPROVED INTERIM DIRECTION. Stage 1: document, verify and
 prepare only. Activation NOT AUTHORIZED UNTIL RESOLVED: mandatory ADR/source
 admission is blocked below. No protection is enabled by this record.**
 Date: 2026-11-17, America/Fortaleza. Authority: Tony's explicit instruction in
 the continuing Codex Desktop LOCAL conversation. Scope: repository governance,
-PDVA-REQ-008, 036–042, 048, 050–051 and 054; no product or gate advancement.
+PDVA-REQ-008, 036â€“042, 048, 050â€“051 and 054; no product or gate advancement.
 
 Tony chose requiring PRs and passing universal CI now, with **zero required
 GitHub approving reviews during the interim period**, because the owner is
@@ -2055,7 +2055,7 @@ implemented here. Passing this evidence-only diff does not satisfy that blocker.
 The earlier unapproved proposal is superseded as direction only; old empirical
 failures and original source receipts are not invalidated or relabeled.
 
-### Stage 2 procedure — separately authorized, NOT EXECUTED
+### Stage 2 procedure â€” separately authorized, NOT EXECUTED
 
 1. Reverify live main, all open PRs/conflicts, parent and effective rules,
    classic protection, current administrative identity/authority, producer app
@@ -2137,7 +2137,7 @@ signed-byte failures, diagnostic execution lock and source safeguards remain
 unchanged. No Android CLI, APK build/signing, signing keys, device/USB/ADB access,
 VM execution, tool installation, host privilege or system-security changes.
 No GitHub administration, visibility, collaborator, merge-method or workflow
-changes. **Gate 0 Unresolved; Gates A–G Not reached. Independent build/signing
+changes. **Gate 0 Unresolved; Gates Aâ€“G Not reached. Independent build/signing
 qualification and phone testing remain blocked.** This governance work establishes
 neither Android isolation nor product feasibility; existing private-evidence and
 independent-backup gaps remain unresolved.
@@ -2156,7 +2156,7 @@ establish Android execution. Final committed-head source admission is a required
 publication check, reported with the PR; this text does not predict hosted CI.
 
 
-## Consolidated ADR-0005 source admission — 2026-11-17
+## Consolidated ADR-0005 source admission â€” 2026-11-17
 
 **Repository implementation prepared for review; administration NOT EXECUTED.**
 Tony authorized completing the already selected interim direction in one PR,
@@ -2265,7 +2265,7 @@ also pass. These fixtures do not qualify any real APK, toolchain or signing chai
 
 All fifteen signed-byte failures remain failures; failed SDK-state qualification
 is not repaired. Independent build/signing custody, private backup and physical
-readiness remain blocked. Gate 0 Unresolved; Gates A–G Not reached. No Android
+readiness remain blocked. Gate 0 Unresolved; Gates Aâ€“G Not reached. No Android
 CLI, APK signing/key operations, device/ADB/USB, VM execution, installation,
 confidential publication or new binary/dependency adoption occurred. This change
 is original standard-library Python and governance prose, with existing reviewed
@@ -2291,8 +2291,12 @@ counts as a successful check. Exact committed-head source admission is checked
 before publication; hosted results are not predicted.
 
 
-## Disposable ADR-0005 failed-check control — 2026-11-17
+## Disposable ADR-0005 failed-check control â€” 2026-11-17
 
-This authorized nonproduction fixture deliberately references a missing local
-[control target](adr0005-deliberately-missing-control.md) so the unchanged
-Foundation validator must fail. It is not intended for main or a successful merge.
+The initial disposable fixture referenced a missing Markdown target. GitHub
+Actions Foundation rejected that exact head, and the merge API rejected it
+with required check foundation failing. The invalid link is repaired here.
+Direct update, non-fast-forward and deletion probes were rejected with the
+target unchanged. The test ruleset was disabled and restored, with exact
+configuration and effective-rule readback. Positive merge testing is pending.
+These observations concern only disposable repository controls, not Gate 0.
