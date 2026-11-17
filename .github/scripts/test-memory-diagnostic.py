@@ -49,6 +49,11 @@ README_UPDATE_COMMIT = '7bbdec67825d4c88d8789d3db643f3bc97ee777f'
 README_UPDATE_PARENT = 'f272de8207586ee2ec84412f6057ea580f0d0611'
 README_UPDATE_SHA256 = 'dd73f7da0c2f9cbb3a647c4e8452a79d7fdfb7e4d6f2865ba2392d0f8705bfe4'
 README_UPDATE_GOVERNANCE = (109, '27162b9af9a45f36a674d76895817ea37285f6ef38487332325f0127f11400ab')
+# Separate current-state addition; never replace historical receipts above.
+ADR_PRIOR_COMMIT = 'e8923e315b603227db4b42c9036c184aed28b6fa'
+ADR_PRIOR_CHECKER_SHA256 = 'f31fc60389e9096db8a330d96a5018646874857342ab1423bfeaad45791b7412'
+ADR_PATH = 'docs/decisions/ADR-0005-interim-main-branch-protection.md'
+ADR_SHA256 = '78e108ca2b5b4ca2660f5b7d101622fd890d1e5cefcf4576beff1bc225a0de87'
 BASE_BUILD = b"""plugins { id 'com.android.application' }
 android {
     namespace 'org.pdva.memorydiagnostic'
@@ -187,6 +192,46 @@ def git_source(*arguments):
     return subprocess.check_output(['git', '--no-optional-locks', *arguments], cwd=ROOT, timeout=60)
 
 
+def check_adr_addition(snapshot):
+    entry = snapshot.get(ADR_PATH)
+    source_require(entry is not None and entry[0] == '100644'
+                   and hashlib.sha256(entry[1]).hexdigest() == ADR_SHA256,
+                   'exact-adr-addition')
+
+
+def check_current_readme(snapshot):
+    source_require('README.md' in snapshot and hashlib.sha256(snapshot['README.md'][1]).hexdigest()
+                   == README_UPDATE_SHA256, 'current-readme')
+
+
+def verify_current_source(snapshot, evidence):
+    """Current contract requires the exact addition; no historical fallback.
+
+    Pins come from reviewed code, never the candidate snapshot or receipt.
+    Historical verify_companion_delta remains a separate audit-only contract.
+    """
+    check_baseline(evidence)
+    check_source_modes(snapshot)
+    check_review_scope(snapshot)
+    check_metadata_delta(snapshot)
+    check_adr_addition(snapshot)
+    check_current_readme(snapshot)
+    check_protected_source({p: row for p, row in snapshot.items() if p != ADR_PATH})
+
+
+def check_adr_worktree(file):
+    """Git modes cannot represent hardlinks or Windows directory reparse points."""
+    for path in (file, *file.parents):
+        if path == ROOT:
+            break
+        info = path.lstat()
+        source_require(not stat.S_ISLNK(info.st_mode)
+                       and not getattr(info, 'st_file_attributes', 0) & 0x400
+                       and (stat.S_ISREG(info.st_mode) and info.st_nlink == 1
+                            if path == file else stat.S_ISDIR(info.st_mode)),
+                       'adr-working-type')
+
+
 def committed_source(ref):
     # Resolve to a commit before using a ref in subsequent plumbing commands.
     commit = git_source('rev-parse', '--verify', '--end-of-options', ref + '^{commit}').decode().strip()
@@ -228,6 +273,8 @@ def working_source():
         snapshot[path.decode('utf-8')] = ('100644', b'')
     for path, (mode, _) in snapshot.copy().items():
         file = ROOT / path
+        if path == ADR_PATH:
+            check_adr_worktree(file)
         source_require(not file.is_symlink() and file.is_file(), 'nonregular-working-source')
         # POSIX executable worktree changes must be caught before staging too.
         if os.name != 'nt' and file.stat().st_mode & 0o111:
@@ -271,15 +318,15 @@ def expect_source_rejection(verifier, snapshot, evidence, code, name):
         raise AssertionError('negative accepted: ' + name)
 
 
-def detector_removed(detector):
+def detector_removed(detector, verifier_function=verify_companion_delta):
     """Compile a real detector-body deletion, not a mocked success/exception."""
     node = ast.parse(inspect.getsource(globals()[detector])).body[0]
     node.body = [ast.Pass()]
-    verifier = ast.parse(inspect.getsource(verify_companion_delta)).body[0]
+    verifier = ast.parse(inspect.getsource(verifier_function)).body[0]
     module = ast.fix_missing_locations(ast.Module(body=[node, verifier], type_ignores=[]))
     namespace = globals().copy()
     exec(compile(module, '<source-detector-removal>', 'exec'), namespace)
-    return namespace['verify_companion_delta']
+    return namespace[verifier_function.__name__]
 
 
 def source_cli_tests(snapshot):
@@ -317,8 +364,11 @@ def source_cli_tests(snapshot):
 def companion_source_tests():
     current = working_source()
     evidence = (SOURCE_BASE, PROTECTED.copy())
+    verify_current_source(current, evidence)
     positive = current.copy()
-    # Require the approved delta in the actual working source, not just a fixture.
+    # Test the historical contract separately after checking the whole current
+    # source. The new ADR is not admitted by this historical verifier.
+    del positive[ADR_PATH]
     verify_companion_delta(positive, evidence)
     # A shallow CI checkout needs no baseline fetch. The explicit
     # --verify-source-baseline procedure independently recomputes this receipt
@@ -446,12 +496,14 @@ def companion_source_tests():
             raise AssertionError('ineffective detector-removal assertion: ' + name)
     print(f'PASS: exact active companion delta; {len(cases)} specific negatives; '
           f'{len(cases)} detector-removal assertion failures ({len(mutants)} detector bodies)')
-    source_cli_tests(positive)
+    source_cli_tests(current)
 
 
 def readme_update_tests():
     positive = working_source()
     evidence = (SOURCE_BASE, PROTECTED.copy())
+    verify_current_source(positive, evidence)
+    del positive[ADR_PATH]  # Historical README contract, not current admission.
     require(hashlib.sha256(positive['README.md'][1]).hexdigest() == README_UPDATE_SHA256,
             'actual integrated README must match reviewed update')
     verify_companion_delta(positive, evidence)
@@ -490,6 +542,191 @@ def readme_update_tests():
         else:
             raise AssertionError('ineffective README detector-removal assertion')
     print('PASS: exact integrated README; 11 negatives / 11 effective detector-removal assertions')
+
+
+def check_adr_prior(snapshot, identity):
+    source_require(identity == ADR_PRIOR_COMMIT, 'adr-prior-identity')
+    source_require(ADR_PATH not in snapshot and hashlib.sha256(
+        snapshot['.github/scripts/test-memory-diagnostic.py'][1]).hexdigest()
+        == ADR_PRIOR_CHECKER_SHA256, 'adr-prior-checker')
+    verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+    check_current_readme(snapshot)
+
+
+def verify_adr_update():
+    """Recompute immutable prior and new exact addition, without candidate pins."""
+    verify_readme_update()
+    prior = committed_source(ADR_PRIOR_COMMIT)
+    check_adr_prior(prior, ADR_PRIOR_COMMIT)
+    current = working_source()
+    evidence = (SOURCE_BASE, PROTECTED.copy())
+    verify_current_source(current, evidence)
+    source_require(current.keys() == prior.keys() | {ADR_PATH}
+                   and all(current[p] == prior[p] for p in prior if p not in REVIEWED_FILES),
+                   'adr-only-transition')
+    # Replay the immutable original checker, not a candidate-supplied verifier.
+    namespace = {'__file__': str(Path(__file__)), '__name__': 'historical_checker'}
+    exec(compile(prior['.github/scripts/test-memory-diagnostic.py'][1],
+                 '<immutable-prior-checker>', 'exec'), namespace)
+    namespace['verify_companion_delta'](prior, evidence)
+    try:
+        namespace['verify_companion_delta'](current, evidence)
+    except namespace['SourceRejection'] as failure:
+        source_require(str(failure) == 'protected-governance', 'old-checker-replay-reason')
+    else:
+        raise AssertionError('old checker silently admitted current ADR')
+    expect_source_rejection(verify_current_source, prior, evidence,
+                            'exact-adr-addition', 'old-source-replay')
+    old_readme = current.copy()
+    old_readme['README.md'] = committed_source(SOURCE_BASE)['README.md']
+    expect_source_rejection(verify_current_source, old_readme, evidence,
+                            'current-readme', 'historical-readme-replay')
+    mutant = detector_removed('check_current_readme', verify_current_source)
+    mutant(old_readme, evidence)
+    try:
+        expect_source_rejection(mutant, old_readme, evidence,
+                                'current-readme', 'historical-readme-replay')
+    except AssertionError as failure:
+        require(type(failure) is AssertionError
+                and str(failure) == 'negative accepted: historical-readme-replay',
+                'wrong current README removal outcome')
+    else:
+        raise AssertionError('ineffective current README removal')
+    rejected_proposal = prior.copy()
+    rejected_proposal[ADR_PATH] = ('100644',
+        b'# ADR-0005: Interim main branch protection\n\nOwner direction selected 2026-11-17; activation blocked.\n')
+    source_require(protected_evidence(rejected_proposal)['governance'] == (
+        110, '3301f6b70ca16b313b74eddef38848fc4f733aef8a75c6e0d6e959c712ff7838'),
+        'historical-rejection-receipt')
+    expect_source_rejection(verify_companion_delta, rejected_proposal, evidence,
+                            'protected-governance', 'stage-1-proposal')
+    expect_source_rejection(verify_current_source, rejected_proposal, evidence,
+                            'exact-adr-addition', 'stage-1-proposal-current')
+    print('PASS: immutable prior checker/source, historical README and exact ADR transition; '
+          'old checker rejects new source; current checker rejects old source')
+
+
+def adr_update_tests():
+    from unittest.mock import patch
+    current = working_source()
+    evidence = (SOURCE_BASE, PROTECTED.copy())
+    verify_current_source(current, evidence)
+    historical = current.copy(); del historical[ADR_PATH]
+    verify_companion_delta(historical, evidence)
+    expect_source_rejection(verify_companion_delta, current, evidence,
+                            'protected-governance', 'historical-extra-ADR')
+    cases = []
+    def add(name, snapshot, code, detector, receipt=evidence):
+        cases.append((name, snapshot, receipt, code, detector))
+    for name, raw in (('changed', current[ADR_PATH][1] + b'\n'), ('substituted', b'other ADR\n')):
+        changed = current.copy(); changed[ADR_PATH] = ('100644', raw)
+        add(name, changed, 'exact-adr-addition', 'check_adr_addition')
+    add('deleted', historical, 'exact-adr-addition', 'check_adr_addition')
+    for mode in ('100755', '120000', '160000', '040000'):
+        changed = current.copy(); changed[ADR_PATH] = (mode, changed[ADR_PATH][1])
+        # Both layers reject mode drift. Test each detector directly below.
+        expect_source_rejection(verify_current_source, changed, evidence,
+                                'regular-source-modes', 'adr-mode-' + mode)
+    renamed = historical.copy(); renamed[ADR_PATH + '.renamed'] = current[ADR_PATH]
+    expect_source_rejection(verify_current_source, renamed, evidence,
+                            'exact-adr-addition', 'renamed-adr')
+    for path in ('docs/decisions/ADR-0006-unreviewed.md', 'docs/unreviewed.md'):
+        changed = current.copy(); changed[path] = ('100644', b'unreviewed\n')
+        add('extra-' + path, changed, 'protected-governance', 'check_protected_source')
+    # Every protected group, plus all existing governance files, is exercised
+    # through current admission, not only the historical projected fixture.
+    protected = [p for p in historical if p not in REVIEWED_FILES and p != BUILD_PATH]
+    representatives = {}
+    for path in protected:
+        representatives.setdefault(protected_group(path), path)
+    paths = {p for p in protected if protected_group(p) == 'governance'} | set(representatives.values())
+    for path in sorted(paths - {'README.md'}):
+        changed = current.copy(); mode, raw = changed[path]
+        changed[path] = (mode, raw + b'\n')
+        add('changed-' + path, changed, 'protected-' + protected_group(path), 'check_protected_source')
+    for receipt in (None, ('unknown', PROTECTED), (ADR_PRIOR_COMMIT, PROTECTED),
+                    (SOURCE_BASE, protected_evidence(current))):
+        add('candidate-baseline-' + str(len(cases)), current, 'baseline-evidence',
+            'check_baseline', receipt)
+    mutants = {detector: detector_removed(detector, verify_current_source) for *_, detector in cases}
+    for name, snapshot, receipt, code, detector in cases:
+        expect_source_rejection(verify_current_source, snapshot, receipt, code, name)
+        mutant = mutants[detector]
+        mutant(snapshot, receipt)
+        try:
+            expect_source_rejection(mutant, snapshot, receipt, code, name)
+        except AssertionError as failure:
+            require(type(failure) is AssertionError and str(failure) == 'negative accepted: ' + name,
+                    'wrong ADR detector-removal outcome')
+        else:
+            raise AssertionError('ineffective ADR detector removal')
+
+    def layer_removal(detector, arguments, code):
+        original = globals()[detector]
+        def reject(fn):
+            try:
+                fn(*arguments)
+            except SourceRejection as failure:
+                require(str(failure) == code, 'wrong ADR layer rejection')
+            else:
+                raise AssertionError('ADR layer negative accepted')
+        reject(original)
+        node = ast.parse(inspect.getsource(original)).body[0]; node.body = [ast.Pass()]
+        namespace = globals().copy()
+        exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])),
+                     '<adr-layer-removal>', 'exec'), namespace)
+        mutant = namespace[detector]
+        mutant(*arguments)
+        try:
+            reject(mutant)
+        except AssertionError as failure:
+            require(type(failure) is AssertionError and str(failure) == 'ADR layer negative accepted',
+                    'wrong ADR layer removal failure')
+        else:
+            raise AssertionError('ineffective ADR layer removal')
+
+    for mode in ('100755', '120000', '160000', '040000'):
+        changed = current.copy(); changed[ADR_PATH] = (mode, changed[ADR_PATH][1])
+        layer_removal('check_source_modes', (changed,), 'regular-source-modes')
+        layer_removal('check_adr_addition', (changed,), 'exact-adr-addition')
+    for path in ('README.md', ADR_PATH):
+        changed = current.copy(); del changed[path]
+        detector, code = ('check_current_readme', 'current-readme') if path == 'README.md' else (
+            'check_adr_addition', 'exact-adr-addition')
+        layer_removal(detector, (changed,), code)
+    changed = current.copy(); changed['README.md'] = ('100644', b'old or changed README\n')
+    layer_removal('check_current_readme', (changed,), 'current-readme')
+    layer_removal('check_adr_prior', (historical, 'candidate-selected'), 'adr-prior-identity')
+    layer_removal('check_adr_prior', (historical, ADR_PRIOR_COMMIT), 'adr-prior-checker')
+    # Real disposable filesystem; no privileges, active files or private inputs.
+    with tempfile.TemporaryDirectory(prefix='pdva-adr-types-') as temp:
+        root = Path(temp)
+        file = root / ADR_PATH
+        file.parent.mkdir(parents=True)
+        file.write_bytes(current[ADR_PATH][1])
+        with patch.dict(globals(), ROOT=root):
+            check_adr_worktree(file)
+            file.unlink(); file.mkdir()
+            layer_removal('check_adr_worktree', (file,), 'adr-working-type')
+            file.rmdir()
+            target = root / 'target'; target.write_bytes(current[ADR_PATH][1])
+            os.link(target, file)
+            layer_removal('check_adr_worktree', (file,), 'adr-working-type')
+            file.unlink()
+            if os.name != 'nt':
+                file.symlink_to(target)
+                layer_removal('check_adr_worktree', (file,), 'adr-working-type')
+                file.unlink()
+            else:
+                file.write_bytes(current[ADR_PATH][1])
+                original = Path.lstat
+                class Reparse:
+                    st_mode = stat.S_IFDIR
+                    st_file_attributes = 0x400
+                with patch.object(Path, 'lstat', lambda p: Reparse() if p == file.parent else original(p)):
+                    layer_removal('check_adr_worktree', (file,), 'adr-working-type')
+    print(f'PASS: current ADR admission; {len(cases)} specific negatives/effective removals; '
+          'mode, prior-identity, README and filesystem layer removals; historical rejection retained')
 
 
 def require(condition, message):
@@ -1191,7 +1428,7 @@ def qualification_source_identity(snapshot):
 def qualify_signed_pair(paths, receipts=None):
     """Read-only staged verifier. There is currently NO successful admission path."""
     snapshot = working_source()
-    verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+    verify_current_source(snapshot, (SOURCE_BASE, PROTECTED.copy()))
     originals = original_pair(paths)
     certificates = []
     for _, raw in originals:
@@ -1507,7 +1744,7 @@ def unsigned_source_correspondence(source, snapshot):
 def compare_unsigned_pair(paths, source_ref, records):
     """Bounded development observation, never signed or independent qualification."""
     snapshot = committed_source(source_ref)
-    verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+    verify_current_source(snapshot, (SOURCE_BASE, PROTECTED.copy()))
     originals = original_pair(paths)  # ALL original bytes, before any ZIP interpretation.
     print('PASS: complete original unsigned bytes equal; package/execution checks still pending')
     unsigned_execution_claims(records, paths, originals, qualification_source_identity(snapshot), time.time_ns())
@@ -2049,9 +2286,17 @@ def main():
                              help='recompute the pinned public evidence from the exact base Git object')
     source_mode.add_argument('--verify-readme-update', action='store_true',
                              help='recompute the exact reviewed README-only transition without changing historical pins')
+    source_mode.add_argument('--verify-adr-update', action='store_true',
+                             help='audit immutable prior source and exact current ADR addition')
     source_mode.add_argument('--check-source-ref',
                              help='check an existing local commit for the exact proposed source delta only')
     args = parser.parse_args()
+    if args.verify_adr_update:
+        require(not (args.unsigned_pair or args.unsigned_source_ref or args.unsigned_executions
+                     or args.signed_pair or args.build_receipts or args.java_home
+                     or args.android_jar or args.apk), 'ADR audit is source-only')
+        verify_adr_update()
+        return
     if args.unsigned_pair:
         try:
             qualification_require(args.unsigned_source_ref and args.unsigned_executions
@@ -2094,9 +2339,10 @@ def main():
             require(protected_evidence(snapshot) == PROTECTED, 'baseline protected evidence')
             print('PASS: public baseline Git blobs/modes recomputed (not independent authentication)')
         else:
-            verify_companion_delta(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+            verify_current_source(snapshot, (SOURCE_BASE, PROTECTED.copy()))
             print('PASS: exact proposed source delta only; independent review and qualification still required')
         return
+    adr_update_tests()
     companion_source_tests()
     readme_update_tests()
     metadata_package_tests()

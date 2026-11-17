@@ -1,13 +1,16 @@
 # Evidence index
 
-[Owner-approved interim main protection](gate-0-companion-source-controls.md#owner-approved-interim-main-protection--2026-11-17),
-2026-11-17: Tony selected PRs plus universal CI, zero required GitHub approvals,
-strict current-base checks and no bypass while no qualified independent reviewer
-is available. Stage 1 only; main remains unprotected. ADR-0005 admission is blocked
-by the unchanged immutable governance inventory: **activation NOT AUTHORIZED UNTIL
-RESOLVED**. Exact settings, continuing ChatGPT review, limitations and separately
-authorized Stage 2 test/recovery procedure are recorded. This is the current
-approved direction, not an undecided alternative; no administration changed.
+[Consolidated ADR-0005 admission](gate-0-companion-source-controls.md#consolidated-adr-0005-source-admission--2026-11-17),
+2026-11-17: [ADR-0005](../decisions/ADR-0005-interim-main-branch-protection.md)
+records Tony's approved interim PR/CI direction, zero mandatory GitHub approvals,
+strict current-base checks and no bypass. The bounded current-state checker and
+security tests admit only its exact bytes while preserving historical pins and
+rejections. Final implementation awaits review; main enforcement is not activated.
+The complete configuration and single activation/recovery procedure are ready
+for separately authorized testing after review and merge. The historical
+[Stage 1 decision and blocker](gate-0-companion-source-controls.md#owner-approved-interim-main-protection--2026-11-17)
+remain evidence of the earlier state, not an outstanding request for another
+preparation PR. Full ChatGPT review and all product-security obligations remain.
 
 [Main branch governance enforcement audit](gate-0-companion-source-controls.md#main-branch-governance-enforcement-audit--2026-11-17),
 2026-11-17 historical investigation (owner disposition continued above): authenticated

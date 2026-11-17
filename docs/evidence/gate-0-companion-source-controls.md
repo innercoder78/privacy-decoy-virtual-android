@@ -2154,3 +2154,138 @@ passed. No new dependency or binary; protected files remain byte-identical to
 verified main. These source/fixture results do not qualify signed artifacts or
 establish Android execution. Final committed-head source admission is a required
 publication check, reported with the PR; this text does not predict hosted CI.
+
+
+## Consolidated ADR-0005 source admission — 2026-11-17
+
+**Repository implementation prepared for review; administration NOT EXECUTED.**
+Tony authorized completing the already selected interim direction in one PR,
+including the new ADR and narrow checker/test changes. This continuation resolves
+the source-admission blocker described in the historical Stage 1 section; that
+section and its actual rejection receipt remain unchanged. It does not infer
+approval of previously unreviewed technical bytes. The complete current policy,
+exact JSON configuration, residual risks, upgrade conditions and single practical
+activation/recovery procedure are in
+[ADR-0005](../decisions/ADR-0005-interim-main-branch-protection.md).
+Its procedure supersedes the earlier Stage 2 planning procedure for subsequent
+use; neither procedure has been executed. After successful review and merge,
+separately authorized enforcement testing/activation is the next operation, not
+another preparation PR. No ruleset, permission or repository setting changed.
+
+### Fresh baseline and applicability
+
+Live remote main, fetched origin/main and the isolated worktree agreed on
+`e8923e315b603227db4b42c9036c184aed28b6fa`. PR #82 is merged; connected search
+and REST both returned zero open PRs, so requested open-PR heads/bases/full
+diffs/files/modes/checks/jobs/logs/reviews/comments/threads form an empty set.
+Local primary main and origin/main were stale before fetch; existing worktrees,
+branches, dirty/untracked and ignored outputs and private records were preserved.
+Initial sandbox network/Git metadata operations failed; narrowly scoped approved
+Git operations succeeded without security-setting changes.
+
+Exact-main [Foundation run 44012740354](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44012740354)
+reported successful `foundation` job 133803359427 and `offline-image-windows`
+job 133803359774. Their completed logs show substantive validation and controls,
+including 45 image, four frame-copy, 38 Gradle and 16 installed-tools tests on
+Windows. Check-run producer was freshly confirmed as GitHub Actions app **15368**.
+The live ruleset list and effective-main-rule list were empty; merge, squash and
+rebase repository settings were all true. GitHub Status reported All Systems
+Operational, page update `2026-11-17T15:19:18.141Z`. These are baseline observations,
+not results for this PR. Existing protection/authority must be freshly read again
+before any subsequent administration.
+
+The existing three workflow definitions were inspected. This checker change
+selects universal Foundation/Windows **and Android** via `.github/**`; QEMU's
+explicit path filters do not select it. Android job execution is an applicable
+hosted review requirement; it was not locally run or manually dispatched. Local
+Android CLI/build/signing/device/VM operations remain prohibited. No workflow,
+filter, job name, checkout pin or dependency changed. New-PR CI is UNOBSERVED at
+publication and will not be polled; ChatGPT must inspect it before merge.
+
+### Exact admission and immutable history
+
+The original `SOURCE_BASE`, `PROTECTED`, `REVIEWED_FILES`, README transition
+constants, `protected_evidence`, `check_protected_source` and
+`verify_companion_delta` remain unchanged. Historical governance remains count
+109 with SHA-256 `384c3a4289c41a25e00a5a90f5eaee5f5a8b7208438fe8de099ad359cb57c45c`;
+its exact README transition remains count 109 with
+`27162b9af9a45f36a674d76895817ea37285f6ef38487332325f0127f11400ab`.
+No digest is recalculated to conceal the new file or any earlier failure.
+
+The separate `verify_current_source` requires the fixed ADR path, mode 100644
+and SHA-256 `78e108ca2b5b4ca2660f5b7d101622fd890d1e5cefcf4576beff1bc225a0de87`,
+and the exact reviewed README. Only after hashing the exact ADR separately does
+it project the remaining snapshot through the unchanged historical protections.
+All other governance paths/counts/bytes remain pinned; no wildcard or caller
+allowlist exists. Deleting the ADR fails current admission rather than selecting
+an older contract. Default tests, source-ref CLI and signed/unsigned source
+prechecks use current admission; historical audit entrypoints remain separate.
+No signing/package/SDK qualification detector or execution-lock source changed.
+
+`--verify-adr-update` reads immutable prior main and authenticates its checker
+against SHA-256 `f31fc60389e9096db8a330d96a5018646874857342ab1423bfeaad45791b7412`.
+It recomputes the historical baseline/README transition and compares the whole
+prior/current source delta to exactly the new ADR plus the same three original
+review files. It executes the immutable prior checker on prior and new snapshots:
+prior passes; new ADR fails `protected-governance`. Current admission rejects
+old-source replay. It also reproduces Stage 1's exact rejected placeholder and
+its recorded count/hash; that placeholder still fails both policies. Original
+README replay fails current admission, and removal of the current-README detector
+makes that exact negative assertion fail. Missing immutable objects cannot pass
+this explicit audit; shallow CI uses the reviewed pins and claims no fresh Git
+history recomputation.
+
+The original three review files remain a manual review boundary, not self-proving
+authorization. Candidate Python can lie if a reviewer approves a malicious
+checker; neither hashes nor app identity eliminate that risk. All changed bytes
+must be reviewed independently. Future governance changes need a new exact,
+reviewed immutable transition and negative/removal evidence, never rebaselining
+historical pins. The ADR defines that maintenance process.
+
+### Actual controls and remaining limits
+
+The current-state suite exercises 123 specific negative cases with effective
+detector-removal failures: modified/substituted/deleted ADR, extra governance/ADR,
+every existing protected governance file and representatives of all seven
+protected groups, plus missing/wrong/candidate-derived baseline identities.
+Additional controls cover rename, executable/symlink/gitlink/directory modes,
+README deletion/change, prior identity/checker substitution, real directory and
+hardlink fixtures and their detector removals. Overlapping mode checks are tested
+individually without disabling a second control to manufacture acceptance.
+Windows reparse-parent handling uses a synthetic lstat fixture; real Windows
+symlink creation is NOT RUN (no privilege changes). POSIX symlink control remains
+in the suite for applicable hosted execution, not claimed as a local result.
+
+The historical 60 source negatives/removals and 11 README negatives/removals still
+pass on their explicitly historical projection, after whole current admission.
+A separate assertion proves that historical admission rejects the new ADR, so
+these passing historical fixtures cannot conceal that rejection. Existing
+metadata, signed/unsigned receipt/package, SDK-state and cache-integrity tests
+also pass. These fixtures do not qualify any real APK, toolchain or signing chain.
+
+All fifteen signed-byte failures remain failures; failed SDK-state qualification
+is not repaired. Independent build/signing custody, private backup and physical
+readiness remain blocked. Gate 0 Unresolved; Gates A–G Not reached. No Android
+CLI, APK signing/key operations, device/ADB/USB, VM execution, installation,
+confidential publication or new binary/dependency adoption occurred. This change
+is original standard-library Python and governance prose, with existing reviewed
+dependencies and provenance unchanged. No product-security obligation is relaxed.
+
+Local validation used existing bundled CPython 3.12.14 on Windows: foundation
+184 files / 113 Markdown / 54 requirements / five ADRs; repository regression
+152 tests (148 passed, four existing Windows skips); harness validator; readiness
+28; offline image 45; frame copy four; Gradle distribution/startup/verification
+38; installed tools 16. Historical baseline, README and ADR transition audits
+passed. The full memory-diagnostic source/fixture suite passed. Linux-only native
+host controls and Android jobs are NOT RUN locally; applicable hosted results
+require review after publication. No native compiler/tool installation occurred.
+
+Final review verifies unchanged historical constants and detector functions,
+exact prefix preservation of this prior evidence record, four-file scope, regular
+100644 modes, UTF-8 text, local links, ruleset JSON and whitespace. An initial
+ad hoc Markdown-link scan incorrectly treated a Python call as a link; limiting
+that scan to Markdown fixes the review script. Foundation caught Windows-default
+encoding in the new evidence suffix; the suffix was corrected to UTF-8 without
+changing any historical bytes, then validation rerun. Neither initial failure
+counts as a successful check. Exact committed-head source admission is checked
+before publication; hosted results are not predicted.
