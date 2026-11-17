@@ -2289,3 +2289,16 @@ encoding in the new evidence suffix; the suffix was corrected to UTF-8 without
 changing any historical bytes, then validation rerun. Neither initial failure
 counts as a successful check. Exact committed-head source admission is checked
 before publication; hosted results are not predicted.
+
+
+## Disposable ADR-0005 failed-check control - 2026-11-17
+
+The initial disposable fixture referenced a missing Markdown target. GitHub
+Actions Foundation rejected that exact head, and the merge API rejected it
+with required check foundation failing. The invalid link is repaired here.
+Direct update, non-fast-forward and deletion probes were rejected with the
+target unchanged. The test ruleset was disabled and restored, with exact
+configuration and effective-rule readback. Positive merge testing is pending.
+An intermediate repair decoded historical punctuation incorrectly; this head
+restores the original historical bytes before any positive merge review.
+These observations concern only disposable repository controls, not Gate 0.
