@@ -1611,3 +1611,243 @@ stability assertion; this PR does not implement that change or waive the failure
 All fifteen historical signed-byte failures remain failures. ADR-0003's
 **December 8, 2026 deadline and earlier termination conditions remain binding**.
 **Independent backup UNVERIFIED; private evidence UNPRESERVED.**
+
+## Main branch governance enforcement audit — 2026-11-17
+
+**Outcome: missing main protection confirmed at this snapshot; one unapproved
+correction proposed.** Codex Desktop LOCAL, Windows x86_64; read-only remote
+investigation and documentation. Scope: PDVA-REQ-008, 036–042, 048, 050–051, 054.
+This extends the earlier protection Unknown and README-transition evidence here;
+it does not rewrite their historical dispositions.
+
+### Identity, permissions and effective enforcement
+
+`git ls-remote origin refs/heads/main`, `git fetch origin main`,
+`git rev-parse origin/main` and live branch metadata agreed on
+`e79d74b7b5724d6326793810c479a3204f7739ab`, merged PR #80. An isolated worktree
+started there. Existing files, branches, worktrees, stashes, ignored outputs and
+private evidence were preserved. No applicable AGENTS.md was found. The complete
+open-PR collection returned `[]` twice before publication: open heads/bases,
+complete diffs/files/modes, checks/jobs/logs, reviews/comments/threads were an
+empty set. No existing intended PR was omitted or duplicated.
+
+**API Facts**, 2026-11-17; detailed response dated 03:17:49 UTC:
+
+| Read-only endpoint | Observed result |
+|---|---|
+| [Repository](https://api.github.com/repos/innercoder78/privacy-decoy-virtual-android) | Public, owner type `User`, default `main`, not archived/disabled. Existing local CLI credential reports repository admin/push/pull permissions. No access was added. |
+| [Main](https://api.github.com/repos/innercoder78/privacy-decoy-virtual-android/branches/main) | `protected=false`, `protection.enabled=false`, required-status enforcement `off`, empty contexts/checks. Metadata is not an enforcement test. |
+| [Detailed protection](https://api.github.com/repos/innercoder78/privacy-decoy-virtual-android/branches/main/protection), connector | 403 `Resource not accessible by integration`: **Unknown for that credential**, not proof of absence. |
+| Same endpoint, authenticated local CLI | 404 with explicit `Branch not protected`. Successful admin-capable repository access and branch metadata corroborate current classic-protection absence; this is not an unexplained inaccessible-resource 404. |
+| [Rulesets including parents](https://api.github.com/repos/innercoder78/privacy-decoy-virtual-android/rulesets?includes_parents=true&per_page=100) | 200 `[]` through both connector and local CLI, no further page. |
+| [Effective main rules](https://api.github.com/repos/innercoder78/privacy-decoy-virtual-android/rules/branches/main?per_page=100) | Local CLI `[]`. Connector's URL allowlist rejected this endpoint; that was a tool limitation, not a GitHub permissions response. |
+| Collaborators, all affiliations, page size 100 | Only the owner with role admin returned; no second eligible reviewer observed. |
+
+Initial sandbox network/keyring/metadata-write failures were resolved by scoped
+command execution, not by changing GitHub credentials or settings. **No additional
+read-only access is needed.** If this CLI access becomes unavailable, the minimum
+replacement for the detailed endpoint is repository-scoped Administration: read,
+plus metadata, per [API permissions](https://docs.github.com/en/rest/branches/branch-protection#get-branch-protection).
+No token, confidential path or private receipt is published.
+
+**Upstream Documentation:** the [effective-rules API](https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch)
+returns active branch rules at every level, including organization rules; it
+excludes disabled/evaluate-only rules. The parent-inclusive collection complements
+that view. This repository has a user owner, not an organization owner.
+[Rulesets are available for public repositories on GitHub Free](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets).
+The paid account tier is **Unknown**; no paid-plan assumption is necessary for
+the branch ruleset below. Push rulesets are not proposed.
+
+**Inference:** neither classic protection nor active branch rules currently
+requires PRs, approvals, current-head review, stale-approval dismissal, CI or
+force-push prevention on main. There is no returned protection/bypass policy to
+inventory: absent gates, not a discovered named bypass, are the issue. Authorized
+writers can update main without those gates. Main is the default branch, so its
+[separate default-branch deletion restriction](https://docs.github.com/en/pull-requests/how-tos/commit-changes/managing-branches-within-your-repository#deleting-a-branch) must not be confused with a missing
+protection deletion rule. No successful deletion or force-push test is claimed.
+Owner administration and repository deletion remain separate powers.
+
+### Runtime and historical evidence
+
+**GitHub Runtime Observation:** exact-main
+[Foundation run 43966161213](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43966161213)
+completed successfully on `push`. Jobs `foundation` **133646042440** and
+`offline-image-windows` **133646042879** had successful substantive steps. Completed
+logs were retrieved and inspected, including Linux control receipts and Windows
+45/4/38/16-test suites. Check runs identify exact main and producer `github-actions`,
+app ID **15368**. Legacy status `pending` had **zero contexts**, not another running
+check. No Android/QEMU run was listed for that SHA; absence is not success.
+Initial log output rejected terminal formatting; a read-only retry stripped it
+before inspection. No dispatch or rerun occurred.
+[GitHub Status](https://www.githubstatus.com/api/v2/status.json) reported All Systems
+Operational, page update `2026-11-17T02:39:29.774Z`; this is a snapshot only.
+
+**Repository/API Facts:** [README commit 7bbdec6](https://github.com/innercoder78/privacy-decoy-virtual-android/commit/7bbdec67825d4c88d8789d3db643f3bc97ee777f)
+has one parent `f272de8207586ee2ec84412f6057ea580f0d0611`; complete diff changes only
+README.md, 3 additions/47 deletions, regular 100644 mode unchanged. Committer is
+GitHub `web-flow`; associated PR collection returned `[]`. Main's first-parent
+history contains it between PR #76 and PR #77. Together these corroborate the
+owner-supplied web-editor direct-main history. One parent alone could be a squash
+merge; web-flow alone does not establish a direct push or unauthorized action.
+
+Fresh [run 43071019706](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/43071019706)
+metadata identifies `push` at that README SHA. Foundation **130698583492 failed**;
+Windows **130698584073 succeeded**. Retrieved Foundation log confirms
+`SourceRejection: protected-governance`. **Inference:** the source checker detected
+the discrepancy after the commit reached main; that push-triggered check did not
+prevent this update. Historical protection settings, intent and use of any bypass
+remain **Unknown**. Current settings cannot establish the historical settings.
+The subsequent exact README integration correction did not erase that failure.
+
+Live merged PR metadata #76–80 targets main, with merge SHAs `f272de8`, `2c64fc1`,
+`2bd1fc1`, `4c2ebd5`, `e79d74b`, matching local history. Each submitted-review
+collection returned `[]`. This proves no submitted GitHub approval was returned,
+not absence of off-platform or conversational review. Merges and green jobs do
+not prove that GitHub required either. No experimental enforcement test was run.
+
+### Workflow applicability and evidence limitations
+
+All three definitions were inspected at exact main:
+
+| Workflow and check context | Applicability |
+|---|---|
+| [Foundation](../../.github/workflows/foundation.yml): `foundation`, `offline-image-windows` | All ordinary PRs, main pushes; no path filter or job-level skip condition. Both are suitable universal baseline required contexts. |
+| [Android](../../.github/workflows/android-harness.yml): `android` | PR/main push paths: `android/**`, `.github/**`, `.gitignore`, `.gitattributes`, `docs/evidence/gate-0-isolated-worker*`, `docs/source-provenance-policy.md`, `docs/source-reference-catalog.md`. Includes APK builds; none run by this task. |
+| [QEMU](../../.github/workflows/qemu-android-research.yml): `cross-build` | PR only: its own workflow and `.github/scripts/qemu-android-research.py`, `kernel-fd-research.py`, `arm64-boot-plan-research.py`, `startup-order-research.py`. Cancel-in-progress enabled. |
+
+This evidence record and index select only Foundation/Windows. README and most
+governance/evidence edits do not select specialized jobs, but can fail Foundation
+source admission. Android/workflow edits select Android; the enumerated QEMU
+scripts select both specialized workflows. Security policy and reviewable evidence
+still need semantic review. Protected digests do not authenticate their checker.
+
+**Upstream Documentation:** [required-check troubleshooting](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
+distinguishes a path-skipped workflow (required check may stay pending) from a
+skipped job; GitHub accepts success/skipped/neutral conclusions for required
+checks. Results must cover the latest applicable SHA; head and test-merge results
+have distinct handling. Thus globally requiring Android/QEMU would strand
+out-of-filter documentation PRs. Requiring only the universal checks leaves
+specialized-job enforcement dependent on review. A green label is not proof of
+substantive execution or security.
+
+A settings-only rule cannot enforce PDVA's stronger predicate: applicable jobs
+actually executed expected substantive steps on intended source and succeeded.
+Missing, skipped, neutral, cancelled, timed-out, zero-step, failed and pending
+outcomes remain non-success evidence. The eligible reviewer must inspect complete
+diffs, applicability, exact checkout SHA, producer, steps and logs; withhold
+approval/merge when an applicable job is absent or inconclusive. Unselected jobs
+are not applicable, never relabeled passes. Existing workflows remain unchanged.
+
+A later machine-enforced solution would require a separately authorized,
+always-triggered admission check from a trusted producer. It must enumerate the
+complete diff without truncation, apply a reviewed path/dependency policy, verify
+exact-source jobs and expected substantive steps, reject missing/wrong-source or
+non-success results, and explicitly report non-applicable suites. Counting steps
+or trusting names alone is insufficient. Changes to that policy/checker must not
+let an unreviewed PR certify itself. Shared security-sensitive inputs also need
+coverage. This is a precise future design obligation, **not an implemented check
+or part of the settings-only proposal**; separate approval and adversarial tests
+are necessary. No dummy successes, weakened filters or CI suppression proposed.
+
+### One minimal proposal for Tony — NOT APPROVED
+
+Create one **active branch ruleset**, name `main-review-and-ci`, include exactly
+`refs/heads/main`, no exclusions and **empty bypass actors**, with:
+
+1. Required PR; **one approving review**, stale approvals dismissed on changes,
+   approval of most recent reviewable push required, review conversations resolved.
+2. Required contexts **`foundation`**, **`offline-image-windows`**, each bound to
+   GitHub Actions integration **15368**; strict up-to-date checking enabled.
+3. Force pushes blocked; branch deletion restricted. Do not restrict all updates
+   (which would require bypass for normal merges). Retain existing merge methods;
+   no new signing, linear-history or deployment requirement.
+
+These settings are supported by [GitHub rules documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets).
+This is a minimal baseline correction, **not complete automatic enforcement of
+PDVA evidence**. Specialized jobs retain the review obligation above. Producer
+binding rejects other apps' same-name checks, not malicious edits within a
+PR-controlled Actions workflow. Strict up-to-date checking does not turn the
+existing explicit PR-head checkout into synthetic-merge-tree testing.
+
+**Activation prerequisite:** only the owner is currently listed as collaborator.
+Tony must name an independent eligible reviewer with write access and separately
+authorize any necessary access grant before activating this rule. Confirm they
+can approve owner-authored/latest-owner-pushed PRs; otherwise the rule can deadlock
+normal contribution. Do not substitute zero approvals, self-approval or an admin
+bypass. Chat feedback is not a GitHub approving review. Build/security reviewer
+qualification remains separately required.
+
+**Exact future approval:** Tony explicitly approves this one named ruleset,
+target, settings and empty bypass list, after naming that reviewer, acknowledging
+the specialized-job/manual-evidence limitation and retained owner settings powers.
+This PR is not that approval. Activation needs repository admin/edit-rules
+authority; REST mutation needs Administration: write. No such access is requested
+or setting changed now. If complete machine enforcement is the required approval
+condition, defer activation/claims until the separately reviewed admission design
+exists; do not represent this baseline as meeting that stronger condition.
+
+[Classic branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+exempts administrators by default unless configured otherwise. The proposed
+ruleset has no bypass actors, including no admin exception. An authorized owner
+can still edit/disable it; it does not resist malicious administration. Review
+dismissal remains a trust risk: dismissing objections is not substantive approval.
+
+**Recovery, proposed only:** retain work on a topic branch while main is blocked;
+diagnose service/check/reviewer failure. Any emergency exception needs separate
+explicit Tony approval, independently reviewed old/new configuration and affected
+SHA, a bounded restoration plan, then verified restoration before normal merges.
+No standing bypass, routine force push or deletion. Do not hide settings changes
+as CI recovery or weaken workflows to make them pass.
+
+**Proposed validation, NOT RUN:** after separate authorization, read back all
+settings; use an explicitly authorized disposable branch with equivalent rules
+for positive/negative documentation and in-filter cases, direct-update/force-push/
+deletion rejection, missing/stale/latest-pusher approval, wrong app/SHA, and
+missing/failed/cancelled/timed-out/skipped/neutral/zero-step checks. Record GitHub's
+skipped/neutral acceptance as a strict-evidence limitation, not test success.
+Confirm successful valid cases too. No such tests or administration changes were
+performed here, and no destructive test against main is proposed.
+
+### Falsifiers and preserved boundary
+
+A successful authorized read showing active applicable protection would falsify
+this snapshot's absence conclusion and require reassessment, not redundant rules.
+A changed reviewer inventory changes the activation prerequisite. Workflow trigger,
+job-name, producer or checkout changes invalidate the applicability proposal until
+reviewed. Historical settings/associated-PR evidence may refine the direct-main
+inference. Actual adversarial enforcement remains **Unknown**; an unauthorized
+bypass claim is not supported. **Unsupported product scope** is separate: no
+engine, privileged execution or production isolation is adopted here.
+
+Reviewed [governance](../governance.md), [source policy](../source-provenance-policy.md),
+[acceptance criteria](../acceptance-evidence-criteria.md), requirements, all ADRs,
+Gate 0 criteria, security boundary inventory and relevant history. Public source
+and source checkers do not themselves enforce admission to main. Missing server
+gates weaken prevention of unreviewed source/evidence changes; they do not imply
+hostile Android guest access to GitHub, nor does branch protection contain a guest.
+The diagnostic execution lock, source protections and complete guest/host boundary
+remain intact. ADR-0004 Option A and ADR-0003's existing bounded decisions remain.
+
+Original analysis only, in this record and its index; no upstream code, dependency,
+binary or license grant. No workflow, source pin, requirement, ADR, secret or
+administration changes; no APK/build/signing, keys, phone/ADB, VM or installation.
+Local checks and committed-source admission are recorded before publication.
+New-PR hosted results remain **UNOBSERVED**. Publish one PR, attach natively,
+verify association once, then STOP without CI/review/comment/bot/badge/mergeability
+polling. **Gate 0 Unresolved; Gates A–G Not reached. Independent build/signing
+qualification and physical testing remain blocked.** Existing private evidence
+and backup gaps are not resolved by this public record.
+
+### Local validation of this evidence change
+
+Existing bundled Python: Foundation validator **PASS**, 183 files, 112 Markdown,
+54 requirements, four ADRs; includes local file-link checks (not fragment checks).
+Unchanged diagnostic source suite **PASS**, including exact-source admission,
+60 source negatives/removals, 11 README-transition negatives/removals and existing
+synthetic signed/unsigned, SDK-state and cache-integrity controls. These are source
+and fixture results, not signed qualification or Android runtime evidence.
+Full two-file diff, regular 100644 modes, whitespace, new section/index anchor,
+public-data/provenance review and exact committed-head admission are checked for
+publication. The initial evidence-file write was denied by sandbox permissions;
+scoped retry succeeded without changing security settings. No failure is counted
+as a pass. No additional tests or workflow changes were needed for Markdown.

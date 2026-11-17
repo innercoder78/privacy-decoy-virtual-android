@@ -1,5 +1,13 @@
 # Evidence index
 
+[Main branch governance enforcement audit](gate-0-companion-source-controls.md#main-branch-governance-enforcement-audit--2026-11-17),
+2026-11-17: authenticated local API resolves the connector's 403: main is not
+protected and effective rules are empty. The direct-main README witness reached
+main before Foundation rejected protected governance. One unapproved ruleset
+proposal requires fresh independent review and universal Foundation/Windows checks,
+with no bypass; reviewer availability and specialized-job evidence remain explicit
+prerequisites/limitations. No settings or workflows changed.
+
 [Gradle installation-level precedence](gate-0-companion-source-controls.md#gradle-installation-level-precedence--2026-11-16),
 2026-11-16: four real desktop controls resolve PR #64's untested installation
 case. Disposable OFF/LENIENT files lose to trusted STRICT; removing only that
