@@ -2302,3 +2302,9 @@ configuration and effective-rule readback. Positive merge testing is pending.
 An intermediate repair decoded historical punctuation incorrectly; this head
 restores the original historical bytes before any positive merge review.
 These observations concern only disposable repository controls, not Gate 0.
+
+The restored disposable ruleset subsequently allowed the reviewed zero-approval
+merge test. A separately green old-base PR was rejected as behind, then refreshed
+with the new base and fresh successful checks before its reviewed squash merge.
+This final disposable fixture exercises the remaining rebase method with the
+same unchanged rules and mandatory exact-head ChatGPT review.
