@@ -2289,3 +2289,10 @@ encoding in the new evidence suffix; the suffix was corrected to UTF-8 without
 changing any historical bytes, then validation rerun. Neither initial failure
 counts as a successful check. Exact committed-head source admission is checked
 before publication; hosted results are not predicted.
+
+
+## Disposable ADR-0005 failed-check control — 2026-11-17
+
+This authorized nonproduction fixture deliberately references a missing local
+[control target](adr0005-deliberately-missing-control.md) so the unchanged
+Foundation validator must fail. It is not intended for main or a successful merge.
