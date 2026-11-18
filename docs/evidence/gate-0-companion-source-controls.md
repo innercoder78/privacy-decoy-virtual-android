@@ -2412,3 +2412,18 @@ ran 152 repository regression tests and reported all seven native positive contr
 [Windows](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44244477590/job/134599994510)
 ran 45 offline-image tests, 4 frame-copy tests, 38 Gradle distribution tests
 and 16 installed-tools tests.
+
+### Disposable target after PR #88
+
+On November 18, 2026 at 05:57:01 UTC, [PR #88](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/88)
+advanced the disposable target to `77f8ba43be86392eefdc307188caa6e2294d6559`.
+Its first parent was the prior target `2e820f5d0ee8319eb428b6e25081479a0fb5c064`.
+Its second parent was the tested head `e57e5b044864c672d47493ed8307d58af0c3e157`.
+[Foundation](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44246947775/job/134608080467)
+and [Windows](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44246947775/job/134608079889)
+both checked out that head and succeeded under GitHub Actions app 15368.
+
+This establishes the first qualifying merge-commit result under ADR-0005,
+after restoration of disposable ruleset 27524027. The earlier results for
+PRs #84–86 retain their recorded limitations. Squash and rebase remain Unknown.
+Production main remained at the first-parent commit with no effective rules.
