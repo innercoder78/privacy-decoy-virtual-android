@@ -54,6 +54,9 @@ ADR_PRIOR_COMMIT = 'e8923e315b603227db4b42c9036c184aed28b6fa'
 ADR_PRIOR_CHECKER_SHA256 = 'f31fc60389e9096db8a330d96a5018646874857342ab1423bfeaad45791b7412'
 ADR_PATH = 'docs/decisions/ADR-0005-interim-main-branch-protection.md'
 ADR_SHA256 = '78e108ca2b5b4ca2660f5b7d101622fd890d1e5cefcf4576beff1bc225a0de87'
+MERGE_POLICY_PRIOR = '2e820f5d0ee8319eb428b6e25081479a0fb5c064'
+MERGE_POLICY_PRIOR_CHECKER = 'a15344a665099584a029746cb366717784ab5f292659daf5ebd590043279754e'
+MERGE_POLICY_SHA256 = '36b6b4cc01a4a018ad243d1fb3dc14485d9eb3c10bbb3bd3f64ae8ce991eb2b0'
 BASE_BUILD = b"""plugins { id 'com.android.application' }
 android {
     namespace 'org.pdva.memorydiagnostic'
@@ -204,8 +207,8 @@ def check_current_readme(snapshot):
                    == README_UPDATE_SHA256, 'current-readme')
 
 
-def verify_current_source(snapshot, evidence):
-    """Current contract requires the exact addition; no historical fallback.
+def verify_original_adr_source(snapshot, evidence):
+    """Historical ADR contract requires the exact addition; no historical fallback.
 
     Pins come from reviewed code, never the candidate snapshot or receipt.
     Historical verify_companion_delta remains a separate audit-only contract.
@@ -215,6 +218,23 @@ def verify_current_source(snapshot, evidence):
     check_review_scope(snapshot)
     check_metadata_delta(snapshot)
     check_adr_addition(snapshot)
+    check_current_readme(snapshot)
+    check_protected_source({p: row for p, row in snapshot.items() if p != ADR_PATH})
+
+
+def check_merge_policy(snapshot):
+    entry = snapshot.get(ADR_PATH)
+    source_require(entry is not None and entry[0] == '100644'
+                   and hashlib.sha256(entry[1]).hexdigest() == MERGE_POLICY_SHA256,
+                   'exact-merge-policy')
+
+
+def verify_current_source(snapshot, evidence):
+    check_baseline(evidence)
+    check_source_modes(snapshot)
+    check_review_scope(snapshot)
+    check_metadata_delta(snapshot)
+    check_merge_policy(snapshot)
     check_current_readme(snapshot)
     check_protected_source({p: row for p, row in snapshot.items() if p != ADR_PATH})
 
@@ -558,9 +578,9 @@ def verify_adr_update():
     verify_readme_update()
     prior = committed_source(ADR_PRIOR_COMMIT)
     check_adr_prior(prior, ADR_PRIOR_COMMIT)
-    current = working_source()
+    current = committed_source(MERGE_POLICY_PRIOR)
     evidence = (SOURCE_BASE, PROTECTED.copy())
-    verify_current_source(current, evidence)
+    verify_original_adr_source(current, evidence)
     source_require(current.keys() == prior.keys() | {ADR_PATH}
                    and all(current[p] == prior[p] for p in prior if p not in REVIEWED_FILES),
                    'adr-only-transition')
@@ -575,13 +595,13 @@ def verify_adr_update():
         source_require(str(failure) == 'protected-governance', 'old-checker-replay-reason')
     else:
         raise AssertionError('old checker silently admitted current ADR')
-    expect_source_rejection(verify_current_source, prior, evidence,
+    expect_source_rejection(verify_original_adr_source, prior, evidence,
                             'exact-adr-addition', 'old-source-replay')
     old_readme = current.copy()
     old_readme['README.md'] = committed_source(SOURCE_BASE)['README.md']
-    expect_source_rejection(verify_current_source, old_readme, evidence,
+    expect_source_rejection(verify_original_adr_source, old_readme, evidence,
                             'current-readme', 'historical-readme-replay')
-    mutant = detector_removed('check_current_readme', verify_current_source)
+    mutant = detector_removed('check_current_readme', verify_original_adr_source)
     mutant(old_readme, evidence)
     try:
         expect_source_rejection(mutant, old_readme, evidence,
@@ -600,10 +620,39 @@ def verify_adr_update():
         'historical-rejection-receipt')
     expect_source_rejection(verify_companion_delta, rejected_proposal, evidence,
                             'protected-governance', 'stage-1-proposal')
-    expect_source_rejection(verify_current_source, rejected_proposal, evidence,
+    expect_source_rejection(verify_original_adr_source, rejected_proposal, evidence,
                             'exact-adr-addition', 'stage-1-proposal-current')
     print('PASS: immutable prior checker/source, historical README and exact ADR transition; '
           'old checker rejects new source; current checker rejects old source')
+
+
+def verify_merge_policy_update():
+    verify_adr_update()
+    prior = committed_source(MERGE_POLICY_PRIOR)
+    current = working_source()
+    evidence = (SOURCE_BASE, PROTECTED.copy())
+    checker = prior['.github/scripts/test-memory-diagnostic.py']
+    source_require(checker[0] == '100644' and hashlib.sha256(checker[1]).hexdigest()
+                   == MERGE_POLICY_PRIOR_CHECKER, 'merge-policy-prior-checker')
+    # The original detector-removal tests inspect their own source file.
+    with tempfile.TemporaryDirectory(prefix='pdva-policy-audit-') as temp:
+        original = Path(temp) / 'prior_checker.py'
+        original.write_bytes(checker[1])
+        namespace = {'__file__': __file__, '__name__': 'prior_policy_checker'}
+        exec(compile(checker[1], str(original), 'exec'), namespace)
+        namespace['working_source'] = lambda: prior.copy()
+        namespace['adr_update_tests']()
+        namespace['verify_current_source'](prior, evidence)
+        namespace['expect_source_rejection'](namespace['verify_current_source'], current, evidence,
+                                             'exact-adr-addition', 'superseding-policy')
+    verify_current_source(current, evidence)
+    expect_source_rejection(verify_current_source, prior, evidence,
+                            'exact-merge-policy', 'three-method-policy-replay')
+    detector_removed('check_merge_policy', verify_current_source)(prior, evidence)
+    source_require(current.keys() == prior.keys() and all(
+        current[path] == prior[path] for path in prior if path not in REVIEWED_FILES | {ADR_PATH}),
+        'merge-policy-transition-scope')
+    print('PASS: immutable three-method source and checker; mutually exclusive policy states')
 
 
 def adr_update_tests():
@@ -620,8 +669,8 @@ def adr_update_tests():
         cases.append((name, snapshot, receipt, code, detector))
     for name, raw in (('changed', current[ADR_PATH][1] + b'\n'), ('substituted', b'other ADR\n')):
         changed = current.copy(); changed[ADR_PATH] = ('100644', raw)
-        add(name, changed, 'exact-adr-addition', 'check_adr_addition')
-    add('deleted', historical, 'exact-adr-addition', 'check_adr_addition')
+        add(name, changed, 'exact-merge-policy', 'check_merge_policy')
+    add('deleted', historical, 'exact-merge-policy', 'check_merge_policy')
     for mode in ('100755', '120000', '160000', '040000'):
         changed = current.copy(); changed[ADR_PATH] = (mode, changed[ADR_PATH][1])
         # Both layers reject mode drift. Test each detector directly below.
@@ -629,7 +678,7 @@ def adr_update_tests():
                                 'regular-source-modes', 'adr-mode-' + mode)
     renamed = historical.copy(); renamed[ADR_PATH + '.renamed'] = current[ADR_PATH]
     expect_source_rejection(verify_current_source, renamed, evidence,
-                            'exact-adr-addition', 'renamed-adr')
+                            'exact-merge-policy', 'renamed-adr')
     for path in ('docs/decisions/ADR-0006-unreviewed.md', 'docs/unreviewed.md'):
         changed = current.copy(); changed[path] = ('100644', b'unreviewed\n')
         add('extra-' + path, changed, 'protected-governance', 'check_protected_source')
@@ -688,11 +737,11 @@ def adr_update_tests():
     for mode in ('100755', '120000', '160000', '040000'):
         changed = current.copy(); changed[ADR_PATH] = (mode, changed[ADR_PATH][1])
         layer_removal('check_source_modes', (changed,), 'regular-source-modes')
-        layer_removal('check_adr_addition', (changed,), 'exact-adr-addition')
+        layer_removal('check_merge_policy', (changed,), 'exact-merge-policy')
     for path in ('README.md', ADR_PATH):
         changed = current.copy(); del changed[path]
         detector, code = ('check_current_readme', 'current-readme') if path == 'README.md' else (
-            'check_adr_addition', 'exact-adr-addition')
+            'check_merge_policy', 'exact-merge-policy')
         layer_removal(detector, (changed,), code)
     changed = current.copy(); changed['README.md'] = ('100644', b'old or changed README\n')
     layer_removal('check_current_readme', (changed,), 'current-readme')
@@ -2286,16 +2335,21 @@ def main():
                              help='recompute the pinned public evidence from the exact base Git object')
     source_mode.add_argument('--verify-readme-update', action='store_true',
                              help='recompute the exact reviewed README-only transition without changing historical pins')
+    source_mode.add_argument('--verify-merge-policy-update', action='store_true',
+                             help='audit immutable previous ADR admission and exact policy replacement')
     source_mode.add_argument('--verify-adr-update', action='store_true',
                              help='audit immutable prior source and exact current ADR addition')
     source_mode.add_argument('--check-source-ref',
                              help='check an existing local commit for the exact proposed source delta only')
     args = parser.parse_args()
-    if args.verify_adr_update:
+    if args.verify_adr_update or args.verify_merge_policy_update:
         require(not (args.unsigned_pair or args.unsigned_source_ref or args.unsigned_executions
                      or args.signed_pair or args.build_receipts or args.java_home
                      or args.android_jar or args.apk), 'ADR audit is source-only')
-        verify_adr_update()
+        if args.verify_merge_policy_update:
+            verify_merge_policy_update()
+        else:
+            verify_adr_update()
         return
     if args.unsigned_pair:
         try:
