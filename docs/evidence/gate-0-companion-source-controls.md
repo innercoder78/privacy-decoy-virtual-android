@@ -2427,3 +2427,72 @@ This establishes the first qualifying merge-commit result under ADR-0005,
 after restoration of disposable ruleset 27524027. The earlier results for
 PRs #84–86 retain their recorded limitations. Squash and rebase remain Unknown.
 Production main remained at the first-parent commit with no effective rules.
+
+### Disposable merge-only configuration, November 18, 2026
+
+The [approved ADR at main](https://github.com/innercoder78/privacy-decoy-virtual-android/blob/53fd5ff9df0de3210902cf20dbc825438df08645/docs/decisions/ADR-0005-interim-main-branch-protection.md)
+supersedes the three-method policy present in this disposable branch's history.
+The branch remained at the #89 result, `8226525bb8fc85126e8debeb9d844eec46dfa8c6`.
+Main was `53fd5ff9df0de3210902cf20dbc825438df08645`. The pre-change
+open-PR list was empty. The repository allowed regular merge commits.
+
+**Stored and effective rules.** The repository ruleset listing including parents
+returned only [ruleset 27524027](https://github.com/innercoder78/privacy-decoy-virtual-android/rules/27524027).
+The initial GET returned `["merge","squash","rebase"]`. A rules-only PUT
+replayed the existing four rules with the pull-request rule's
+`allowed_merge_methods` set to `["merge"]`. GitHub documents this array in
+the [update ruleset API](https://docs.github.com/en/rest/repos/rules#update-a-repository-ruleset).
+GitHub recorded the update at `2026-11-18T14:55:10.578-03:00`.
+An independent GET matched the complete prior response except for that array
+and the server's update timestamp. The branch-rules endpoint independently
+returned the same four rules and parameters, each attributed to 27524027.
+
+| Property | Before and after |
+|---|---|
+| Scope | Active branch rule, sole include `refs/heads/codex/adr0005-ownerreview-test-20261118`, empty excludes and bypass actors, caller bypass `never` |
+| Pull request | Zero approvals, empty required reviewers. Stale-review dismissal, code-owner review, last-push approval, thread resolution and extra approval for unattributed changes all false |
+| Required checks | `foundation` and `offline-image-windows`, each bound to Actions app 15368. Strict freshness true, `do_not_enforce_on_create` false |
+| Other rules | Deletion and non-fast-forward updates restricted |
+| Controls | Main and existing sibling `codex/adr0005-ownerreview-test-20261118-pr1` each returned an empty effective list before and after. Classic protection reported branch not protected on both controls and the target |
+
+**Recovery.** The caller had repository administration access. Ruleset history
+versions 58322128, 58322165 and 58322171 record active, disabled and restored
+active enforcement with all three methods. The #88 two-parent merge followed
+that restoration. The successful scoped PUT establishes current access to
+the update route. Restoring the saved three-method array through that route
+would reverse this change. No new disable, rollback or restoration took place.
+Recovery execution with the singleton array remains unverified.
+
+| Case | Evidence boundary |
+|---|---|
+| Wrong producer | Both integrations are pinned. Rejection of a check from another producer remains Unknown. |
+| Wrong SHA | Historical successful logs identify the tested checkout. Wrong-SHA rejection remains Unknown. |
+| Missing | Historical GH013 named missing checks together with a missing PR. Missing-only rejection remains Unknown. |
+| Stale | A historical head with two green jobs fell behind the target. HTTP 405 named expected checks. Attribution to strict freshness remains an inference. |
+| Cancelled | No isolated observation. Unknown. |
+| Timed out | No isolated observation. Unknown. |
+| Skipped | No isolated observation. Unknown. A satisfying conclusion alone cannot establish executed steps. |
+| Neutral | No isolated observation. Unknown. A satisfying conclusion alone cannot establish executed steps. |
+| Zero steps | No isolated observation. Unknown. A successful status alone cannot establish execution. |
+
+Earlier direct-update, force-push, deletion, failing-check and pending-check
+receipts retain their original three-method scope. The singleton array excludes
+squash and rebase in configuration. Runtime refusal of either method is untested.
+A regular merge under this exact configuration and its resulting parents remain
+Unknown. A changed target, extra method, lost check binding, unexpected effective
+rule on a control, or a result lacking the prior target and tested head as its
+ordered parents would invalidate the corresponding qualification claim.
+Hosted execution requires checking the producer, checkout and substantive steps.
+Gate 0 remains Unresolved. Gates A-G remain Not reached.
+
+The three post-#90 push jobs from Actions app 15368 recorded the verified
+main SHA. Foundation job 135003545347 ran 152 repository tests and seven
+native positive controls. Windows job 135003544583 ran the offline-image
+suite. Android job 135003545460 recorded a successful build. These jobs
+predate the disposable configuration change.
+
+Local Windows validation passed Foundation, harness and memory/source controls,
+plus the immutable ADR transition audit. Repository regression ran 152 tests
+with four existing skips. Desktop readiness ran 28 tests, offline image 45,
+frame copy 4, Gradle distribution 38 and installed tools 16. Linux native
+controls and Android builds were unrun locally.
