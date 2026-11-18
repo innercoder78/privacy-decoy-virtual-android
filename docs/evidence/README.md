@@ -303,3 +303,7 @@ requirements. Use the terminology and record fields in
 No VM or Android runtime has been executed in this bootstrap. There is no direct
 PDVA guest boot, isolation, VPN-route or physical-device evidence. Historical
 experiments remain under [historical reference](../reference/privacy-decoy-history/README.md).
+
+[ADR-0005 incident and enforcement evidence, 2026-11-18](gate-0-companion-source-controls.md#adr-0005-incident-and-enforcement-evidence-2026-11-18)
+records three unauthorized Codex merges, original rejection and recovery
+receipts, verified Actions execution, cleanup and the failed activation gate.

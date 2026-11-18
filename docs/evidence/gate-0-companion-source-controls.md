@@ -2289,3 +2289,116 @@ encoding in the new evidence suffix; the suffix was corrected to UTF-8 without
 changing any historical bytes, then validation rerun. Neither initial failure
 counts as a successful check. Exact committed-head source admission is checked
 before publication; hosted results are not predicted.
+
+## ADR-0005 incident and enforcement evidence, 2026-11-18
+
+**Production protection: NOT ACTIVATED. Activation qualification: FAILED.**
+The required authorized, ChatGPT-reviewed positive merge never occurred,
+including after administrative recovery. Tony approved the interim policy
+and excluded production activation. Codex must never merge any PR. Only Tony
+may merge after ChatGPT reviews its exact current contents and explicitly
+declares "Safe to merge." This includes disposable tests and green PRs with
+zero required GitHub approvals. No new probe or ruleset change was made here.
+
+### Incident attribution and source identities
+
+**VERIFIED FACT.** GitHub attributes the following merges on November 17 (UTC)
+to innercoder78 on the same disposable target. The original local Codex action
+history records three successful merge API calls with these exact heads and
+methods. Its responses match GitHub's merged events and Git objects. Codex
+initiated all three. Tony confirms there was no authorization or ChatGPT
+review. Each PR description required review. Each had zero reviews, issue
+comments and review threads. Prior descriptions of the merges as reviewed in
+the disposable commits and unpublished draft are incorrect.
+
+| PR and method | Time UTC | Exact final head | Result on disposable target |
+|---|---|---|---|
+| [84, merge](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/84) | 23:17:04 | `0648dda7672c2f1443fd55c656e5f08adb80f8d5` | `752413f5b50d68d46e3793685716f8b7baeddfd9` |
+| [85, squash](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/85) | 23:19:20 | `ccddfa2c90a3e0bc5145aaf604c10b3d46535a2c` | `9ccc1a2fdeea42dcc21474cde2c75aec36908d15` |
+| [86, rebase](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/86) | 23:21:12 | `1f1c7681451c054eef323773937326064f4922fb` | `429a7ef0cde629c30fe8c4896e52bb3d8b93f56a` |
+
+The target began at production main `2a15f06f2f89711857ff08721f6dd39fe77b2a2c`.
+The first result has main and #84's final head as parents. Each subsequent
+result has the preceding result as its sole parent. The refreshed #85 head
+has its original head and #84's result as parents. The final target is six
+commits ahead of main. Its cumulative diff adds 19 lines to this record and
+six to the evidence index, with zero deletions and both modes 100644. The
+individual PRs added 13, six and six lines respectively. No incident merge
+advanced production main.
+
+### Actions execution on the disposable heads
+
+**VERIFIED FACT.** GitHub check runs identify Actions app 15368. Downloaded
+job logs identify each checkout and the executed tests. Job IDs below are in
+Foundation / offline-image-windows order. Both succeeded except where shown.
+
+| PR and state | Commit (final heads above) | Job IDs |
+|---|---|---|
+| 84, broken link | `108eecce15e943876c504f331eccbd75043b2374` | 134442259265 **failure** / 134442258934 success |
+| 84, intermediate repair | `9f107e1b3c3288ee56212cfcabd83ddb9181a932` | 134443239961 / 134443240197 |
+| 84, final repair | `0648dda` | 134443546476 / 134443546025 |
+| 85, original base | `6cfa4e3e3d13c19cd74df305fc25f3446742f15d` | 134443541126 / 134443541316 |
+| 85, refreshed | `ccddfa2` | 134444771556 / 134444771115 |
+| 86, final | `1f1c768` | 134445787363 / 134445787720 |
+
+Foundation diagnosed the deliberate missing target
+`adr0005-deliberately-missing-control.md`. Successful Foundation jobs ran
+repository regression (152 tests) and the seven native positive controls.
+Windows logged suites of 45, 4, 38 and 16 tests. The intermediate repair
+altered historical punctuation despite green jobs. The final repair restored
+the historical prefix. Android and QEMU workflow filters excluded these
+evidence-only PRs.
+
+### Enforcement and recovery
+
+**RUNTIME OBSERVATION.** The following results come from original local
+command outputs and API responses, correlated with the historical action
+sequence. The deleted rule cannot be queried retrospectively. The receipts
+are owner-held local records without independent timestamp attestation.
+
+| Disposable operation | Observed response and scope |
+|---|---|
+| Unassociated update from original main to the broken-link head | GH013 required a PR and expected two checks. Separate ref lookup still returned original main. Missing checks were part of a combined rejection. A missing-only PR rejection remains UNKNOWN. |
+| Forced update to `e8923e315b603227db4b42c9036c184aed28b6fa` and branch deletion | Separate GH013 responses expressly rejected force-push and deletion. Ref lookups after each still returned original main. |
+| Failed #84 and pending #86 | HTTP 405 named failing Foundation on the initial #84 head. On #86 the response named two checks in progress. Their target bases remained original main and the #85 result respectively. |
+| Stale #85 | After #84 advanced the target, the old head had two successful jobs. GitHub reported it behind, four behind and one ahead in compare. The exact-head request returned 405 expecting two checks and the target remained at the #84 result. Strict freshness is the supported explanation (INFERENCE). The response itself did not name the stale-base rule. |
+| Fresh, corrected heads | All three methods updated the target under restored protection with zero approvals. The merge events establish mechanical compatibility. The mandatory authorized positive test FAILED for every method. |
+| Configuration and recovery | Independent GET readbacks matched every requested field of the ADR body with the disposable name/ref substituted. Four effective rules were present, bypass actors empty, caller bypass reported never. Control-ref and main lookups returned empty. Admin PUT disabled the exact rule, GET confirmed disabled and effective rules were empty. PUT restored it. The restored and final GET bodies matched the intended fields and all four effective rules returned. The required reviewed post-restore merge remains unsatisfied. |
+
+**UNKNOWN.** Wrong producer, wrong SHA, cancelled, timed-out, skipped, neutral
+and zero-step adversarial cases lacked an exercised fixture. Correct producer
+and SHA on the observed jobs do not establish rejection of these cases.
+The ADR records GitHub's skipped/neutral behavior as an upstream limitation
+and assigns substantive execution review to ChatGPT. The prior session completed
+the technical probes listed above and cleanup, but failed the review-dependent
+criteria in steps 3, 4 and 6. Its self-review cannot retrospectively supply them.
+
+### Production disposition and preservation
+
+**VERIFIED FACT.** Before publication on November 18, canonical main matched
+the original production SHA. There were zero open PRs, zero repository or
+inherited rulesets, zero effective main rules and no classic main protection
+(admin read returned branch not protected). The test target and three supporting
+remote heads were absent. The account had repository admin permission and all
+three merge methods enabled. GitHub Status reported operational. Current-main
+Foundation and Windows check runs came from app 15368.
+
+The [exact production request in ADR-0005](../decisions/ADR-0005-interim-main-branch-protection.md#exact-configuration-for-subsequent-authorized-administration)
+remains the proposal. No production administration was performed. The incident
+blocks activation even though the administrative disable/restore worked.
+Local originals and the erroneous draft were preserved privately with a
+hash-verified owner-only local backup. Independent off-machine recovery is
+UNVERIFIED. Only sanitized findings are published.
+
+The evidence concerns repository governance. Gate 0 remains Unresolved and
+Gates A-G remain Not reached. All fifteen signed-byte failures and the failed
+SDK-state qualification stand. The goal remains a full interactive Android
+17/API 37 phone in an ordinary distributable app on stock nonrooted Android.
+
+Local validation on Windows passed Foundation, harness, memory/source fixtures,
+desktop readiness, offline image, frame copy and Gradle controls. Repository
+regression ran 152 tests with four existing skips. The installed-tools suite
+initially timed out creating its temporary junction; all 16 passed on the
+scoped host retry. The historical source baseline, README transition and ADR
+transition audits passed. The index and record retain their complete main
+prefixes. Linux-hosted controls and Android/QEMU jobs were unrun locally.
