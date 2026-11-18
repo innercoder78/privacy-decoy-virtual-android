@@ -1,25 +1,9 @@
 # Evidence index
 
-[Consolidated ADR-0005 admission](gate-0-companion-source-controls.md#consolidated-adr-0005-source-admission--2026-11-17),
-2026-11-17: [ADR-0005](../decisions/ADR-0005-interim-main-branch-protection.md)
-records Tony's approved interim PR/CI direction, zero mandatory GitHub approvals,
-strict current-base checks and no bypass. The bounded current-state checker and
-security tests admit only its exact bytes while preserving historical pins and
-rejections. Final implementation awaits review; main enforcement is not activated.
-The complete configuration and single activation/recovery procedure are ready
-for separately authorized testing after review and merge. The historical
-[Stage 1 decision and blocker](gate-0-companion-source-controls.md#owner-approved-interim-main-protection--2026-11-17)
-remain evidence of the earlier state, not an outstanding request for another
-preparation PR. Full ChatGPT review and all product-security obligations remain.
-
-[Main branch governance enforcement audit](gate-0-companion-source-controls.md#main-branch-governance-enforcement-audit--2026-11-17),
-2026-11-17 historical investigation (owner disposition continued above): authenticated
-local API resolves the connector's 403: main is not
-protected and effective rules are empty. The direct-main README witness reached
-main before Foundation rejected protected governance. One unapproved ruleset
-proposal requires fresh independent review and universal Foundation/Windows checks,
-with no bypass; reviewer availability and specialized-job evidence remain explicit
-prerequisites/limitations. No settings or workflows changed.
+[Merge-only policy evidence](gate-0-companion-source-controls.md#merge-only-policy-evidence)
+records the two regular merges, earlier enforcement and recovery observations,
+remaining Unknowns and production activation blockers for
+[ADR-0005](../decisions/ADR-0005-interim-main-branch-protection.md).
 
 [Gradle installation-level precedence](gate-0-companion-source-controls.md#gradle-installation-level-precedence--2026-11-16),
 2026-11-16: four real desktop controls resolve PR #64's untested installation
@@ -127,7 +111,7 @@ sanitized results, JVM/source/package controls and a conditional novice procedur
 Installation remains blocked on independent artifact qualification; no gate advances.
 
 [Accepted Gate 0 owner disposition](../decisions/ADR-0004-gate-0-owner-disposition.md),
-2026-11-07: Tony explicitly selected Option A in the current project conversation.
+2026-11-07: Option A was selected.
 Retain the full interactive Android 17 virtual-phone and ordinary stock nonrooted
 host-app requirements; keep dependent implementation stopped until genuinely new
 qualifying Gate 0 evidence and applicable approvals exist. No redesign commissioned;
@@ -305,5 +289,5 @@ PDVA guest boot, isolation, VPN-route or physical-device evidence. Historical
 experiments remain under [historical reference](../reference/privacy-decoy-history/README.md).
 
 [ADR-0005 incident and enforcement evidence, 2026-11-18](gate-0-companion-source-controls.md#adr-0005-incident-and-enforcement-evidence-2026-11-18)
-records three unauthorized Codex merges, original rejection and recovery
+records three unauthorized merges, original rejection and recovery
 receipts, verified Actions execution, cleanup and the failed activation gate.
