@@ -111,7 +111,7 @@ sanitized results, JVM/source/package controls and a conditional novice procedur
 Installation remains blocked on independent artifact qualification; no gate advances.
 
 [Accepted Gate 0 owner disposition](../decisions/ADR-0004-gate-0-owner-disposition.md),
-2026-11-07: Tony explicitly selected Option A in the current project conversation.
+2026-11-07: Option A was selected.
 Retain the full interactive Android 17 virtual-phone and ordinary stock nonrooted
 host-app requirements; keep dependent implementation stopped until genuinely new
 qualifying Gate 0 evidence and applicable approvals exist. No redesign commissioned;

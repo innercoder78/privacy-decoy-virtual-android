@@ -56,7 +56,7 @@ ADR_PATH = 'docs/decisions/ADR-0005-interim-main-branch-protection.md'
 ADR_SHA256 = '78e108ca2b5b4ca2660f5b7d101622fd890d1e5cefcf4576beff1bc225a0de87'
 MERGE_POLICY_PRIOR = '2e820f5d0ee8319eb428b6e25081479a0fb5c064'
 MERGE_POLICY_PRIOR_CHECKER = 'a15344a665099584a029746cb366717784ab5f292659daf5ebd590043279754e'
-MERGE_POLICY_SHA256 = '36b6b4cc01a4a018ad243d1fb3dc14485d9eb3c10bbb3bd3f64ae8ce991eb2b0'
+MERGE_POLICY_SHA256 = 'eb2e6ab7bad2ae4ebf3065251d9d96e5f515f6bccba0183b982acecb389831ca'
 BASE_BUILD = b"""plugins { id 'com.android.application' }
 android {
     namespace 'org.pdva.memorydiagnostic'

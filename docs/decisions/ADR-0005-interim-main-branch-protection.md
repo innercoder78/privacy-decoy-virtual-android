@@ -2,11 +2,8 @@
 
 **Approved policy revision, 2026-11-18. Production enforcement pending.**
 
-Updates to main require a pull request. Only a human maintainer may use GitHub's
-regular **Merge pull request** operation. Squash merges, rebase merges and merges
-performed by automated agents are prohibited. Zero GitHub approvals remain
-required in this interim configuration. A future change to approval requirements
-requires a separate decision.
+Updates to main require a pull request. Regular merge commits are the only
+permitted merge method. Squash and rebase merges are disallowed.
 
 This revision supersedes the three-method decision in the
 [previous ADR](https://github.com/innercoder78/privacy-decoy-virtual-android/blob/2e820f5d0ee8319eb428b6e25081479a0fb5c064/docs/decisions/ADR-0005-interim-main-branch-protection.md). Qualification of squash
@@ -55,44 +52,10 @@ are independent of this branch rule.
 }
 ```
 
-The rule applies only to main, with no bypass actors. The strict check policy
-requires results against a current base. An additional restrictive update rule
-would interfere with legitimate PR merges. Reconfirm both check contexts and
-their GitHub Actions integration ID against genuine runs at activation.
+The rule requires current-base results for both `foundation` and
+`offline-image-windows` from GitHub Actions app 15368. It blocks branch
+deletion and force pushes, has no bypass actors, and requires zero GitHub
+approvals under the interim configuration.
 
-## Evidence required for a merge
-
-Inspect the exact head and base, changed bytes and modes, applicable workflow
-definitions, job checkout, producer, steps and logs. Repeat the assessment on
-head or base changes. Android and QEMU jobs apply according to their path filters.
-Successful execution requires substantive test output. A skipped, neutral,
-cancelled, timed-out or empty job provides no such evidence. Same-app workflow
-changes can affect what a successful context represents. Strict freshness does
-not test a synthetic merge tree when the workflow checks out the PR head.
-
-## Activation and recovery
-
-The [evidence record](../evidence/gate-0-companion-source-controls.md#merge-only-policy-evidence)
-identifies completed tests and open conditions. Production activation requires
-separate owner authorization after the exact disposable configuration, effective
-rules, legitimate merge, enforcement gaps and recovery are assessed. Preserve
-refs and export the prior configuration before an authorized change. Independently
-read back the stored ruleset including bypass actors, effective rules for the
-target and an unrelated ref, and any inherited or classic protections. Compare
-each field with the body above. Stop on drift, unavailable mandatory proof or an
-unexpected allowed or rejected update.
-
-Recovery requires an independently available administrative read/update route,
-verified disable and restoration on a disposable rule, followed by a qualifying
-merge. Prefer a reviewed repair PR for CI failures. Emergency production changes
-require separate authorization for the exact rule, change, duration and restoration
-procedure. Verify restoration before resuming merges. Administrators can edit
-rules even when the bypass list is empty.
-
-## Scope
-
-The [requirements](../requirements.md), [governance](../governance.md),
-[source policy](../source-provenance-policy.md) and
-[evidence criteria](../acceptance-evidence-criteria.md) govern product work.
-Gate 0 remains Unresolved. Gates A-G remain Not reached. These repository tests
-establish no Android guest, VM, physical-device or ordinary-app authority result.
+The [enforcement evidence](../evidence/gate-0-companion-source-controls.md#merge-only-policy-evidence)
+records the tested configuration and outstanding activation conditions.

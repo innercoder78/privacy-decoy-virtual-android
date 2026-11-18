@@ -1141,8 +1141,7 @@ Foundation and Android already check out the exact PR head and call this checker
 the merged ancestry now makes their next normal runs exercise integrated source.
 Triggers, check requirements and failure propagation remain unchanged; QEMU filters
 do not select this change. **Applicable new-head checks are UNVERIFIED at push;
-successful integration is not claimed.** Renewed review must verify those exact-head
-results before an integration-success claim.
+successful integration is not claimed.**
 
 **Publication resumed 2026-11-15, America/Fortaleza.** The interruption left the
 merge commit and three uncommitted correction/evidence files intact; no push had
@@ -1681,8 +1680,7 @@ The subsequent exact README integration correction did not erase that failure.
 
 Live merged PR metadata #76–80 targets main, with merge SHAs `f272de8`, `2c64fc1`,
 `2bd1fc1`, `4c2ebd5`, `e79d74b`, matching local history. Each submitted-review
-collection returned `[]`. This proves no submitted GitHub approval was returned,
-not absence of off-platform review. Merges and green jobs do
+collection returned `[]`. Merges and green jobs do
 not prove that GitHub required either. No experimental enforcement test was run.
 
 ### Workflow applicability and evidence limitations
@@ -1729,13 +1727,9 @@ coverage. This is a precise future design obligation, **not an implemented check
 or part of the settings-only proposal**; separate approval and adversarial tests
 are necessary. No dummy successes, weakened filters or CI suppression proposed.
 
-### One minimal proposal for Tony — NOT APPROVED
+### Historical one-approval proposal
 
-**Historical proposal from PR #81.** The later
-[owner-approved interim decision](#owner-approved-interim-main-protection--2026-11-17)
-below governs the current direction. The independent-review approach here is
-deferred; its instruction against substituting zero approvals describes that
-original proposal and does not override Tony's subsequent explicit decision.
+PR #81 proposed one required GitHub approval. The later interim decision selected zero.
 
 Create one **active branch ruleset**, name `main-review-and-ci`, include exactly
 `refs/heads/main`, no exclusions and **empty bypass actors**, with:
@@ -1755,22 +1749,8 @@ binding rejects other apps' same-name checks, not malicious edits within a
 PR-controlled Actions workflow. Strict up-to-date checking does not turn the
 existing explicit PR-head checkout into synthetic-merge-tree testing.
 
-**Activation prerequisite:** only the owner is currently listed as collaborator.
-Tony must name an independent eligible reviewer with write access and separately
-authorize any necessary access grant before activating this rule. Confirm they
-can approve owner-authored/latest-owner-pushed PRs; otherwise the rule can deadlock
-normal contribution. Do not substitute zero approvals, self-approval or an admin
-bypass. Build/security reviewer
-qualification remains separately required.
-
-**Exact future approval:** Tony explicitly approves this one named ruleset,
-target, settings and empty bypass list, after naming that reviewer, acknowledging
-the specialized-job/manual-evidence limitation and retained owner settings powers.
-This PR is not that approval. Activation needs repository admin/edit-rules
-authority; REST mutation needs Administration: write. No such access is requested
-or setting changed now. If complete machine enforcement is the required approval
-condition, defer activation/claims until the separately reviewed admission design
-exists; do not represent this baseline as meeting that stronger condition.
+The proposed latest-push approval would block a PR without an eligible approval.
+Ruleset mutation requires Administration: write. This proposal was never activated.
 
 [Classic branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
 exempts administrators by default unless configured otherwise. The proposed
@@ -1778,12 +1758,8 @@ ruleset has no bypass actors, including no admin exception. An authorized owner
 can still edit/disable it; it does not resist malicious administration. Review
 dismissal remains a trust risk: dismissing objections is not substantive approval.
 
-**Recovery, proposed only:** retain work on a topic branch while main is blocked;
-diagnose service/check/reviewer failure. Any emergency exception needs separate
-explicit Tony approval, independently reviewed old/new configuration and affected
-SHA, a bounded restoration plan, then verified restoration before normal merges.
-No standing bypass, routine force push or deletion. Do not hide settings changes
-as CI recovery or weaken workflows to make them pass.
+The proposed recovery path required verified restoration of the exact settings.
+No standing bypass, force push or deletion exception was proposed.
 
 **Proposed validation, NOT RUN:** after separate authorization, read back all
 settings; use an explicitly authorized disposable branch with equivalent rules
@@ -1844,13 +1820,8 @@ admission is blocked below. No protection is enabled by this record.**
 Approved on 2026-11-17. Scope: repository governance,
 PDVA-REQ-008, 036–042, 048, 050–051 and 054; no product or gate advancement.
 
-Tony chose requiring PRs and passing universal CI now, with **zero required
-GitHub approving reviews during the interim period**, because the owner is
-currently the only eligible collaborator. This supersedes the earlier
-independent-review-only proposal as the selected direction. It authorizes this
-documentation PR, not administration, an experimental ruleset or activation.
-
-Activation required separate authorization.
+The interim decision selected required PRs and universal CI with zero mandatory
+GitHub approvals. Production activation remained pending.
 
 ### Fresh remote preflight and historical reconciliation
 
@@ -1867,8 +1838,7 @@ is merged into main: base `e79d74b7b5724d6326793810c479a3204f7739ab`, head
 `31348cb82cd2027d1601fafb271f2a3101762b60`, merge commit equal to verified main.
 Its complete diff has 248 additions and no deletions in this record and index;
 both remain mode 100644. Submitted reviews, issue comments, review comments
-and review threads returned empty collections. This says nothing about absence
-of off-platform review. The earlier audit remains historical evidence;
+and review threads returned empty collections. The earlier audit remains historical evidence;
 its one-approval proposal was not activated or implicitly accepted by merge.
 
 Authenticated read-only API observations reproduced its configuration findings:
@@ -1950,13 +1920,7 @@ updates, plus protection against force pushes and deletion. Current absence of
 protection is not evidence of unauthorized activity. Default-branch deletion
 restrictions are separate from the proposed explicit deletion rule.
 
-### Manual review, alternatives and remaining risks
-
-The technical review covers exact
-head/base and all changed bytes/modes; workflows and applicability; check producer
-and checkout identity; substantive job steps/logs; security, source rights and
-evidence. Re-review changed heads/bases. A successful-looking label or step count
-is insufficient. The ruleset cannot enforce substantive review.
+### Check semantics and remaining risks
 
 [GitHub check semantics](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
 accept skipped/neutral as well as success and distinguish head from test-merge
@@ -1976,13 +1940,8 @@ owner credentials, mistakes, CI outages and unverified specialized obligations
 remain risks. This interim policy enforces neither independent review nor every
 specialized CI/evidence requirement and warrants no full-repository-security claim.
 
-| Alternative | Owner disposition / reopening condition |
-|---|---|
-| Approach 1: mandatory independent GitHub approval | Deferred, not rejected permanently. Requires a named, trusted, qualified independent reviewer who actually can approve owner-authored/latest-owner-pushed PRs, any separately authorized access grant, and separate Tony approval of final stronger settings. Self-approval cannot satisfy this requirement. |
-| Wait without protection until such a reviewer exists | Not the selected direction; leaves the observed PR/CI prevention gap. Present ADR/test blockers still prohibit premature activation. |
-| Interim PR + universal CI, zero approvals | Tony's selected direction, with substantive review and acknowledged residual risk. |
-| Standing admin bypass or Restrict updates with bypass | Not selected; would either evade the intended gates or prevent ordinary sole-owner merges. |
-| Globally required Android/QEMU or a new admission workflow | Not selected now: path-filter deadlock or additional implementation/authority needed. No dummy successes, filter weakening or workflow edits. |
+The selected configuration required universal CI with zero mandatory approvals.
+Standing bypass and globally required path-filtered jobs were excluded.
 
 ### Mandatory ADR and immutable source-admission blocker
 
@@ -2027,70 +1986,12 @@ implemented here. Passing this evidence-only diff does not satisfy that blocker.
 The earlier unapproved proposal is superseded as direction only; old empirical
 failures and original source receipts are not invalidated or relabeled.
 
-### Stage 2 procedure — separately authorized, NOT EXECUTED
+### Historical disposable test plan
 
-1. Reverify live main, all open PRs/conflicts, parent and effective rules,
-   classic protection, current administrative identity/authority, producer app
-   and recent genuine universal job successes. Export old configuration and
-   exact refs/identities to reviewed public-safe evidence. Stop on drift or gaps.
-2. Confirm the admitted, explicitly approved ADR and final exact settings above.
-   Obtain separate Tony authorization naming disposable branch, test ruleset,
-   permitted test commits/PRs, actors, bounded cleanup/recovery and eventual main
-   activation. This Stage 1 request authorizes none of those mutations.
-3. Create the explicitly authorized disposable target before applying its
-   matching interim rule; differ only in name/target as approved. Do not target
-   main, a wildcard or any existing protected branch. Read back normalized rules,
-   empty bypass list and effective applicability; record server acceptance or
-   rejection. Verify an unrelated control branch is outside the rule.
-4. On that disposable target, demonstrate a legitimate sole-owner PR with
-   **zero approving reviews**, current base, genuine successful required checks
-   from the verified app and substantive expected logs. Observe an actual
-   authorized merge, not only a mergeable badge. Cover each preserved merge
-   method with separate fresh cases if authorized; an untested method is Unknown.
-5. Attempt only authorized non-destructive negative cases against that target;
-   capture attempted ref/OIDs, actor, API/transport response and unchanged target
-   after rejection. Test an unassociated direct update (including web-edit/API
-   routes where authorized), non-fast-forward force update, deletion, missing,
-   pending and failed checks, and a stale PR head. Advance the disposable base
-   via a compliant test PR for the stale-head case; demonstrate recovery by a
-   legitimate head update and fresh checks. Do not assume every Git transport
-   push is prohibited: GitHub documents some PR-associated local merge pushes.
-   Verify prohibited unassociated updates and record any allowed merge route.
-6. Exercise wrong-source and wrong-SHA receipts and cancelled/timed-out results
-   only where an authorized producer/fixture can safely create them. Do not
-   impersonate GitHub Actions, grant app permissions or alter production workflows
-   for tests. If valid fixtures cannot be produced within authority, record
-   **Unknown**, not simulated rejection. Observe skipped/neutral and zero-step
-   limitations where safely testable; acceptance is a limitation, never a PDVA
-   security pass. In-filter APK/QEMU execution needs separate authority and is
-   not licensed by this plan. Preserve all specialized manual-review obligations.
-7. Establish recovery before main activation: retain work on topic branches;
-   diagnose CI/configuration and prefer a legitimate reviewed repair PR. An
-   outage or blocked PR does not authorize fake checks or workflow weakening.
-   Confirm an authorized administrator retains settings-edit capability outside
-   the branch merge path and rehearse only the approved disposable-rule recovery.
-   Any emergency main relaxation/disablement needs separate explicit Tony approval
-   of exact old/new configuration, reason, affected refs, bounded duration,
-   reviewer and restoration/verification steps. No standing bypass, automatic
-   disablement, routine force push or deletion. If no legitimate recovery route
-   or required independent recovery review is available, STOP before activation.
-8. Review the test evidence and all Unknowns with Tony. Unexpected successful
-   prohibited updates, blocked valid zero-review PRs, missing source binding,
-   mandatory test gaps or unresolved ADR admission block activation. Only after
-   successful applicable tests, review and explicit final authorization activate
-   the exact approved single main ruleset. No destructive test against main.
-9. Read back the saved ruleset with sufficient authority to see bypass actors;
-   independently query effective main rules and all parent/classic protections.
-   Compare every field/target and merge-method setting to the approved record;
-   record rule ID, identity, timestamp, old/new settings, source/check identities,
-   test outcomes and limitations. Verify actual applicability rather than relying
-   on creation response or UI badge. If readback disagrees, halt merges and use
-   only the separately authorized recovery. Remove disposable resources only
-   within their explicit cleanup authorization, preserving evidence.
-
-All Stage 2 enforcement, mergeability and recovery outcomes are **NOT RUN /
-Unknown**. No test branch, test PR or test ruleset was created in Stage 1.
-The one documentation publication branch/PR is not an enforcement experiment.
+The earlier plan covered configuration readback, PR merges, direct updates,
+force pushes, deletion, check provenance and freshness, and recovery. Stage 1
+did not execute those tests. Subsequent outcomes and outstanding gaps appear
+in the [disposable test results](#merge-only-policy-evidence).
 
 ### Stage 1 validation and preserved boundaries
 
@@ -2126,18 +2027,9 @@ publication check, reported with the PR; this text does not predict hosted CI.
 ## Consolidated ADR-0005 source admission — 2026-11-17
 
 **Repository implementation prepared for review; administration NOT EXECUTED.**
-Tony authorized completing the already selected interim direction in one PR,
-including the new ADR and narrow checker/test changes. This continuation resolves
-the source-admission blocker described in the historical Stage 1 section; that
-section and its actual rejection receipt remain unchanged. It does not infer
-approval of previously unreviewed technical bytes. The complete current policy,
-exact JSON configuration, residual risks, upgrade conditions and single practical
-activation/recovery procedure are in
-[ADR-0005](../decisions/ADR-0005-interim-main-branch-protection.md).
-Its procedure supersedes the earlier Stage 2 planning procedure for subsequent
-use; neither procedure has been executed. After successful review and merge,
-separately authorized enforcement testing/activation is the next operation, not
-another preparation PR. No ruleset, permission or repository setting changed.
+The exact ADR addition resolved the historical Stage 1 source-admission blocker.
+The rejected-proposal receipt remains reproducible. This transition changed
+repository source only.
 
 ### Fresh baseline and applicability
 
@@ -2260,7 +2152,7 @@ before publication; hosted results are not predicted.
 ## ADR-0005 incident and enforcement evidence, 2026-11-18
 
 The [immutable prior record](https://github.com/innercoder78/privacy-decoy-virtual-android/blob/2e820f5d0ee8319eb428b6e25081479a0fb5c064/docs/evidence/gate-0-companion-source-controls.md#adr-0005-incident-and-enforcement-evidence-2026-11-18) preserves the original incident and validation receipts.
-An automated agent performed all three November 17 disposable merges without authorization. Each had zero
+All three November 17 disposable merges were unauthorized. Each had zero
 GitHub reviews. Their technical observations and failed activation qualification
 stand as originally recorded. The historical table below describes that exercise.
 
@@ -2365,7 +2257,7 @@ Substantive execution and checkout identity require inspection of the logs.
 stored and effective readbacks, method exclusion, legitimate post-restoration
 merge and recovery with that exact setting remain unverified. The prior evidence
 can support unchanged controls. It cannot close these configuration-specific
-gaps. Mandatory Unknowns require resolution and separate final owner authorization
+gaps. Mandatory Unknowns require resolution and separate authorization
 before activation. Squash/rebase qualification is retired. No further method-test
 PRs are required by this policy.
 
@@ -2380,9 +2272,9 @@ pins the previous checker and ADR independently of the proposed tree. Run
 recompute the older audits, execute the original checker's negative controls,
 and verify rejection in both directions. The new ADR has the same exact path
 and mode 100644. Its SHA-256 is
-`36b6b4cc01a4a018ad243d1fb3dc14485d9eb3c10bbb3bd3f64ae8ce991eb2b0`.
-The normal source checks use reviewed pins in shallow checkouts. The checker,
-evidence record and evidence index still require independent diff review.
+`eb2e6ab7bad2ae4ebf3065251d9d96e5f515f6bccba0183b982acecb389831ca`.
+The normal source checks use reviewed pins in shallow checkouts. The ADR digest does
+not authenticate the checker or evidence files.
 
 Windows validation covered Foundation, the harness, memory/source admission,
 repository regression (152 tests, four existing skips), desktop readiness (28),
@@ -2390,4 +2282,8 @@ offline image (45), frame copy (4), Gradle distribution (38) and installed tools
 (16). The first installed-tools run timed out creating a temporary junction.
 All 16 passed on the host retry. Linux native and Android build jobs were unrun
 locally. The checker change selects Foundation, Windows and Android CI. QEMU's
-path filters exclude it. Hosted results for this revision were unobserved.
+path filters exclude it. On PR #90 head `fea3ddb48619c6ab76a4ef0301ab1014624ec369`, all three
+applicable Actions jobs succeeded. Foundation (134624310608) recorded 152
+repository tests and seven native positive controls. Windows (134624311027)
+ran suites of 45, 4, 38 and 16 tests. Android (134624310552) recorded a successful
+build. Each log identified that head. The revised head has separate CI results.
