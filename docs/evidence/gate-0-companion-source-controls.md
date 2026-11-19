@@ -2287,3 +2287,65 @@ applicable Actions jobs succeeded. Foundation (134624310608) recorded 152
 repository tests and seven native positive controls. Windows (134624311027)
 ran suites of 45, 4, 38 and 16 tests. Android (134624310552) recorded a successful
 build. Each log identified that head. The revised head has separate CI results.
+
+### Regular merge under the exact disposable rule
+
+At 18:00:56 UTC on November 18, 2026, [PR #91](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/91)
+advanced the disposable target to [merge commit c10be8d](https://github.com/innercoder78/privacy-decoy-virtual-android/commit/c10be8d9a4341547d25bfd1a077cb9b381cdd4a5).
+GitHub's commit object gives these parents in order:
+
+1. `8226525bb8fc85126e8debeb9d844eec46dfa8c6`, the PR base and #89 result.
+2. `cdba30ce138b0efb06e5f77370e96c1a33b6738f`, the original and final PR head.
+
+The head was one commit directly on that base. Its only change appended 69 lines
+to `docs/evidence/gate-0-companion-source-controls.md`, mode 100644 on both sides.
+The PR had zero submitted GitHub reviews, comments or review threads. The
+approved rule requires zero GitHub approvals.
+
+The [pull_request workflow run](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44364422551)
+completed successfully. Each required check run named the second parent as its
+head SHA and GitHub Actions (app 15368) as its producer. Both checkout logs
+recorded that exact commit. All listed job steps completed successfully.
+
+| Required check | Execution on the tested head |
+|---|---|
+| [foundation](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44364422551/job/135014209282) | The log printed the checked-out HEAD, 152 repository tests, seven native wait controls and the expected assertion failure. The bootstrap, Linux worker lifetime, seccomp and revocation steps also completed. |
+| [offline-image-windows](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44364422551/job/135014208847) | The Windows log recorded 45 offline-image, 4 frame-copy, 38 Gradle distribution and 16 installed-tools tests. |
+
+#### Activation assessment after PR #91
+
+| Condition | Classification | Evidence and scope |
+|---|---|---|
+| Exact configuration and applicability | PROVEN | [Ruleset 27524027](https://github.com/innercoder78/privacy-decoy-virtual-android/rules/27524027), version 58434939, was active before the merge. Its stored rules match the ADR with the disposable name and sole target ref substituted. Excludes and bypass actors are empty, caller bypass is `never`, and the target's effective endpoint returned all four matching rules from this ID. The sibling control had no effective rules. |
+| Regular merge with current base | PROVEN | The two ordered parents match the original base and tested head. #88 and #89 used the earlier three-method configuration. #91 closes the positive regular-merge case for the singleton configuration. |
+| Squash and rebase exclusion | PROVEN in stored and effective configuration; runtime refusals NOT RUN | Both readbacks allowed exactly `["merge"]`. The ADR retires qualification of the other merge paths. No runtime refusal is claimed or required as a separate method trial. |
+| Required producer and exact SHA | PROVEN for #91; wrong producer and wrong SHA each UNKNOWN | Both contexts bind app 15368. Both jobs checked out and exercised the exact head. A green context alone cannot authenticate the workflow contents or prove execution on the resulting merge tree. |
+| Missing checks | PARTIALLY SUPPORTED | Earlier GH013 named both missing checks and the missing PR. Isolated missing-check refusal remains UNKNOWN. |
+| Failing and pending checks | PARTIALLY SUPPORTED for each | Earlier HTTP 405 responses named the failing Foundation job on #84 and the in-progress checks on #86. The check rule parameters persisted across the method change. |
+| Strict base freshness | PROVEN in configuration; stale-refusal attribution INFERENCE | The strict flag is true. The old #85 head was behind with two green jobs. Its refusal named expected checks without identifying the stale-base condition. |
+| Refreshed-head recovery | PARTIALLY SUPPORTED | The refreshed #85 head passed both jobs and merged in the earlier unauthorized exercise. #91 started current. A reviewed stale-to-refreshed sequence remains unobserved. |
+| Cancelled, timed-out, skipped, neutral and zero-step jobs | NOT RUN for each; isolated outcomes UNKNOWN | Neither #91 job exercised any of these cases. Skipped and neutral conclusions can satisfy status semantics. The logs establish substantive execution for #91 only. |
+| Direct update, force push and deletion | PARTIALLY SUPPORTED for each | The earlier GH013 receipts and unchanged refs document three refusals. Current effective rules retain the same restrictions. Those historical local receipts lack independent timestamp attestation. |
+| Administrative recovery with the singleton setting | PARTIALLY SUPPORTED; exact cycle NOT RUN | History versions 58322128, 58322165 and 58322171 show active, disabled and active with three methods throughout. Version 58434939 changed the method array while active. #88 followed the earlier restore. #91 followed the method change. Neither supplies a merge after restoration of the singleton setting. |
+| Independent observation and implementation limits | PARTIALLY SUPPORTED | GitHub exposes the merge object, per-version settings, job identities and substantive output. No separately controlled administrative recovery route or independent witness to the earlier local refusals is established. Empty bypass actors do not prevent an administrator editing the rule. |
+| Production applicability | PROVEN at preflight | Main was `53fd5ff9df0de3210902cf20dbc825438df08645`. The listing including inherited rulesets returned only the disposable rule, effective main rules were empty, main reported `protected: false`, and the classic endpoint returned HTTP 404, “Branch not protected.” |
+
+**Production activation remains BLOCKED.** The [approved ADR](../decisions/ADR-0005-interim-main-branch-protection.md)
+points to this record for outstanding activation conditions. The outstanding
+configuration-specific condition is verified recovery followed by a qualifying
+regular merge under the restored singleton rule. The approved policy does not
+make each unobserved status conclusion, isolated refusal, or independent GitHub
+approval a separate activation test. The earlier unauthorized merges and failed
+qualifications retain their recorded outcomes.
+
+The minimum additional proof is a disposable recovery receipt under separate
+authorization: capture the singleton rule, observe it disabled and absent from
+the target's effective rules, then observe the same singleton body restored and
+effective with the control ref still clear. Correlate that restoration with the
+next authorized regular merge, its exact-head jobs and its ordered parents.
+A changed method array, lost binding, unexpected scope or merge predating the
+restore leaves the condition open. Existing #91 receipts already close ordinary
+merge qualification. Production activation requires separate owner authorization.
+
+Gate 0 remains Unresolved. Gates A-G remain Not reached. This evidence covers
+repository governance only.
