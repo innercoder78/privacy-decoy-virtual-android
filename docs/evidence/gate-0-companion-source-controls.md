@@ -2349,3 +2349,85 @@ merge qualification. Production activation requires separate owner authorization
 
 Gate 0 remains Unresolved. Gates A-G remain Not reached. This evidence covers
 repository governance only.
+
+### Qualification after restoration
+
+**A. TECHNICALLY READY FOR SEPARATE OWNER AUTHORIZATION.** PR #91 established
+the regular merge under the merge-only rule. [PR #93](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/93)
+supplies the qualifying regular merge after recovery. The owner identifies
+this disposable merge as authorized. GitHub independently establishes its
+timing, ancestry and check execution. It shows zero submitted reviews,
+comments or review threads on either PR. Production activation requires a
+separate owner decision.
+
+| Stored configuration | Independent GitHub ruleset history, UTC |
+|---|---|
+| PROVEN, initial | Version 58434939 was active before #91. |
+| PROVEN, disabled | Version 58492991 at 00:26:53 on November 19 changed only enforcement in the stored state. |
+| PROVEN, restored | Version 58493015 at 00:27:04 restored the initial state field for field. All three version bodies were retrieved for this assessment. |
+
+**PROVEN, policy and current scope.** The stored [ruleset](https://github.com/innercoder78/privacy-decoy-virtual-android/rules/27524027)
+matches the [ADR body](../decisions/ADR-0005-interim-main-branch-protection.md)
+with only the name and sole included branch replaced. The four effective
+rules on the target carry this ID and the same parameters. Exclusions and
+bypass actors are empty. Caller bypass is `never`. A PR is required and
+allows only regular merges. Required approvals are zero, required reviewers
+are empty, and all five review flags are false. The two required contexts
+are `foundation` and `offline-image-windows`, both from app 15368. Strict
+freshness is enabled and `do_not_enforce_on_create` is false. Deletion and
+non-fast-forward updates are restricted.
+
+**PARTIALLY SUPPORTED, effective state during recovery.** The receipt committed
+in #93 records four, zero and four effective rules across the three stages.
+It records the disposable tip at the #91 result throughout, and the two
+controls unchanged and unprotected at every stage. Those point-in-time
+branch reads come from one administrative account. The historical version
+bodies independently establish the stored settings. Current branch reads
+confirm the endpoints after the merge.
+
+**PROVEN, production and sibling controls at preflight.** The listing including
+inherited rulesets returned only the disposable rule. The repository had zero
+classic protection rules. Main at `c53676b009062df4140fb3107e16f3e1433e0cb1`
+and sibling `codex/adr0005-ownerreview-test-20261118-pr1` at
+`e57e5b044864c672d47493ed8307d58af0c3e157` each reported unprotected with
+empty effective rules. The target alone reported protected. Classic protection
+returned HTTP 404, “Branch not protected,” for all three branches.
+
+**PROVEN, post-restoration regular merge and substantive execution.** GitHub
+recorded #93 merged at 00:37:31 UTC on November 19. The disposable target
+points to [fb0b070](https://github.com/innercoder78/privacy-decoy-virtual-android/commit/fb0b070b7e086eb83a3142738855e5d49e635e62).
+Its ordered parents are the exact PR base and head:
+
+1. `c10be8d9a4341547d25bfd1a077cb9b381cdd4a5`, the #91 merge result.
+2. `e21a1795baf20e41c36d0c73379586f41b46b2ef`, one commit directly on that base.
+
+The head and result have identical trees. The sole change appended 41 lines
+to this evidence file, mode 100644 on both sides. Both check runs reported
+success from Actions app 15368 on the second parent. Both checkout logs
+identified that SHA. All listed job steps succeeded.
+
+| Required check on #93 | Observed execution |
+|---|---|
+| [foundation](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44429571456/job/135243156656) | The log recorded 152 repository tests and the native positive and negative controls. The bootstrap, Linux worker lifetime, seccomp and revocation steps completed. |
+| [offline-image-windows](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44429571456/job/135243156041) | The log recorded 45 offline-image, 4 frame-copy, 38 Gradle distribution and 16 installed-tools tests. |
+
+The condition classifications in the #91 assessment continue to apply to
+the earlier enforcement trials. Direct updates, force pushes, deletion,
+missing, failed and pending checks, and refreshed-head recovery remain
+PARTIALLY SUPPORTED. Attribution of the stale refusal to strict freshness
+remains INFERENCE. Isolated missing-check, wrong-producer and wrong-SHA
+outcomes remain UNKNOWN. Cancelled, timed-out, skipped, neutral, zero-step
+and alternate-method refusal trials remain NOT RUN. The approved contract
+requires the singleton method in stored and effective configuration. The
+remaining unknowns are documented enforcement limits. None requires a
+further disposable trial for activation under the approved ADR.
+
+Manual review still covers the complete diff, workflow and checkout identity,
+and substantive logs for every applicable job, including path-selected Android
+and QEMU CI. Review must withhold acceptance for missing or inconclusive
+evidence. A same-app workflow change can retain the required name and
+producer. A satisfying status, including skipped or neutral, can lack
+meaningful execution. Administrators retain settings authority even with an
+empty bypass list. The historical unauthorized merges, fifteen signed-byte
+failures and failed SDK-state qualification retain their original outcomes.
+Gate 0 remains Unresolved. Gates A-G remain Not reached.
