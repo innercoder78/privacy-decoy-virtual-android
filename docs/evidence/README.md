@@ -1,5 +1,9 @@
 # Evidence index
 
+[Disposable branch retirement](gate-0-companion-source-controls.md#disposable-branch-retirement)
+records the deleted ref and its original tip, the retained qualification history,
+and the production protection readbacks after deletion.
+
 [ADR-0005 production activation](gate-0-companion-source-controls.md#production-activation-on-main)
 records the protected main commit, ruleset 27600511, its four effective rules
 and the unchanged repository and branch controls.

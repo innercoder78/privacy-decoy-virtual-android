@@ -2481,3 +2481,40 @@ the ruleset. The historical limitations above still apply.
 This activation concerns repository governance. Android feasibility, isolation
 and VM security remain unverified. Gate 0 remains Unresolved. Gates A-G remain
 Not reached.
+
+### Disposable branch retirement
+
+GitHub accepted the deletion of `codex/adr0005-ownerreview-test-20261118`
+with an exact-ref lease on its original tip,
+`fb0b070b7e086eb83a3142738855e5d49e635e62`. Before deletion, ruleset
+27524027 applied only to this ref. Its enforcement changed from active to
+disabled. A separate read confirmed all other settings matched, and the
+branch reported unprotected with zero effective rules. The ruleset remains
+available as a historical record.
+
+After deletion, Git's remote head listing and GitHub's matching-refs API
+both omitted the exact ref. Every other remote head retained its preflight
+SHA, including the similarly named PR branch. GitHub listed zero open PRs.
+These checks establish removal of the comparison source. The browser banner
+was not inspected.
+
+The [qualification record](#qualification-after-restoration) and
+[production activation record](#production-activation-on-main) remain on
+main. The disposable history adds eight commits beyond its common ancestor
+with main. The heads and merge commits of PRs #88, #89, #91 and #93 account
+for all eight. Their only changed file was this technical evidence document.
+An independent restoration reproduced the original tip and its full reachable
+object set, including the original commits, ordered parents and trees.
+Git's strict object integrity check passed.
+
+Main remained at `92fd3f52aab0804d19e2067ef1be2271baaa7a9b` and reported
+protected after deletion. The complete stored response for active ruleset
+27600511 matched preflight. All four effective rules matched ADR-0005:
+regular-merge-only pull requests, required status checks, non-fast-forward
+protection and deletion protection. Both `foundation` and
+`offline-image-windows` required GitHub Actions integration 15368 and strict
+freshness. The bypass list remained empty.
+
+Production enforcement trials and Android and VM tests were unrun for this
+retirement. The earlier qualification limits still apply. Gate 0 remains
+Unresolved. Gates A-G remain Not reached.
