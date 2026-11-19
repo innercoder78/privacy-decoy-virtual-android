@@ -2354,9 +2354,9 @@ repository governance only.
 
 **A. TECHNICALLY READY FOR SEPARATE OWNER AUTHORIZATION.** PR #91 established
 the regular merge under the merge-only rule. [PR #93](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/93)
-supplies the qualifying regular merge after recovery. The owner identifies
-this disposable merge as authorized. GitHub independently establishes its
-timing, ancestry and check execution. It shows zero submitted reviews,
+merged into the disposable branch after GitHub recorded restoration of the
+rule. GitHub records the merge time, ordered parents and check execution.
+It shows zero submitted reviews,
 comments or review threads on either PR. Production activation requires a
 separate owner decision.
 
@@ -2422,12 +2422,11 @@ requires the singleton method in stored and effective configuration. The
 remaining unknowns are documented enforcement limits. None requires a
 further disposable trial for activation under the approved ADR.
 
-Manual review still covers the complete diff, workflow and checkout identity,
-and substantive logs for every applicable job, including path-selected Android
-and QEMU CI. Review must withhold acceptance for missing or inconclusive
-evidence. A same-app workflow change can retain the required name and
-producer. A satisfying status, including skipped or neutral, can lack
-meaningful execution. Administrators retain settings authority even with an
+Changed paths determine whether the Android and QEMU workflows apply.
+A workflow change can retain both the required check name and the producing
+app. The checkout log identifies the tested commit, and test output shows
+which checks ran. GitHub can accept skipped or neutral conclusions even when
+no tests ran. Administrators retain settings authority even with an
 empty bypass list. The historical unauthorized merges, fifteen signed-byte
 failures and failed SDK-state qualification retain their original outcomes.
 Gate 0 remains Unresolved. Gates A-G remain Not reached.
