@@ -1,9 +1,9 @@
 # Evidence index
 
-[Regular merge under the exact disposable rule](gate-0-companion-source-controls.md#regular-merge-under-the-exact-disposable-rule)
-records PR #91, the two earlier three-method regular merges,
-the enforcement evidence and the outstanding recovery condition for
-[ADR-0005](../decisions/ADR-0005-interim-main-branch-protection.md).
+[ADR-0005 qualification after restoration](gate-0-companion-source-controls.md#qualification-after-restoration)
+records the regular merges in #91 and #93, the recovered merge-only ruleset
+and the limits of the enforcement evidence. Production activation requires
+separate owner authorization.
 
 [Gradle installation-level precedence](gate-0-companion-source-controls.md#gradle-installation-level-precedence--2026-11-16),
 2026-11-16: four real desktop controls resolve PR #64's untested installation
