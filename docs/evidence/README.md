@@ -1,8 +1,8 @@
 # Evidence index
 
-[Merge-only policy evidence](gate-0-companion-source-controls.md#merge-only-policy-evidence)
-records the two regular merges, earlier enforcement and recovery observations,
-remaining Unknowns and production activation blockers for
+[Regular merge under the exact disposable rule](gate-0-companion-source-controls.md#regular-merge-under-the-exact-disposable-rule)
+records PR #91, the two earlier three-method regular merges,
+the enforcement evidence and the outstanding recovery condition for
 [ADR-0005](../decisions/ADR-0005-interim-main-branch-protection.md).
 
 [Gradle installation-level precedence](gate-0-companion-source-controls.md#gradle-installation-level-precedence--2026-11-16),
