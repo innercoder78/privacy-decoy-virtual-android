@@ -2496,3 +2496,44 @@ plus the immutable ADR transition audit. Repository regression ran 152 tests
 with four existing skips. Desktop readiness ran 28 tests, offline image 45,
 frame copy 4, Gradle distribution 38 and installed tools 16. Linux native
 controls and Android builds were unrun locally.
+
+### Merge-only ruleset recovery on November 18, 2026
+
+An authenticated Windows GitHub CLI session observed repository ruleset
+[27524027](https://github.com/innercoder78/privacy-decoy-virtual-android/rules/27524027)
+on `innercoder78/privacy-decoy-virtual-android`. GitHub history records actor
+282964457 for all three versions below. Times use Fortaleza time (UTC−03:00).
+
+| Ruleset version | Stored enforcement | Independent target branch readbacks |
+|---|---|---|
+| 58434939, before the test | Active | Protected, four effective rules from 27524027 |
+| 58492991, 21:26:53 | Disabled | Unprotected, empty effective rule list |
+| 58493015, 21:27:04 | Active | Protected, the original four effective rules and parameters |
+
+The sole included ref was `refs/heads/codex/adr0005-ownerreview-test-20261118`,
+at `c10be8d9a4341547d25bfd1a077cb9b381cdd4a5` throughout. Exclusions and
+bypass actors were empty. The pull request rule allowed exactly `["merge"]`
+and required zero approvals. The strict status-check rule bound both
+`foundation` and `offline-image-windows` to GitHub Actions app 15368.
+The other rules prohibited non-fast-forward updates and deletion.
+
+Two updates to the existing ruleset changed only enforcement. Separate GETs
+read the stored ruleset, effective rules and branch records at each stage.
+The complete restored stored response matched the saved original except for
+the server update timestamp. The restored effective response matched the
+original including rule sources and IDs. Both controls reported empty
+effective rules, unchanged tips and unprotected branch records at all stages:
+
+- Production `main` at `c53676b009062df4140fb3107e16f3e1433e0cb1`.
+- Sibling `codex/adr0005-ownerreview-test-20261118-pr1` at
+  `e57e5b044864c672d47493ed8307d58af0c3e157`.
+
+The preflight listing including inherited rulesets contained only 27524027.
+Classic protection returned “Branch not protected” for all three refs.
+The disabled interval contained no test push or PR. These are separate
+GitHub API observations from one administrative account. A changed target,
+binding, method, control state or restored configuration would falsify this
+recovery result. Enforcement probes and alternative merge methods were unrun.
+A subsequent independently reviewed regular merge, its ordered parents and
+exact-head checks still require verification. Production activation remains
+blocked. Gate 0 remains Unresolved. Gates A-G remain Not reached.
