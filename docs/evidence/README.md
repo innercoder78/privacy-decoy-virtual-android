@@ -1,5 +1,9 @@
 # Evidence index
 
+[ADR-0005 production activation](gate-0-companion-source-controls.md#production-activation-on-main)
+records the protected main commit, ruleset 27600511, its four effective rules
+and the unchanged repository and branch controls.
+
 [ADR-0005 qualification after restoration](gate-0-companion-source-controls.md#qualification-after-restoration)
 records the regular merges in #91 and #93, the recovered merge-only ruleset
 and the limits of the enforcement evidence. Production activation requires
