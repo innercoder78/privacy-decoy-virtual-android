@@ -2430,3 +2430,54 @@ no tests ran. Administrators retain settings authority even with an
 empty bypass list. The historical unauthorized merges, fifteen signed-byte
 failures and failed SDK-state qualification retain their original outcomes.
 Gate 0 remains Unresolved. Gates A-G remain Not reached.
+
+### Production activation on main
+
+GitHub created [ruleset 27600511](https://github.com/innercoder78/privacy-decoy-virtual-android/rules/27600511)
+active at 2026-11-19 01:25:23 UTC. The request body came directly from the
+[approved ADR-0005 at the activation commit](https://github.com/innercoder78/privacy-decoy-virtual-android/blob/886ae75681a7c66ee0bc0b240c67d8e7134cfade/docs/decisions/ADR-0005-interim-main-branch-protection.md).
+The remote main ref, fetched commit and branch API agreed on
+`886ae75681a7c66ee0bc0b240c67d8e7134cfade`, the merge of #94.
+
+**Direct observations.** Preflight found zero open PRs. Main reported
+`protected: false`, with no effective rules. The listing including inherited
+rulesets contained only 27524027. GitHub Status reported normal operation.
+Both required checks on the main commit succeeded under GitHub Actions app
+15368. The [Foundation log](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44432993043/job/135254766352)
+identified the exact checkout, 152 repository tests and seven native positive
+controls. The [Windows log](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/44432993043/job/135254766775)
+identified the same checkout and suites of 45, 4, 38 and 16 tests.
+
+Independent GETs of the stored rule, main's effective rules and the branch
+returned the following results after creation.
+
+| Readback | Observed result |
+|---|---|
+| Stored scope | `main-review-and-ci`, target `branch`, enforcement `active`. Sole include `refs/heads/main`, empty exclusions and bypass actors. Caller bypass was `never`. |
+| Effective source | Exactly four rules, all from repository ruleset 27600511. Each rule and its parameters matched the stored configuration and the ADR. |
+| Pull request | Only `merge` allowed. Required approvals 0, required reviewers empty. Stale-review dismissal, code-owner review, last-push approval, thread resolution and extra approval for unattributed changes all false. |
+| Required checks | `foundation` and `offline-image-windows`, each with integration ID 15368. Strict freshness true, `do_not_enforce_on_create` false. |
+| Ref restrictions | `non_fast_forward` and `deletion`, each without parameters. |
+| Main | Branch GET returned `protected: true`. The remote SHA stayed at the #94 merge. Classic protection still returned HTTP 404, “Branch not protected.” The branch summary's classic status-check list was empty. The ruleset checks appeared in the effective rules endpoint. |
+| Repository controls | Regular, squash and rebase merge options each remained enabled repository-wide. The listing including inherited rulesets contained exactly 27524027 and 27600511. |
+| Disposable target | Ruleset 27524027 retained its complete stored configuration and update timestamp. Its sole target, `codex/adr0005-ownerreview-test-20261118`, retained all four effective rules from that ID alone. |
+| Sibling control | `codex/adr0005-ownerreview-test-20261118-pr1` remained at `e57e5b044864c672d47493ed8307d58af0c3e157`, unprotected with zero effective rules. |
+
+**Historical qualification.** The [restoration record](#qualification-after-restoration)
+documents disposable enforcement trials. Preflight re-read versions 58434939,
+58492991 and 58493015 (active, disabled, active), and confirmed the subsequent
+#93 regular merge time and its two ordered parents. The authenticated repository
+permission read showed administrative access. Future maintenance depends on
+continued authorized settings access. A separately controlled recovery account
+remains unverified.
+
+**Inference and unknowns.** The readbacks establish the configured policy.
+Production push, deletion, merge, refusal and recovery trials were unrun.
+Runtime outcomes for those operations on main remain unknown. CI depends on
+the workflow, checkout and actual job execution. A matching check name and app
+alone cannot establish which tests ran. Administrators retain authority to edit
+the ruleset. The historical limitations above still apply.
+
+This activation concerns repository governance. Android feasibility, isolation
+and VM security remain unverified. Gate 0 remains Unresolved. Gates A-G remain
+Not reached.
