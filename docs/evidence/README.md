@@ -1,5 +1,7 @@
 # Evidence index
 
+[Android 17 security-branch lifecycle comparison](gate-0-companion-source-controls.md#android-17-security-branch-lifecycle-comparison)
+
 [Disposable branch retirement](gate-0-companion-source-controls.md#disposable-branch-retirement)
 records the deleted ref and its original tip, the retained qualification history,
 and the production protection readbacks after deletion.
