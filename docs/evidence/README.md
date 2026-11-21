@@ -1,5 +1,7 @@
 # Evidence index
 
+[External assessment evidence for the Java diagnostic](gate-0-companion-source-controls.md#external-assessment-evidence-for-the-java-diagnostic)
+
 [Android 17 SELinux worker cleanup authority](gate-0-companion-source-controls.md#android-17-selinux-worker-cleanup-authority)
 
 [Android 17 security-branch lifecycle comparison](gate-0-companion-source-controls.md#android-17-security-branch-lifecycle-comparison)

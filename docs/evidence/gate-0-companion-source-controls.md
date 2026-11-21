@@ -2675,3 +2675,51 @@ experiment was run. This source comparison establishes neither guest feasibility
 nor universal impossibility. No further investigation of this snapshot is
 justified without a concrete new falsifier involving an ordinary-app-accessible
 enforcer that covers descendants and retained grants across manager loss.
+
+## External assessment evidence for the Java diagnostic
+
+On 2026-11-21 the review asked whether an independent assessor could evaluate
+the existing release diagnostic and its build chain before anyone signs it.
+Git remote advertisement, fetched origin/main and the GitHub commit API agreed
+on `9f610ffc5e9e56faff129ae625405ac2658e7cfe`. There were no open PRs.
+Effective main ruleset 27600511 required a merge PR and both up-to-date
+Foundation checks, with zero required approvals, and blocked deletion and
+non-fast-forward updates. GitHub Status reported all systems operational.
+
+**Observed in primary sources accessed 2026-11-21.** Two sponsor-published
+assessment reports identify the same assessment team. The Android report
+documents review of an exported activity, signing scheme and source versus
+packaged configuration. The infrastructure report evaluates provenance and
+records the limits of unsigned build logs. These are examples of completed
+work against other targets. [Android assessment](https://www.opentech.fund/wp-content/uploads/2025/03/CIR-01-Circulo-Audit-Report-PublicRC1.1.pdf)
+and [build infrastructure assessment](https://ostif.org/wp-content/uploads/2025/07/CON-01-conda-forge-Audit-Public_RC1.0.pdf).
+
+**Inference.** A source and supply-chain review can be scoped from the public
+tree. The sole enabled API 37 release variant already has the companion-only
+metadata setting, null signing configuration and no requested permissions.
+The [source and qualification contract](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
+and the unsigned-pair and signed-prequalification records above identify the
+inputs and rejection cases. The earlier unsigned equality and separate SDK
+state failure both stand. No public record reviewed establishes a qualified
+PDVA operator, authenticated replacement environment, dedicated signing
+custody, recoverable evidence store or independent recipient verification.
+
+**STOP before signing.** The smallest next action is owner authorization to
+request a public-source-only assessment scope with named reviewers and
+independence evidence. A proposal that imports suspect tools, caches or
+credentials, allows the producer to approve its own evidence, or relies on
+copying a signature fails the relevant qualification condition. Only independent
+review of two freshly built, originally signed, byte-identical APKs and the
+actual rejection controls can support artifact admission. All fifteen historical
+signed-byte failures stand. Independent backup remains unverified.
+
+This documentation review introduced no dependency and used only published
+reports and canonical source. Local checks are limited to repository and
+source validation. Foundation passed (184 files, 113 Markdown files, 54 requirements,
+5 ADRs). Harness manifest validation and the diagnostic source/fixture suite passed,
+including RWX and INTERNET rejection. Signed qualification remained Unknown.
+No new acquisition, build, signing, restoration, delivery
+or physical test took place. Foundation applies to this documentation change.
+Android and QEMU path filters do not select it. Companion-only Option B expires
+by 2026-12-08 in America/Fortaleza or an earlier terminating event. ADR-0004
+Option A remains accepted, Gate 0 Unresolved, Gates A-G Not reached.
