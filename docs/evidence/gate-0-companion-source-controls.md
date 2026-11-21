@@ -2675,3 +2675,49 @@ experiment was run. This source comparison establishes neither guest feasibility
 nor universal impossibility. No further investigation of this snapshot is
 justified without a concrete new falsifier involving an ordinary-app-accessible
 enforcer that covers descendants and retained grants across manager loss.
+
+## Disposable SDK copy and source immutability
+
+At `9f610ffc5e9e56faff129ae625405ac2658e7cfe`, can a same-account
+filesystem copy plus full source scans before and after copying establish an
+immutable SDK input for the Java diagnostic? **Failed on a synthetic Windows
+fixture.** The existing scanner observes points in time. The bootstrap's file
+checks and Gradle dependency verification supply no write boundary around the
+original SDK for the duration of copying or execution.
+
+Two disposable trials used the existing `sdk_capture` and `sdk_scan`, two
+synthetic package roots with regular `package.xml` files, an empty licenses
+directory, and Python `shutil.copytree` into a previously absent sibling.
+
+1. Both copied files matched their originals and had different file identities.
+   A write in the copy left the full source inventory equal. Creating a file
+   under source licenses made the inventories differ. Removing that fixture
+   file made them equal again. The copying account had write access throughout.
+2. Capture the source inventory and the platform package.xml timestamps. Write
+   the seven bytes `changed` over `fixture`; the live inventory differs. Copy
+   the entire tree, then put back `fixture` and set the original access and
+   modification timestamps with `os.utime(ns=...)`. The final full source
+   inventory equaled the initial one, while the copy retained `changed`.
+   Comparing copied file digests to the initial capture would catch this copy
+   mismatch. It would still leave the transient source write in trial 1
+   undetected by endpoint comparisons.
+
+**Decision.** Reject this implementation for build validation. Every entry,
+including generated state, stays in its respective full inventory. A subsequent
+discovery operation consumes existing generated state as input and needs evidence
+binding that exact state to the preceding operation. These trials did not run
+discovery, test redirection defenses, exercise output freshness or establish
+independent provenance. No installed SDK, Gradle build, APK or device was used.
+PR #77's unsigned-byte equality passed and its complete SDK assertion failed.
+
+**Next proof.** Before any build, use an independently administered immutable
+source snapshot with authenticated inventory. Under the actual disposable worker
+identity, demonstrate denied write, create, rename, delete and metadata changes
+through every accessible source path, including redirected paths. Verify the
+fresh copy against that inventory before use, including package metadata and
+empty directories. Record source and copy identities separately. Each later
+operation still needs its complete input state, fresh outputs and exact admitted
+source and packaging correspondence. A synthetic copy supplies no Windows
+incident resolution, signing custody, signed-byte reproducibility, independent
+evidence preservation or device authorization. Gate 0 remains Unresolved and
+Gates A-G remain Not reached.
