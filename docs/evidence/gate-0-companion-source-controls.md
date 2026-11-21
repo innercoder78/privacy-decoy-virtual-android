@@ -2606,3 +2606,72 @@ SELinux, other framework files, OEM correspondence and device behavior were
 outside this comparison. No upstream code was adopted and no Android, native
 worker or VM experiment was run. This scoped negative justifies no follow-up
 execution or change to the accepted decision.
+
+## Android 17 SELinux worker cleanup authority
+
+Does the Android 17 security release give an ordinary installed app on a stock,
+nonrooted user build a new way to enforce and verify isolated-worker cleanup?
+This comparison covers the SELinux source excluded from the preceding framework
+record. Both annotated tags resolved in AOSP `platform/system/sepolicy`.
+
+| Release tag | Peeled commit | Root tree |
+|---|---|---|
+| `android-17.0.0_r1` | [`e066568e98d86db31a9346d30977f3632fa7073c`](https://android.googlesource.com/platform/system/sepolicy/+/e066568e98d86db31a9346d30977f3632fa7073c/) | `f0e857a84958d5472dee9187c54f7b4f191a415a` |
+| `android-security-17.0.0_r3` | [`895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac`](https://android.googlesource.com/platform/system/sepolicy/+/895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac/) | `0461cbd56064556d0091ec76f062c59083244fb3` |
+
+Resolve the tags with `git ls-remote`, fetch both, then run
+`git diff-tree -r --no-renames --no-abbrev <release> <security>` without a path
+filter. Inspect the full patch for every changed blob. The tree comparison found
+exactly three modified paths, all mode 100644 on both sides. Each lost the rule
+`allow SUBJECT block_device:dir search;`. The table supplies the literal subject
+and the before/after Git blob IDs. Each retained its adjacent read permission for
+`apex_dm_device:blk_file`. Only the system_app hunk also replaced a two-line
+comment about parent-directory search and device reads with a one-line comment
+about device-mapped block files.
+
+| Changed path | Subject and authority class | Release blob | Security blob |
+|---|---|---|---|
+| `private/crosvm.te` | `crosvm_domain`, VM monitor domains | `7e8006850114d97eea6ba4da49f565889b33afb2` | `a9d90ed20f4010e04b6339c50d05c71687b96bb8` |
+| `private/priv_app_all.te` | `priv_app_all`, privileged app domains | `49cbc8fc1e0858b19e8e9bee1ccc39cf38db0f03` | `cf4b0e6085f501dd63a750238cfc430bf23a54d4` |
+| `private/system_app.te` | `system_app`, system app domain | `00a41baaf53d7a47c83fa9018555d9b3352bc90a` | `d78a59c0908ffedbd261bde8951ea4c5bf24a206` |
+
+**Falsifying observation for each row.** The only executable policy edit in
+each blob deletes a directory-search allow for the named subject. None adds an
+operation, changes domain membership or identifies a process or retained grant.
+Whether another rule supplies equivalent directory access on a particular build
+is Unknown.
+
+The ordinary manager and its worker keep distinct domain assignments.
+`private/seapp_contexts` maps the ordinary target-SDK 37 app to `untrusted_app`
+and the ordinary isolated service to `isolated_app`. Its older target-SDK
+mappings also retain identical bytes. `private/isolated_app.te` still applies
+`app_domain` and `isolated_app_domain`. The signal neverallow in
+`private/app.te` still restricts signals from app domains to the specified
+non-app domains, with explicit exclusions. Its target set does not decide
+app-to-isolated-worker signaling. The same file retains its procfs restrictions
+for non-app process entries. The explicit `getpgid sigkill signal` allow on
+`appdomain:process` in `private/system_server.te` still names system_server as
+caller. The tree and hunk comparison found no change to process signals, cgroup
+control, procfs, pidfd, process observation or relevant neverallows, and no new
+enforcement grant even to system_server.
+[Domain mappings](https://android.googlesource.com/platform/system/sepolicy/+/895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac/private/seapp_contexts#183),
+[app restrictions](https://android.googlesource.com/platform/system/sepolicy/+/895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac/private/app.te#654),
+[system-server signal rule](https://android.googlesource.com/platform/system/sepolicy/+/895c7f4dcaa61fbe3155c0c273db63cbda9cd1ac/private/system_server.te#198).
+
+**NO NEW QUALIFYING AUTHORITY EVIDENCE.** A permitted signal or a framework
+group-kill request gives the manager no new observation that every descendant
+exited. None of the changes establishes that every holder lost a retained FD,
+mapping or delegated handle. None returns an independent completion result
+that a restarted manager can authenticate after losing its prior state. A
+surviving descendant or holder after reported success would falsify a cleanup
+claim. A result available only to a privileged caller, or recoverable only
+from lost manager state, also fails the ordinary-app criterion.
+
+No Gate 0 blocker moves. ADR-0004 Option A remains accepted, Gate 0 Unresolved,
+Gates A–G Not reached, and physical testing **NOT READY — STOP**. Effective
+policy on a particular production build and runtime behavior remain Unknown.
+No policy compilation, APK, emulator, VM, physical-device test or Linux lifetime
+experiment was run. This source comparison establishes neither guest feasibility
+nor universal impossibility. No further investigation of this snapshot is
+justified without a concrete new falsifier involving an ordinary-app-accessible
+enforcer that covers descendants and retained grants across manager loss.
