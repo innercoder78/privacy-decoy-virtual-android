@@ -35,6 +35,10 @@ full-tree inspector rejects the input mutation and pre-existing state. Eight add
 negative/removal controls preserve that boundary; no admission relaxation or APK
 build. Historical unsigned equality and failed combined SDK result stay intact.
 
+[Disposable SDK copy and source immutability](gate-0-companion-source-controls.md#disposable-sdk-copy-and-source-immutability)
+records a Windows synthetic copy with matching source endpoint inventories and
+different copied package bytes. Same-account copying failed the immutability test.
+
 [SDK generated-state investigation](gate-0-companion-source-controls.md#sdk-generated-state-investigation--2026-11-15),
 2026-11-15: pinned repository-library source/bytecode and a fresh isolated library
 call identify `LocalRepoLoaderImpl.getPackages` → `writeHashFile` as a writer of
