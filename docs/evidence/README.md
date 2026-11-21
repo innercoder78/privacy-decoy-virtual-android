@@ -1,5 +1,7 @@
 # Evidence index
 
+[Android 17 SELinux worker cleanup authority](gate-0-companion-source-controls.md#android-17-selinux-worker-cleanup-authority)
+
 [Android 17 security-branch lifecycle comparison](gate-0-companion-source-controls.md#android-17-security-branch-lifecycle-comparison)
 
 [Disposable branch retirement](gate-0-companion-source-controls.md#disposable-branch-retirement)
