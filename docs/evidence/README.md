@@ -1,7 +1,7 @@
 # Evidence index
 
 The owner accepted the [one-attempt Java diagnostic policy](../decisions/ADR-0006-one-attempt-java-memory-diagnostic.md)
-on 2026-11-23. The first build remains blocked.
+on 2026-11-23. The [build worker assessment](gate-0-companion-source-controls.md#adr-0006-build-worker-assessment) records the blocker for the first build.
 
 [Android 17 SELinux worker cleanup authority](gate-0-companion-source-controls.md#android-17-selinux-worker-cleanup-authority)
 
