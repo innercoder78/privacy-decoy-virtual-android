@@ -57,6 +57,8 @@ ADR_SHA256 = '78e108ca2b5b4ca2660f5b7d101622fd890d1e5cefcf4576beff1bc225a0de87'
 MERGE_POLICY_PRIOR = '2e820f5d0ee8319eb428b6e25081479a0fb5c064'
 MERGE_POLICY_PRIOR_CHECKER = 'a15344a665099584a029746cb366717784ab5f292659daf5ebd590043279754e'
 MERGE_POLICY_SHA256 = 'eb2e6ab7bad2ae4ebf3065251d9d96e5f515f6bccba0183b982acecb389831ca'
+DIAGNOSTIC_ADR = 'docs/decisions/ADR-0006-one-attempt-java-memory-diagnostic.md'
+DIAGNOSTIC_ADR_SHA256 = '2f74db4471c13deaf060f74701602ef5aa302ee6a8c52b0311d88c09a0a1a485'
 BASE_BUILD = b"""plugins { id 'com.android.application' }
 android {
     namespace 'org.pdva.memorydiagnostic'
@@ -229,14 +231,22 @@ def check_merge_policy(snapshot):
                    'exact-merge-policy')
 
 
+def check_diagnostic_adr(snapshot):
+    entry = snapshot.get(DIAGNOSTIC_ADR)
+    source_require(entry is not None and entry[0] == '100644'
+                   and hashlib.sha256(entry[1]).hexdigest() == DIAGNOSTIC_ADR_SHA256,
+                   'exact-diagnostic-adr')
+
+
 def verify_current_source(snapshot, evidence):
     check_baseline(evidence)
     check_source_modes(snapshot)
     check_review_scope(snapshot)
     check_metadata_delta(snapshot)
     check_merge_policy(snapshot)
+    check_diagnostic_adr(snapshot)
     check_current_readme(snapshot)
-    check_protected_source({p: row for p, row in snapshot.items() if p != ADR_PATH})
+    check_protected_source({p: row for p, row in snapshot.items() if p not in (ADR_PATH, DIAGNOSTIC_ADR)})
 
 
 def check_adr_worktree(file):
@@ -293,7 +303,7 @@ def working_source():
         snapshot[path.decode('utf-8')] = ('100644', b'')
     for path, (mode, _) in snapshot.copy().items():
         file = ROOT / path
-        if path == ADR_PATH:
+        if path in (ADR_PATH, DIAGNOSTIC_ADR):
             check_adr_worktree(file)
         source_require(not file.is_symlink() and file.is_file(), 'nonregular-working-source')
         # POSIX executable worktree changes must be caught before staging too.
@@ -389,6 +399,7 @@ def companion_source_tests():
     # Test the historical contract separately after checking the whole current
     # source. The new ADR is not admitted by this historical verifier.
     del positive[ADR_PATH]
+    del positive[DIAGNOSTIC_ADR]
     verify_companion_delta(positive, evidence)
     # A shallow CI checkout needs no baseline fetch. The explicit
     # --verify-source-baseline procedure independently recomputes this receipt
@@ -524,6 +535,7 @@ def readme_update_tests():
     evidence = (SOURCE_BASE, PROTECTED.copy())
     verify_current_source(positive, evidence)
     del positive[ADR_PATH]  # Historical README contract, not current admission.
+    del positive[DIAGNOSTIC_ADR]
     require(hashlib.sha256(positive['README.md'][1]).hexdigest() == README_UPDATE_SHA256,
             'actual integrated README must match reviewed update')
     verify_companion_delta(positive, evidence)
@@ -648,7 +660,10 @@ def verify_merge_policy_update():
     verify_current_source(current, evidence)
     expect_source_rejection(verify_current_source, prior, evidence,
                             'exact-merge-policy', 'three-method-policy-replay')
-    detector_removed('check_merge_policy', verify_current_source)(prior, evidence)
+    # Isolate the ADR-0005 detector while satisfying the later ADR-0006 check.
+    detector_removed('check_merge_policy', verify_current_source)(
+        {**prior, DIAGNOSTIC_ADR: current[DIAGNOSTIC_ADR]}, evidence)
+    del current[DIAGNOSTIC_ADR]  # Already checked above. Compare the historical transition.
     source_require(current.keys() == prior.keys() and all(
         current[path] == prior[path] for path in prior if path not in REVIEWED_FILES | {ADR_PATH}),
         'merge-policy-transition-scope')
@@ -661,6 +676,7 @@ def adr_update_tests():
     evidence = (SOURCE_BASE, PROTECTED.copy())
     verify_current_source(current, evidence)
     historical = current.copy(); del historical[ADR_PATH]
+    del historical[DIAGNOSTIC_ADR]
     verify_companion_delta(historical, evidence)
     expect_source_rejection(verify_companion_delta, current, evidence,
                             'protected-governance', 'historical-extra-ADR')
@@ -670,7 +686,16 @@ def adr_update_tests():
     for name, raw in (('changed', current[ADR_PATH][1] + b'\n'), ('substituted', b'other ADR\n')):
         changed = current.copy(); changed[ADR_PATH] = ('100644', raw)
         add(name, changed, 'exact-merge-policy', 'check_merge_policy')
-    add('deleted', historical, 'exact-merge-policy', 'check_merge_policy')
+    add('deleted', {**historical, DIAGNOSTIC_ADR: current[DIAGNOSTIC_ADR]},
+        'exact-merge-policy', 'check_merge_policy')
+    predecessor = current.copy()
+    mode, text = predecessor.pop(DIAGNOSTIC_ADR)
+    add('missing-diagnostic-adr', predecessor, 'exact-diagnostic-adr', 'check_diagnostic_adr')
+    add('altered-diagnostic-adr', {**current, DIAGNOSTIC_ADR: (mode, text + b'\n')},
+        'exact-diagnostic-adr', 'check_diagnostic_adr')
+    renamed_diagnostic = {**predecessor, DIAGNOSTIC_ADR + '.renamed': (mode, text)}
+    expect_source_rejection(verify_current_source, renamed_diagnostic, evidence,
+                            'exact-diagnostic-adr', 'renamed-diagnostic-adr')
     for mode in ('100755', '120000', '160000', '040000'):
         changed = current.copy(); changed[ADR_PATH] = (mode, changed[ADR_PATH][1])
         # Both layers reject mode drift. Test each detector directly below.
@@ -738,6 +763,10 @@ def adr_update_tests():
         changed = current.copy(); changed[ADR_PATH] = (mode, changed[ADR_PATH][1])
         layer_removal('check_source_modes', (changed,), 'regular-source-modes')
         layer_removal('check_merge_policy', (changed,), 'exact-merge-policy')
+        changed = current.copy(); changed[DIAGNOSTIC_ADR] = (mode, current[DIAGNOSTIC_ADR][1])
+        expect_source_rejection(verify_current_source, changed, evidence,
+                                'regular-source-modes', 'diagnostic-adr-mode-' + mode)
+        layer_removal('check_diagnostic_adr', (changed,), 'exact-diagnostic-adr')
     for path in ('README.md', ADR_PATH):
         changed = current.copy(); del changed[path]
         detector, code = ('check_current_readme', 'current-readme') if path == 'README.md' else (

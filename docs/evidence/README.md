@@ -1,7 +1,7 @@
 # Evidence index
 
-**PROPOSED · NOT APPROVED** — [One-attempt Java diagnostic policy](gate-0-companion-source-controls.md#one-attempt-java-diagnostic-policy).
-Draft for ADR-0006. The first build remains blocked.
+The owner accepted the [one-attempt Java diagnostic policy](../decisions/ADR-0006-one-attempt-java-memory-diagnostic.md)
+on 2026-11-23. The first build remains blocked.
 
 [Android 17 SELinux worker cleanup authority](gate-0-companion-source-controls.md#android-17-selinux-worker-cleanup-authority)
 
