@@ -3083,3 +3083,26 @@ Markdown link validation, harness manifest validation, historical source audits,
 diagnostic negatives and detector-removal checks passed. Repository validation
 ran 152 tests with four Windows skips. No worker qualification or physical
 candidate build ran. Hosted results are outside this local evidence.
+
+## Diagnostic worker availability
+
+On 2026-11-23 the owner reported that no suitable computer or separately
+provisioned environment was available for inspection. **STOP before the first
+unsigned diagnostic build.** This finding concerns the one-attempt diagnostic.
+Gate 0 remains **Unresolved** and Gates A-G remain **Not reached**.
+
+No worker was inspected or provisioned. Incident separation, the account that
+would actually run Gradle, denial of writes to original SDK inputs, the location
+of writable generated files, authenticated tool inputs and recovery from a
+separate encrypted private backup all remain unverified. No write probe,
+restore, build, signing, transfer, installation or phone operation ran.
+The fifteen historical signed-byte failures and failed SDK-state assertion
+retain their recorded outcomes. The native harness remains execution-locked.
+
+Reopen worker assessment only if the owner designates a candidate and authorizes
+a read-only review before the exception ends. Start with its setup history and
+whether it shares tools, caches, keys or credentials with the affected system.
+Shared incident state or an unexplained source of build inputs blocks qualification.
+Keep supporting records in private owner custody. ADR-0006 and ADR-0007 retain
+their earlier termination conditions and the deadline of 00:00 on 2026-12-08
+in America/Fortaleza.
