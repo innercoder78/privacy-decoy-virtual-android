@@ -2,6 +2,7 @@
 
 The owner accepted the [one-attempt Java diagnostic policy](../decisions/ADR-0006-one-attempt-java-memory-diagnostic.md)
 on 2026-11-23. The [build worker assessment](gate-0-companion-source-controls.md#adr-0006-build-worker-assessment) records the blocker for the first build.
+The [proposed first-build decision](gate-0-companion-source-controls.md#proposed-decision-on-the-first-unsigned-diagnostic-build) compares the worker options and requests an exact source binding.
 
 [Android 17 SELinux worker cleanup authority](gate-0-companion-source-controls.md#android-17-selinux-worker-cleanup-authority)
 
