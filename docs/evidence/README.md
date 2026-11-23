@@ -1,5 +1,8 @@
 # Evidence index
 
+**PROPOSED · NOT APPROVED** — [One-attempt Java diagnostic policy](gate-0-companion-source-controls.md#one-attempt-java-diagnostic-policy).
+Draft for ADR-0006. The first build remains blocked.
+
 [Android 17 SELinux worker cleanup authority](gate-0-companion-source-controls.md#android-17-selinux-worker-cleanup-authority)
 
 [Android 17 security-branch lifecycle comparison](gate-0-companion-source-controls.md#android-17-security-branch-lifecycle-comparison)

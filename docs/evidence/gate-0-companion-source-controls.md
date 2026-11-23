@@ -2722,15 +2722,15 @@ incident resolution, signing custody, signed-byte reproducibility, independent
 evidence preservation or device authorization. Gate 0 remains Unresolved and
 Gates A-G remain Not reached.
 
-## Proposed ADR-0006 — One owner-operated Java memory diagnostic attempt
+## One-attempt Java diagnostic policy
 
-**Status PROPOSED · 2026-11-23 · Device operations STOP.** Publication or merge
-does not constitute approval. This is the text submitted for decision. A sixth
-decision file passes the numbering rule but fails the existing diagnostic
-source-admission rule (`protected-governance` in an in-memory added-path test).
-This admitted evidence document can carry the proposal for review. Formal
-entry in the decision register requires a separately authorized source-admission
-transition. An evidence entry alone cannot amend governance.
+**Draft for ADR-0006 · PROPOSED · NOT APPROVED · 2026-11-23.** ADR-0006 is
+unregistered. The next number is available, but adding the decision file
+triggered `protected-governance` in the source-admission test. Formal registration
+requires separate owner authorization for a reviewed change admitting that
+exact decision path and text, its validation, and any hosted operations the
+change would trigger. That transition is outside this proposal. Publication,
+merge and registration each confer no operational approval.
 
 ### Decision and scope
 
@@ -2763,12 +2763,19 @@ automatic retry. Durability assumes intact app data.
 Under [ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
 the companion's preparation scope still requires independent administration,
 full toolchain qualification, qualified signing custody and two independently
-built complete signed originals with identical bytes. For this attempt alone,
-propose owner-operated build and custody, checked development inputs with
-documented provenance limits, and verification of one original from packaging
-through delivery. Record independent qualification and paired signed-byte
-equality as **waived for this attempt / unproven**. Preserve all fifteen
-historical signed-byte failures, the failed complete SDK assertion and every
+built complete signed originals with identical bytes. The table identifies the
+three proposed exceptions and the evidence the owner would provide for this attempt.
+
+| Existing requirement proposed for exception | Evidence the owner would still have to produce |
+|---|---|
+| Independently administered build and independent qualification of the complete toolchain | Identify the fresh worker and exact inputs, verify available authenticated pins, document provenance gaps and demonstrate the SDK write boundary in step 2. |
+| Independently qualified signing custody and independent artifact verifier | Keep the dedicated key privately, demonstrate custody and recovery, and verify the signer, signature, tamper rejection and delivered bytes in steps 3 and 4. |
+| Two independently built complete signed originals with identical bytes | Trace one original from the reviewed tree to the installed candidate. The second build and signed-byte equality remain unproven. |
+
+Record each exception as **proposed** until explicitly adopted, then as
+**waived for this attempt / unproven**. Policy review evaluates those tradeoffs.
+It supplies neither independent build evidence nor security certification.
+Preserve all fifteen historical signed-byte failures, the failed complete SDK assertion and every
 negative receipt. Any observed new mismatch is a failure and stops the attempt.
 No normalized comparison, comparator change or substitution of an unsigned pass.
 
@@ -2800,13 +2807,17 @@ follow-on attempt qualifies. Gate 0 remains **Unresolved**. Gates A-G remain
    assumptions for OS, JDK, SDK 37, Build Tools 36.0.0, Gradle, AGP, full
    dependency closure, packager, signer and verifier. Retain strict dependency
    verification. Exclude the unresolved incident environment and its caches,
-   keys and tools. Use a fresh controlled worker with authenticated read-only
-   SDK input, test denial of writes including through alternate paths, verify
-   the complete disposable copy and bind generated state between operations.
-   Endpoint scans alone failed this condition. Establish recoverable encrypted
-   private evidence storage and verify a restore. Missing mandatory proof or an
-   unbounded input discrepancy stops here. Obtain separate owner authorization
-   for one unsigned release build on those inputs.
+   keys and tools. The owner may administer a fresh worker under the proposed
+   exception. Under its actual build identity, demonstrate that the authenticated
+   SDK snapshot rejects writes, creation, rename, deletion and metadata changes
+   through every accessible path. Match the disposable copy to the full inventory
+   and bind generated state between operations. Endpoint scans failed to prove
+   immutability. Verify a restore from a separate encrypted private backup.
+   **First build remains blocked.** The policy decision and formal registration
+   are outstanding. This proposal supplies no incident-separated worker or input
+   receipts, SDK write-denial proof, backup restore receipt, or build authorization.
+   The owner must record the evidence above, resolve discrepancies, and expressly
+   authorize one unsigned release build against that exact source and input set.
 3. **Before signing.** Bind the original unsigned digest and fresh output to
    that build. Require passing desktop behavior/cleanup tests, release lint,
    and inspection of the entire merged and packaged manifest, DEX, resources,
