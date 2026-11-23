@@ -59,6 +59,11 @@ MERGE_POLICY_PRIOR_CHECKER = 'a15344a665099584a029746cb366717784ab5f292659daf5eb
 MERGE_POLICY_SHA256 = 'eb2e6ab7bad2ae4ebf3065251d9d96e5f515f6bccba0183b982acecb389831ca'
 DIAGNOSTIC_ADR = 'docs/decisions/ADR-0006-one-attempt-java-memory-diagnostic.md'
 DIAGNOSTIC_ADR_SHA256 = '2f74db4471c13deaf060f74701602ef5aa302ee6a8c52b0311d88c09a0a1a485'
+BINDING_ADR = 'docs/decisions/ADR-0007-diagnostic-source-binding.md'
+BINDING_ADR_SHA256 = '7c3c8d1794a225462ffcb526005d5ec8e4e5bcca085b30d48c41f54b27fbbc24'
+BUILD_CHECKOUT = '381ab85afacde557346a80b887841e7f49eef05c'
+BUILD_TREE = '192748380b2c14ec2f24bb42d1e40410a03bc2db'
+ANDROID_TREE = 'a844105b1373ef121401718e1c5d08cf1d6ca3ce'
 BASE_BUILD = b"""plugins { id 'com.android.application' }
 android {
     namespace 'org.pdva.memorydiagnostic'
@@ -238,6 +243,23 @@ def check_diagnostic_adr(snapshot):
                    'exact-diagnostic-adr')
 
 
+def check_binding_adr(snapshot):
+    entry = snapshot.get(BINDING_ADR)
+    source_require(entry is not None and entry[0] == '100644'
+                   and hashlib.sha256(entry[1]).hexdigest() == BINDING_ADR_SHA256,
+                   'exact-source-binding-adr')
+
+
+def check_build_identity(commit, tree, android):
+    source_require((commit, tree, android) == (BUILD_CHECKOUT, BUILD_TREE, ANDROID_TREE),
+                   'exact-prospective-checkout')
+
+
+def check_build_checkout(commit):
+    tree, android = git_source('rev-parse', commit + '^{tree}', commit + ':android').decode().split()
+    check_build_identity(commit, tree, android)
+
+
 def verify_current_source(snapshot, evidence):
     check_baseline(evidence)
     check_source_modes(snapshot)
@@ -245,8 +267,9 @@ def verify_current_source(snapshot, evidence):
     check_metadata_delta(snapshot)
     check_merge_policy(snapshot)
     check_diagnostic_adr(snapshot)
+    check_binding_adr(snapshot)
     check_current_readme(snapshot)
-    check_protected_source({p: row for p, row in snapshot.items() if p not in (ADR_PATH, DIAGNOSTIC_ADR)})
+    check_protected_source({p: row for p, row in snapshot.items() if p not in (ADR_PATH, DIAGNOSTIC_ADR, BINDING_ADR)})
 
 
 def check_adr_worktree(file):
@@ -303,7 +326,7 @@ def working_source():
         snapshot[path.decode('utf-8')] = ('100644', b'')
     for path, (mode, _) in snapshot.copy().items():
         file = ROOT / path
-        if path in (ADR_PATH, DIAGNOSTIC_ADR):
+        if path in (ADR_PATH, DIAGNOSTIC_ADR, BINDING_ADR):
             check_adr_worktree(file)
         source_require(not file.is_symlink() and file.is_file(), 'nonregular-working-source')
         # POSIX executable worktree changes must be caught before staging too.
@@ -400,6 +423,7 @@ def companion_source_tests():
     # source. The new ADR is not admitted by this historical verifier.
     del positive[ADR_PATH]
     del positive[DIAGNOSTIC_ADR]
+    del positive[BINDING_ADR]
     verify_companion_delta(positive, evidence)
     # A shallow CI checkout needs no baseline fetch. The explicit
     # --verify-source-baseline procedure independently recomputes this receipt
@@ -536,6 +560,7 @@ def readme_update_tests():
     verify_current_source(positive, evidence)
     del positive[ADR_PATH]  # Historical README contract, not current admission.
     del positive[DIAGNOSTIC_ADR]
+    del positive[BINDING_ADR]
     require(hashlib.sha256(positive['README.md'][1]).hexdigest() == README_UPDATE_SHA256,
             'actual integrated README must match reviewed update')
     verify_companion_delta(positive, evidence)
@@ -662,7 +687,8 @@ def verify_merge_policy_update():
                             'exact-merge-policy', 'three-method-policy-replay')
     # Isolate the ADR-0005 detector while satisfying the later ADR-0006 check.
     detector_removed('check_merge_policy', verify_current_source)(
-        {**prior, DIAGNOSTIC_ADR: current[DIAGNOSTIC_ADR]}, evidence)
+        {**prior, DIAGNOSTIC_ADR: current[DIAGNOSTIC_ADR], BINDING_ADR: current[BINDING_ADR]}, evidence)
+    del current[BINDING_ADR]
     del current[DIAGNOSTIC_ADR]  # Already checked above. Compare the historical transition.
     source_require(current.keys() == prior.keys() and all(
         current[path] == prior[path] for path in prior if path not in REVIEWED_FILES | {ADR_PATH}),
@@ -677,6 +703,7 @@ def adr_update_tests():
     verify_current_source(current, evidence)
     historical = current.copy(); del historical[ADR_PATH]
     del historical[DIAGNOSTIC_ADR]
+    del historical[BINDING_ADR]
     verify_companion_delta(historical, evidence)
     expect_source_rejection(verify_companion_delta, current, evidence,
                             'protected-governance', 'historical-extra-ADR')
@@ -686,8 +713,26 @@ def adr_update_tests():
     for name, raw in (('changed', current[ADR_PATH][1] + b'\n'), ('substituted', b'other ADR\n')):
         changed = current.copy(); changed[ADR_PATH] = ('100644', raw)
         add(name, changed, 'exact-merge-policy', 'check_merge_policy')
-    add('deleted', {**historical, DIAGNOSTIC_ADR: current[DIAGNOSTIC_ADR]},
+    add('deleted', {**historical, DIAGNOSTIC_ADR: current[DIAGNOSTIC_ADR], BINDING_ADR: current[BINDING_ADR]},
         'exact-merge-policy', 'check_merge_policy')
+    before_binding = current.copy()
+    binding_mode, binding_bytes = before_binding.pop(BINDING_ADR)
+    add('missing-binding', before_binding, 'exact-source-binding-adr', 'check_binding_adr')
+    add('changed-binding', {**current, BINDING_ADR: (binding_mode, binding_bytes + b'\n')},
+        'exact-source-binding-adr', 'check_binding_adr')
+    expect_source_rejection(verify_current_source,
+                            {**before_binding, BINDING_ADR + '.renamed': (binding_mode, binding_bytes)},
+                            evidence, 'exact-source-binding-adr', 'renamed-binding')
+    check_build_identity(BUILD_CHECKOUT, BUILD_TREE, ANDROID_TREE)
+    for index in range(3):
+        identity = [BUILD_CHECKOUT, BUILD_TREE, ANDROID_TREE]
+        identity[index] = '0' * 40
+        try:
+            check_build_identity(*identity)
+        except SourceRejection as failure:
+            require(str(failure) == 'exact-prospective-checkout', 'wrong build identity rejection')
+        else:
+            raise AssertionError('substituted build identity admitted')
     predecessor = current.copy()
     mode, text = predecessor.pop(DIAGNOSTIC_ADR)
     add('missing-diagnostic-adr', predecessor, 'exact-diagnostic-adr', 'check_diagnostic_adr')
@@ -767,6 +812,10 @@ def adr_update_tests():
         expect_source_rejection(verify_current_source, changed, evidence,
                                 'regular-source-modes', 'diagnostic-adr-mode-' + mode)
         layer_removal('check_diagnostic_adr', (changed,), 'exact-diagnostic-adr')
+        changed = {**current, BINDING_ADR: (mode, binding_bytes)}
+        expect_source_rejection(verify_current_source, changed, evidence,
+                                'regular-source-modes', 'binding-mode-' + mode)
+        layer_removal('check_binding_adr', (changed,), 'exact-source-binding-adr')
     for path in ('README.md', ADR_PATH):
         changed = current.copy(); del changed[path]
         detector, code = ('check_current_readme', 'current-readme') if path == 'README.md' else (
@@ -2368,9 +2417,19 @@ def main():
                              help='audit immutable previous ADR admission and exact policy replacement')
     source_mode.add_argument('--verify-adr-update', action='store_true',
                              help='audit immutable prior source and exact current ADR addition')
+    source_mode.add_argument('--check-prospective-checkout',
+                             help='verify only the exact ADR-0007 Git identity; confers no build authority')
     source_mode.add_argument('--check-source-ref',
                              help='check an existing local commit for the exact proposed source delta only')
     args = parser.parse_args()
+    if args.check_prospective_checkout is not None:
+        require(not any(value for key, value in vars(args).items() if key != 'check_prospective_checkout'),
+                'checkout identity check is source-only')
+        commit = git_source('rev-parse', '--verify', '--end-of-options',
+                            args.check_prospective_checkout + '^{commit}').decode().strip()
+        check_build_checkout(commit)
+        print('PASS: exact ADR-0007 prospective checkout identity only; build remains blocked')
+        return
     if args.verify_adr_update or args.verify_merge_policy_update:
         require(not (args.unsigned_pair or args.unsigned_source_ref or args.unsigned_executions
                      or args.signed_pair or args.build_receipts or args.java_home
@@ -2415,7 +2474,13 @@ def main():
     require(args.build_receipts is None, 'build receipts require signed pair')
     if args.verify_source_baseline or args.check_source_ref:
         require(not (args.java_home or args.android_jar or args.apk), 'source-only options cannot build/inspect packages')
-        snapshot = committed_source(SOURCE_BASE if args.verify_source_baseline else args.check_source_ref)
+        ref = SOURCE_BASE if args.verify_source_baseline else args.check_source_ref
+        commit = git_source('rev-parse', '--verify', '--end-of-options', ref + '^{commit}').decode().strip()
+        if args.check_source_ref and commit == BUILD_CHECKOUT:
+            check_build_checkout(commit)
+            print('PASS: exact ADR-0006 registered source; build remains blocked')
+            return
+        snapshot = committed_source(commit)
         if args.verify_source_baseline:
             check_source_modes(snapshot)
             require(snapshot[BUILD_PATH][1] == BASE_BUILD, 'baseline module bytes')

@@ -3065,3 +3065,21 @@ requirements. ADR-0004 Option A still requires the complete interactive Android
 native harness stays execution-locked. Even Admitted with Complete cleanup
 establishes only bounded memory mapping. Gate 0 remains **Unresolved** and
 Gates A-G remain **Not reached**.
+
+## Owner disposition on diagnostic source identity
+
+On 2026-11-23 the owner approved both exact identities in the proposal above
+and separately authorized registration and ordinary hosted CI.
+[ADR-0007](../decisions/ADR-0007-diagnostic-source-binding.md) records the
+decision and its expiry. The first unsigned build remains STOP pending the
+separate worker, evidence, recovery and authorization specified above.
+
+Local source-only validation replayed the immutable ADR-0006 checker. It
+admitted the exact prospective checkout and rejected the reviewed application
+commit at `exact-diagnostic-adr`. The registration checker requires the exact
+ADR-0007 path, text and regular mode. Its separate `--check-prospective-checkout`
+check pins the commit, full tree and Android subtree. Foundation and local
+Markdown link validation, harness manifest validation, historical source audits,
+diagnostic negatives and detector-removal checks passed. Repository validation
+ran 152 tests with four Windows skips. No worker qualification or physical
+candidate build ran. Hosted results are outside this local evidence.
