@@ -2953,3 +2953,115 @@ of its provisioning record, intended Gradle identity, mounted inputs and cache
 origins. Evidence of shared incident tools, keys or caches rejects that
 candidate. Without such a worker the first unsigned build remains blocked.
 Any later fixture probe and the build each require separate authority.
+
+## PROPOSED decision on the first unsigned diagnostic build
+
+**Recommendation for ADR-0007.** Retain the ADR-0006 worker and SDK requirements
+(Path A). Amend only the source-identity clause as specified below. Path B would
+accept an unknown build environment for an APK destined for a personal phone.
+The available checks cannot establish enough about that APK to recommend B.
+The first unsigned build remains blocked. This assessment, its publication,
+successful checks and merge confer no authority. A material evidence-gate
+change requires independent policy review, explicit owner approval and separate
+registration under [project governance](../governance.md).
+
+### Which source would be eligible?
+
+| Identity | Proposed binding and acceptance test |
+| --- | --- |
+| Reviewed application | Preserve ADR-0006 commit `b84af1c7764298b06bc8b356c38b3ef9fd8f0db3`, full tree `0dfc367c4c87defe7d468946bf3e7cf477cc0282`, as the source of the approved bytes. Only the Java 17 release of `org.pdva.memorydiagnostic`, version code 1, version name `0.1-diagnostic`, min/target/compile API 37, is in scope. |
+| Registered checkout | Approve exactly commit `381ab85afacde557346a80b887841e7f49eef05c`, tree `192748380b2c14ec2f24bb42d1e40410a03bc2db`, as the sole prospective build checkout. Both commits contain the same entire `android/` tree `a844105b1373ef121401718e1c5d08cf1d6ca3ce`. The complete delta modifies the source checker, adds ADR-0006, and updates this companion document and the evidence index. All four paths are regular files. Review those exact blobs and modes. Exclude every later commit, including the proposal and any registration commit. |
+| Admission | The registered checker rejects the older full tree at `exact-diagnostic-adr` because registration came later. Preserve that rejection. Require the unchanged registered checker to admit the exact proposed checkout. Passing that check cannot select a build ref or approve an exception. |
+| Actual build and output | Before invocation verify the clean exported inputs against the pinned tree, including modes, absence of overlays, untracked inputs and ambient build configuration. Privately bind the actual launcher identity, tool and dependency inventory, command, variant and fresh output to that checkout. Afterward retain the original unsigned bytes and whole-file digest. A Git tree identifies neither the executed tools nor the resulting APK. |
+
+### Cost and consequence of the two paths
+
+**Path A.** The owner needs one freshly provisioned worker with an evidenced
+boundary from the unresolved incident. This could be an existing separate
+machine with verifiable history. If none is available, the owner would have to
+provide separate hardware, storage for protected inputs and writable scratch,
+and separate encrypted backup capacity. A VM on the incident host supplies
+no such separation by itself. No suitable machine, purchase price, license
+fee or time estimate is established. The concrete administration cost is a fresh
+OS and restricted build account, provisioning JDK 17, SDK 37, Build Tools
+36.0.0, Gradle 9.6.0, AGP 9.4.0 and the strict dependency closure from recorded
+origins, verifying available authenticated digests and rights, and excluding
+incident tools, credentials and caches. Keep a protected SDK master under a
+different administrative identity. Expose only read-only SDK inputs to Gradle
+and direct generated state to separately inventoried writable storage. The
+owner must document and verify that arrangement and restore the private backup.
+
+**Path B, evaluated and declined.** Waiving incident separation, a known
+execution identity and proven SDK immutability would also leave exact input
+correspondence during execution unknown. A compromised compiler or packager
+could replace a method body, inject a component or add permissions. A compromised
+inspector could report the expected inventory for different bytes. Even with
+the reviewed manifest and no network permission, substituted code could act
+at launch, abuse accessible platform interfaces, corrupt the result or trigger
+a framework or kernel flaw on the personal phone. A signer exposed to the
+worker could leak its key or sign a substituted file. A dedicated key limits
+reuse across projects but cannot make malicious code safe.
+
+The repository supplies pinned Gradle and AGP versions, strict dependency
+metadata, source and negative controls, and package inspection logic. They
+address specific errors. Hashes can detect a changed file after binding;
+successful CI, class names and a clean packaged manifest cannot authenticate
+the tool that emitted or inspected a method body. A verifier outside the
+suspect environment, reviewed DEX behavior, an isolated signer and authenticated
+private delivery would reduce specific risks. Their availability and custody
+for this candidate are unverified. Even all four would leave a single build
+without independent signed-byte correspondence. There is no defensible
+environment waiver on the present evidence. If A cannot be provisioned, STOP.
+
+### Owner decision and order of operations
+
+1. **YES** means approve only the two exact source bindings above for this one
+   release, retain all ADR-0006 build conditions, and record the dated decision
+   against this reviewed revision after independent policy review. **NO** means
+   retain the existing source contract and STOP. Registration needs separate
+   authority. Neither answer authorizes a build. The next preparatory action
+   on YES is to designate one candidate worker and authorize read-only review
+   of its provisioning, actual Gradle identity, mounted inputs and cache origins.
+2. Require evidence excluding incident state. Only on a genuinely new boundary
+   and separate fixture authorization, demonstrate under the actual build token
+   denial of writes, creation, rename, deletion and metadata changes on every
+   accessible SDK path, with a working writable control. Verify complete input
+   correspondence and account for generated state between operations. Shared
+   suspect inputs, an unexamined alias, a successful mutation or an unexplained
+   difference stops qualification. Preserve the prior failed SDK assertion and
+   all fifteen historical signed-byte failures. Do not repeat same-account probes.
+3. Before a build require passing exact-ref admission, applicable checks and
+   RWX/permission negatives, complete input receipts and a verified restore
+   from a separate encrypted private backup. Agree the retention deadline,
+   deletion owner and withdrawal procedure. Then obtain separate owner authority
+   for one unsigned release build naming the exact checkout, inputs and worker.
+   No such worker, recovery receipt or build authority is established here.
+4. Before separate signing approval, require passing desktop behavior/cleanup
+   tests and release lint. Inspect the merged and packaged manifests, DEX code,
+   resources and full archive against the reviewed source. Require the single
+   launcher, zero permissions, expected extraction rules and release flags.
+   Reject unexplained code, components, libraries, assets or metadata. Bind the
+   approved unsigned digest to one fresh, owner-controlled diagnostic-only key,
+   with private encrypted recovery and no build-worker access to key material.
+5. Verify expected certificate and schemes, account for signing-only changes,
+   reinspect the final APK and require rejection of a tampered copy. Obtain
+   separate transfer approval for its whole-file digest and one private
+   recipient. Match the received bytes before separate installation approval
+   for one privately designated compatible stock Android 17 device. Require
+   the ADR-0006 compatibility and prior-attempt checks and ordinary installation
+   with protections active. One further explicit authorization permits one press.
+6. Terminate at first press, withdrawal by owner or reviewer, failed mandatory
+   check, unexpected behavior, loss of custody, source/tool/artifact/device/
+   recipient change, or **00:00 on 2026-12-08 in America/Fortaleza**, whichever
+   comes first. Companion-only Option B retains its own earlier stops.
+   Interruption consumes the attempt. Follow ADR-0006 closure even after
+   termination, including removal, installer-setting restoration, key retirement
+   and private evidence retention and disposal. Uncertain cleanup means Unknown.
+
+ADR-0006's three existing concessions remain recorded as unproven. Production
+isolation, signing, provenance, supply chain and distribution retain their full
+requirements. ADR-0004 Option A still requires the complete interactive Android
+17 virtual phone inside an ordinary stock nonrooted user-installed app. The
+native harness stays execution-locked. Even Admitted with Complete cleanup
+establishes only bounded memory mapping. Gate 0 remains **Unresolved** and
+Gates A-G remain **Not reached**.
