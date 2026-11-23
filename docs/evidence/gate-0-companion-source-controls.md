@@ -2721,3 +2721,154 @@ source and packaging correspondence. A synthetic copy supplies no Windows
 incident resolution, signing custody, signed-byte reproducibility, independent
 evidence preservation or device authorization. Gate 0 remains Unresolved and
 Gates A-G remain Not reached.
+
+## Proposed ADR-0006 — One owner-operated Java memory diagnostic attempt
+
+**Status PROPOSED · 2026-11-23 · Device operations STOP.** Publication or merge
+does not constitute approval. This is the text submitted for decision. A sixth
+decision file passes the numbering rule but fails the existing diagnostic
+source-admission rule (`protected-governance` in an in-memory added-path test).
+This admitted evidence document can carry the proposal for review. Formal
+entry in the decision register requires a separately authorized source-admission
+transition. An evidence entry alone cannot amend governance.
+
+### Decision and scope
+
+Recommend allowing the owner to rely on one inspected development artifact for
+one observation of mapping admission. Independent reproduction adds assurance
+against a compromised or divergent build. Its cost is disproportionate here
+only if the owner accepts that missing assurance and every control below holds.
+The alternative is to retain the existing qualification contract and STOP.
+
+Bind the exception to commit `b84af1c7764298b06bc8b356c38b3ef9fd8f0db3`,
+tree `0dfc367c4c87defe7d468946bf3e7cf477cc0282`, and one privately designated
+compatible stock Android 17 device. The [module](../../android/memory-diagnostic/build.gradle)
+defines only the enabled release of `org.pdva.memorydiagnostic`, version 1
+(`0.1-diagnostic`), compile/min/target 37, non-debuggable, with no configured
+signer or runtime dependency. Its companion-only APK metadata exclusion is
+already in source. The [manifest](../../android/memory-diagnostic/src/main/AndroidManifest.xml)
+declares one launcher and zero permissions.
+
+In the [Java implementation](../../android/memory-diagnostic/src/main/java/org/pdva/memorydiagnostic/Experiment.java),
+one user press disables the button and requires a successful synchronous
+preference commit before allocation. One memfd backs one 4 or 16 KiB page with
+separate shared RW and RX views. No RWX view, access to mapping contents,
+network operation, JNI, payload, subprocess or guest execution occurs in source.
+RX and RW unmapping and descriptor close are attempted independently for acquired
+resources. Unexpected faults and incomplete cleanup yield Unknown. There is no
+automatic retry. Durability assumes intact app data.
+
+### Which obligations would change
+
+Under [ADR-0003](../decisions/ADR-0003-host-apk-dependency-metadata-and-reproducibility-evidence.md)
+the companion's preparation scope still requires independent administration,
+full toolchain qualification, qualified signing custody and two independently
+built complete signed originals with identical bytes. For this attempt alone,
+propose owner-operated build and custody, checked development inputs with
+documented provenance limits, and verification of one original from packaging
+through delivery. Record independent qualification and paired signed-byte
+equality as **waived for this attempt / unproven**. Preserve all fifteen
+historical signed-byte failures, the failed complete SDK assertion and every
+negative receipt. Any observed new mismatch is a failure and stops the attempt.
+No normalized comparison, comparator change or substitution of an unsigned pass.
+
+This is a limited disposition of the development-tool adoption evidence under
+PDVA-REQ-036 and the companion qualification packet. Rights, provenance
+accounting, source controls, independent policy review, private preservation
+and truthful reporting under PDVA-REQ-008, PDVA-REQ-039 through PDVA-REQ-041
+and PDVA-REQ-051 remain mandatory. Production host Option A retains metadata
+and strict signed-byte equality. [ADR-0004 Option A](../decisions/ADR-0004-gate-0-owner-disposition.md)
+retains the complete interactive Android 17 virtual phone in an ordinary
+user-installed app on a stock nonrooted host. All production isolation,
+provenance, signing and distribution requirements and the native harness lock
+remain mandatory. No other variant, device, recipient, release, guest or
+follow-on attempt qualifies. Gate 0 remains **Unresolved**. Gates A-G remain
+**Not reached**.
+
+### Authorization and evidence, in order
+
+1. **Owner decision after independent review.** YES means “I accept the
+   listed residual risks and authorize only an offline, read-only assessment
+   of the proposed build inputs and custody plan for this exact source.”
+   NO means “Retain current qualification and STOP.” Record the dated decision,
+   reviewed proposal revision, scope and deadline privately, with a technical
+   disposition in the decision register before implementation. Silence, an open
+   PR, a merge or a passing check supplies no authority to build or test.
+2. **Before a build.** Verify the clean source and tree, applicable real checks,
+   exact-ref source admission and RWX/permission negative controls. Record tool
+   versions, origin, available authenticated hashes, rights and unresolved trust
+   assumptions for OS, JDK, SDK 37, Build Tools 36.0.0, Gradle, AGP, full
+   dependency closure, packager, signer and verifier. Retain strict dependency
+   verification. Exclude the unresolved incident environment and its caches,
+   keys and tools. Use a fresh controlled worker with authenticated read-only
+   SDK input, test denial of writes including through alternate paths, verify
+   the complete disposable copy and bind generated state between operations.
+   Endpoint scans alone failed this condition. Establish recoverable encrypted
+   private evidence storage and verify a restore. Missing mandatory proof or an
+   unbounded input discrepancy stops here. Obtain separate owner authorization
+   for one unsigned release build on those inputs.
+3. **Before signing.** Bind the original unsigned digest and fresh output to
+   that build. Require passing desktop behavior/cleanup tests, release lint,
+   and inspection of the entire merged and packaged manifest, DEX, resources,
+   components and archive inventory. Match the reviewed launcher, SDK/version,
+   extraction exclusions and non-debuggable flags. Reject added permissions,
+   networking, code, components, dependencies, native libraries, assets or
+   unexpected metadata. Record build limitations. Require explicit approval of
+   the unsigned digest, method and diagnostic-only key operation. Use a fresh
+   protected private key with owner-only access, encrypted storage and recovery,
+   separate from debug, host and production identities. Keep secrets offline
+   from public infrastructure. Sign privately outside the unchanged module.
+4. **Before transfer or installation.** Verify the original signed APK using
+   pinned signature tools, expected certificate and approved signing schemes.
+   Require rejection of a tampered disposable copy and account for every
+   difference from the inspected unsigned archive by the signing operation.
+   Reinspect the final package and bind its whole-file SHA-256 to the source,
+   inputs, unsigned digest and signer. Privately verify stock nonrooted production
+   user configuration, exact API 37, ARM64 support, 64-bit app-process support,
+   supported page size, ordinary installer access and no previous attempt or
+   ambiguous installation history. An Android version alone is insufficient.
+   Obtain explicit authorization naming the final digest, signer, private route,
+   single recipient, designated device and shorter execution window. Compare
+   whole-file digest at receipt before normal installation. Any mismatch,
+   protection warning requiring bypass, or unverifiable prerequisite means STOP.
+5. **Before pressing.** Confirm authorization is current, identity and installer
+   receipts match, the ordinary launcher shows Ready, and the owner has explicitly
+   authorized one press for this artifact in this window. Leave platform and OEM
+   protections active. The app rechecks API, ABI, actual process bitness and
+   page size before allocation. Consume the private authorization on first press,
+   including denial, interruption or lost output. Never clear data or reinstall
+   to recover an attempt.
+6. **Close and withdraw.** Privately transcribe only the outcome, operation,
+   bounded errno and corresponding cleanup fields. Accept a positive observation
+   only for Admitted with Complete cleanup. Preserve Unsupported, Denied or
+   ResourceFailure as observed. Interruption, unresponsiveness, inconsistent
+   results or uncertain cleanup mean Unknown and STOP. Record uncertainty even
+   if normal uninstall succeeds. Restore the original per-source installer
+   permission, verify removal, retire delivery copies and disable further key use.
+   Keep originals, failures, authorizations and cleanup receipts encrypted with
+   access limited to authorized custodians. Before any build agree a retention
+   deadline, verified backup, deletion owner and withdrawal procedure. At expiry
+   revoke access and document authorized disposal or unresolved cleanup.
+
+**Residual risk accepted only on YES.** One administrator and one build can
+produce and sign the same unintended bytes. Hashes and signature checks detect
+substitution but cannot prove benign tools, complete source correspondence or
+freedom from key compromise. The owner bears custody, withdrawal and recovery
+responsibility. Framework or kernel faults, a blocked synchronous call, state
+loss and loss of the displayed result remain possible. A successful attempt
+establishes only the bounded observation on that device. Hostile-worker
+containment and full-guest feasibility require their own evidence.
+
+**Separate proposed term.** Start only on dated explicit acceptance. End at the
+earliest of first press, withdrawal by owner or reviewer, failed mandatory check,
+unexpected behavior, loss of custody, change of source/tools/artifact/device/
+recipient, or 00:00 on 2026-12-08 in America/Fortaleza. Closure obligations
+survive termination. The earlier companion-only Option B ends under its own
+terms no later than December 8, 2026 in America/Fortaleza. No renewal, inherited
+authority or later signing/install/press permission follows from either term.
+
+Technical provenance is the exact source above, the
+[existing diagnostic qualification packet](gate-0-java-memory-diagnostic.md),
+the [failed equality record](gate-0-apk-reproducibility.md), and the SDK copy
+falsifier immediately above. These are repository observations and retained
+evidence. All proposed artifact and device checks are prospective.
