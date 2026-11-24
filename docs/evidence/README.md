@@ -312,3 +312,5 @@ experiments remain under [historical reference](../reference/privacy-decoy-histo
 [ADR-0005 incident and enforcement evidence, 2026-11-18](gate-0-companion-source-controls.md#adr-0005-incident-and-enforcement-evidence-2026-11-18)
 records three unauthorized merges, original rejection and recovery
 receipts, verified Actions execution, cleanup and the failed activation gate.
+
+[QEMU TCG interpreter and ordinary-app execution](gate-0-companion-source-controls.md#qemu-tcg-interpreter-and-ordinary-app-execution) records the non-executable translation buffer and the remaining whole-worker and interactive-guest questions.
