@@ -1,5 +1,8 @@
 # Evidence index
 
+The [Android 17 crosvm radio endpoint trace](gate-0-companion-source-controls.md#android-17-crosvm-radio-endpoint-trace)
+shows where the connected control socket leads to a required kernel vhost device. The selected radio path stops there.
+
 The [complete TCI worker review](gate-0-companion-source-controls.md#complete-tci-worker-with-delegated-endpoints)
 traces host mappings and identifies the required vsock pathname outside the selected peer's delegated authority.
 
