@@ -3614,3 +3614,194 @@ compilation, native execution, workflow change, APK or device operation occurred
 ADR-0004 Option A governs the complete interactive Android 17 phone in an ordinary stock
 nonrooted app. ADR-0006/0007 and the execution locks retain their recorded dispositions.
 Gate 0 remains **Unresolved** and Gates A–G remain **Not reached**.
+
+## Independent upstream Rust qualification for delegated streams
+
+**Disposition A, 2026-11-24.** Upstream Rust 1.100.0 supplies a credible compiler
+for a separately authorized cross-link experiment. The first question is whether
+the release FD-passing code and its actual libc bindings link into an app ABI
+library. This is narrower than compiling the adapted daemon. No inspected
+transport operation requires a Google compiler extension. Successful compilation
+of the entire backend, including its host-only modules, remains **Unknown**.
+
+**Fact/Source.** Canonical ls-remote, fetch and origin/main agreed at
+`ab1a0fa625273c701eaacc5a22e7edce6e1cf31a`. Open PR inventory was empty,
+including the population for diff, mode, job, log and review-thread inspection.
+GitHub Status reported operational. PRs 107–110 trace interpreter execution,
+the pathname contradiction, the kernel-vsock alternative and the original
+backend's proposed connected-stream entry. Their current limits apply.
+[Previous assessment](#delegated-stream-adaptation-of-the-original-vsock-backend).
+
+### Compiler distribution and correspondence
+
+The upstream release tag object `6b503e798d0cc01ca1052eeefaccee43893b0ff6`
+peels to `0ef1bc386059596dada8fb65b50425aab2ea637a`. Its target definition
+selects ARM64, 64-bit pointers, Tier 2 and std. Its Android base selects
+emulated TLS. The platform Soong evidence describes global-dynamic TLS.
+The two configurations therefore make different runtime claims. The historical
+reconstruction remains STOP for rustc `3b396167a567d74f6fe75444780fc25832928858`
+and android_rust `fd3c251016559fa70d31861d507dde14160515a2`. Neither retrieval
+was repeated. [Upstream target](https://github.com/rust-lang/rust/blob/0ef1bc386059596dada8fb65b50425aab2ea637a/compiler/rustc_target/src/spec/targets/aarch64_linux_android.rs),
+[Android defaults](https://github.com/rust-lang/rust/blob/0ef1bc386059596dada8fb65b50425aab2ea637a/compiler/rustc_target/src/spec/base/android.rs),
+[release reconstruction](gate-0-rust-release-reconstruction.md).
+
+**Runtime Observation (metadata verification only).** Retrieved the versioned text
+manifest, its detached .asc and the key designated by Rust Forge. GnuPG verified
+the original manifest bytes in a fresh keyring. VALIDSIG fingerprint was
+`108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE`, with undefined local owner trust.
+Manifest SHA-256 was `3051e859570f64a8c5acb9d09e87425db52c7d97287c67e8f6d57d7d34ef9258`.
+The signed November 12 inventory gives the following xz SHA-256 values. The
+dated URLs are in the corresponding package/target entries. Component bytes
+and individual archive signatures remain untested.
+[Manifest](https://static.rust-lang.org/dist/channel-rust-1.100.0.toml),
+[signatures and key distribution](https://forge.rust-lang.org/infra/other-installation-methods.html).
+
+| Package and target | Signed digest |
+| --- | --- |
+| rustc, x86_64-unknown-linux-gnu | `f1d0b1dec81dab6f523cd098507763487b0d4bd7fd2c87582f154128719be03b` |
+| rust-std, same host | `4591b6486594ded52ecd6135db95bf9355bbd3ca7a380888b141528bbcf9a5d4` |
+| cargo, same host (optional for this direct invocation) | `7e29ce07d7c6e92d1826870575ba27d57fff6cb3e754aa57d99099cb88fab35d` |
+| rust-std, aarch64-linux-android | `5e7503cc0cb87b710457d13ec97b2e7729a1210a2fdce9ad99bd0c86e0f69186` |
+| rust-src, library sources | `107afa7819b500c573b21a160b08f1a20bc2dfd99550717e1ffbbdb09da7ec6e` |
+
+**Upstream claim and limitations.** Rust supports cross-compilation with std
+and the LTS NDK. Hold the link baseline at the previously reviewed Linux NDK
+r28c (28.2.13676358), API 30. Google now lists r28c as unsupported. This pairing
+requires measurement. The Linux zip is 722261334 bytes, publisher SHA-1
+`a7b54a5de87fecd125a17d54f73c446199e72a64`, repository-pinned SHA-256
+`dfb20d396df28ca02a8c708314b814a4d961dc9074f9a161932746f815aa552f`.
+Independently verify the SHA-256 provenance before use. Inventory Clang, lld,
+sysroot headers and API 30 stubs, shared-object CRT, compiler-rt and unwind
+archives, alongside Rust LLVM, core, alloc, std, compiler_builtins, panic and
+any linked allocator, TLS or unwind implementation. Attribute actual selected
+members with a link map. Never mix rlibs from the platform sysroot.
+[Rust target support](https://doc.rust-lang.org/rustc/platform-support/android.html),
+[Google archive](https://github.com/android/ndk/wiki/Unsupported-Downloads),
+[existing NDK pin](../../.github/scripts/qemu-android-research.py).
+
+Independent reproduction would require the full compiler tree and submodules,
+including LLVM `0a5579eb649d3634a9c30ac873300cc2944fa070`, the release build
+configuration, native bootstrap tools, and stage0 Rust 1.99.0 at
+`b940084d7eb6a299eb4bfeb8e34901bc051e7ac4`. Recreate the distribution with the
+pinned bootstrap recipe and compare compiler, host/target sysroots and runtime
+members independently. Reconstructing the NDK likewise requires its own pinned
+component sources, build host and recipes. Neither comparison has run. A signed
+archive digest binds distributed bytes only. Rust generally offers MIT or
+Apache-2.0, LLVM uses Apache-2.0 with LLVM exceptions, and the NDK bundles
+multiple licenses. Audit per-file exceptions, compiler runtime notices, NDK
+NOTICE and redistribution terms for every linked object before redistribution.
+[Build instructions](https://github.com/rust-lang/rust/blob/0ef1bc386059596dada8fb65b50425aab2ea637a/INSTALL.md),
+[bootstrap pins](https://github.com/rust-lang/rust/blob/0ef1bc386059596dada8fb65b50425aab2ea637a/src/stage0),
+[provenance requirements](../source-provenance-policy.md).
+
+### Release dependencies and the first cross-link
+
+Re-read pinned Gitiles TEXT for V `28233ae213b24a9a35f25e9e49bcadee2bf93821`
+and D `1f5e95cd6e996995023c9c0f7df0f15a8a43269e`. V's host CLI options,
+YAML/config parsing and logger initialization may be removed after a call-site
+audit. FD ownership, ancillary transfer, eventfd/epoll, guest RAM mapping,
+vrings, credit, bounded refusal/reset, response framing and revocation remain
+required. The proposed daemon must accept a connected control FD and delegate
+both service directions without opening paths. The retained release versions,
+V patches and full direct Soong edges are in the [release graph](gate-0-backend-endpoints.md#build-closure-and-invocation).
+The standalone lockfile would select a different protocol stack.
+
+D vhost enables default/vhost-user/vhost-user-backend. Its daemon rejects the
+combination postcopy+xen. D vm-memory selects arc-swap, backend-atomic,
+backend-bitmap, backend-mmap and default, requires 64-bit pointers and selects
+Unix mmap. virtio-bindings selects checked-in AArch64 bindings. Docs-only
+unstable attributes in vm-memory and vmm-sys-util are inactive for this target.
+libc's internal no_core feature is gated on rustc-dep-of-std, absent from its
+selected regular Soong library. libc declares MSRV 1.63 and thiserror 1.61.
+V and the inspected daemon manifest give no complete graph-wide MSRV.
+thiserror uses a host procedural macro with proc-macro2 and other host rustlibs.
+Both libc and thiserror have Cargo build scripts. A full port must reconcile
+their outputs, generated files, host vs target features, Android patches and
+native imports for every transitively selected variant. Soong host-only modules
+are a real porting constraint. A Google-only compiler requirement for them is
+**Unsupported**. No replacement Cargo graph is proposed.
+[Release crate sources](https://android.googlesource.com/platform/external/rust/android-crates-io/+/1f5e95cd6e996995023c9c0f7df0f15a8a43269e/crates/).
+
+**Hypothesis and smallest next proof.** Cross-link a nonexecuted shared object
+whose single C export reaches the actual ScmSocket send_with_fd and recv_with_fd
+implementations on caller-supplied Unix streams. These implement SCM_RIGHTS in
+the release vhost connection path and exercise Bionic msghdr layout and libc
+calls. A constant-returning export could pass while omitting the critical code.
+Use the unmodified, already patched subtrees of D, with src/lib.rs as each root.
+No crate download, Cargo resolution, build script or proc macro is required by
+these three Soong library declarations. Retain their source and metadata
+together. For libc preserve the regular std variant and explicit cfg from the
+generated Android.bp, including its cargo_embargo Android.bp.diff provenance.
+Do not apply patches twice. For bitflags use extra_versions/crates/bitflags,
+since crates/bitflags is 2.11.0. vmm-sys-util's module override selects 1.3.2.
+[FD code](https://android.googlesource.com/platform/external/rust/android-crates-io/+/1f5e95cd6e996995023c9c0f7df0f15a8a43269e/crates/vmm-sys-util/src/unix/sock_ctrl_msg.rs),
+[versioned bitflags](https://android.googlesource.com/platform/external/rust/android-crates-io/+/1f5e95cd6e996995023c9c0f7df0f15a8a43269e/extra_versions/crates/bitflags/Android.bp).
+
+**Proposed commands, unrun.** D is a verified read-only checkout, R the verified
+host rustc, N the Linux NDK LLVM prebuilt root and O a new empty output directory.
+Review the tiny probe source and export allowlist before the job. Refuse any
+unmapped source, generated include or Cargo environment request. Use fresh
+outputs, no ambient library paths, and no bootstrap/unstable cfg overrides.
+
+```bash
+set -eu
+T=aarch64-linux-android
+common=(--target "$T" --crate-type rlib -C panic=abort -C relocation-model=pic)
+CARGO_PKG_VERSION=1.3.2 "$R" "${common[@]}" --edition 2018 --crate-name bitflags \
+  --cfg 'feature="default"' "$D/extra_versions/crates/bitflags/src/lib.rs" -o "$O/libbitflags.rlib"
+CARGO_PKG_VERSION=0.2.183 "$R" "${common[@]}" --edition 2021 --crate-name libc \
+  --cfg freebsd12 --cfg 'feature="default"' --cfg 'feature="std"' --cfg 'feature="extra_traits"' \
+  "$D/crates/libc/src/lib.rs" -o "$O/liblibc.rlib"
+CARGO_PKG_VERSION=0.15.0 "$R" "${common[@]}" --edition 2021 --crate-name vmm_sys_util \
+  --extern "libc=$O/liblibc.rlib" --extern "bitflags=$O/libbitflags.rlib" \
+  "$D/crates/vmm-sys-util/src/lib.rs" -o "$O/libvmm_sys_util.rlib"
+"$R" --target "$T" --edition 2021 --crate-type cdylib -C panic=abort -C relocation-model=pic \
+  -C "linker=$N/bin/aarch64-linux-android30-clang" -C "link-arg=-Wl,-Map,$O/probe.map" \
+  -C link-arg=-Wl,-z,defs,-z,max-page-size=16384 -L "dependency=$O" \
+  --extern "vmm_sys_util=$O/libvmm_sys_util.rlib" probe.rs -o "$O/libprobe.so"
+"$N/bin/llvm-readelf" -h -lW -d -rW --dyn-syms --version-info "$O/libprobe.so"
+```
+
+A separate inspector must trace both calls from the export through the link map
+and disassembly to sendmsg/recvmsg. Require AArch64 ET_DYN, allowlisted exports
+and public API 30 imports/DT_NEEDED only, non-executable stack, no writable
+executable segment, text relocations or host paths. Check each LOAD alignment
+at least 16384 and offset/address congruence for both page sizes. Account for
+TLS helpers, allocator/free ownership, unwinding and every runtime dependency.
+Panic abort at the FFI boundary still requires inspection of precompiled std.
+Reject an intentionally inert probe despite valid ELF headers, a changed
+input digest before compilation, and a deliberately misaligned LOAD fixture
+in the independent inspector. Failure on a required cfg, API or unknown runtime
+member stops qualification. Static inspection cannot prove runtime page-size
+logic, namespace loading by the isolated service, SELinux authority, working
+SCM_RIGHTS transfers or Android behavior. [Android page-size guidance](https://developer.android.com/guide/practices/page-sizes).
+
+**Assumption and resources.** A disposable Ubuntu 24.04 x86-64 runner is a
+candidate for the three-crate experiment. Standard public GitHub runners list
+4 vCPUs, 16 GB RAM and 14 GB SSD. Proposed ceilings are 2 jobs, 8 GiB RAM,
+10 GiB temporary disk and 30 minutes. Fit is unmeasured. Budget expanded inputs
+before extraction and fail closed. Require owner review of image identity,
+egress isolation, independent inspector and free capacity before scheduling.
+Stage only digest-verified Rust components, NDK and source blobs. Cross-check
+the release key fingerprint independently, verify detached signatures and
+SHA-256 before extraction, then mount inputs read-only and build offline as an
+unprivileged user without credentials or shared caches. Keep the ELF disposable.
+Hosted execution cannot establish production trust. The desktop supports
+source review. Its inspected volume had less than 24 GB free, below Rust's
+30 GB+ compiler build recommendation. Even the hosted nominal SSD is below
+that recommendation. Full compiler/LLVM/NDK reproduction on either is
+unqualified. [Runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners),
+[Rust build resources](https://rustc-dev-guide.rust-lang.org/building/prerequisites.html).
+
+**Owner authorization requested.** May we acquire and verify the specified
+public inputs, review the one-function probe, and perform one offline
+cross-link of those three release libraries on a separately reviewed disposable
+Linux runner, with the limits and independent static controls above? Stop on
+any missing input, trust check or unexpected dependency. Permission would
+cover only this research ELF and its inspection. This review acquired no
+toolchain binary and ran no compilation or backend. The physical diagnostic
+worker is independently unavailable. ADR-0004 Option A, ADR-0006 and ADR-0007
+continue to govern. Both workers and their dependencies remain potentially
+compromised. Independent resource limits, revocation, lifecycle enforcement
+and management-secret separation remain prerequisites. Gate 0 is **Unresolved**.
+Gates A–G are **Not reached**.
