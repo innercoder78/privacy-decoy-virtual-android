@@ -3106,3 +3106,138 @@ Shared incident state or an unexplained source of build inputs blocks qualificat
 Keep supporting records in private owner custody. ADR-0006 and ADR-0007 retain
 their earlier termination conditions and the deadline of 00:00 on 2026-12-08
 in America/Fortaleza.
+
+## QEMU TCG interpreter and ordinary-app execution
+
+**2026-11-24 disposition — A genuinely new ordinary-app execution mechanism merits
+further qualification.** The new evidence applies to A2 in the
+[integrated decision](gate-0-integrated-feasibility-decision.md). Both reviewed
+QEMU revisions can translate guest instructions into data consumed by a packaged
+native interpreter. Their POSIX system-emulation allocator requires no executable
+host alias for those translation blocks. Ordinary-app launch, the complete
+native dependency set, hostile-worker containment and interactive usability
+remain Unknown. Gate 0 remains **Unresolved**. Gates A–G remain **Not reached**.
+
+**Fact/Source and procedure.** Canonical `git ls-remote origin refs/heads/main`,
+`git fetch origin main` and `git rev-parse origin/main` agreed on
+`e5fc9df9a7bfb1b5580ecb481c1ed68e2c28837f`. The open-PR inventory was empty,
+so there were no open heads, bases, diffs, modes, checks, jobs, logs, reviews,
+comments or threads to inspect. GitHub Status reported all systems operational.
+The requirements, ADRs, roadmap and integrated decision retain the ordinary,
+stock, nonrooted full-phone scope. The [strict allocator experiment](gate-0-tcg-executable-memory.md)
+excluded the interpreter in its compile controls. Searching the evidence for
+interpreter configuration and reviewing the A2 disposition found no prior
+end-to-end TCI assessment. Merged PR #106 records the unavailable diagnostic
+worker. ADR-0004 Option A stands. ADR-0006/0007 retain their earlier stops and
+00:00 on 2026-12-08 in America/Fortaleza.
+
+**Release correspondence.** The upstream download list identified 11.1.3 as the
+latest stable release and 11.2.0-rc1 as a candidate. Independent Git tag lookup
+returned annotated object `34105b228c52e1d1d055003fab74d0503fa4bc37`, peeled
+to `005c61c0ef6f6ae615283440b4bb7be51b2c6ddd`. The checkout's VERSION was
+11.1.3. The previous PDVA pin `4fc49f46dc95d4a27de2509e7fceb2931e91faeb`
+reported 11.1.2. Git tree comparison found identical contents for meson.build,
+tcg/meson.build, tcg/region.c, tcg/tci.c and tcg/tci/ across these commits.
+The ARM page walker, helpers and generic TCG optimizer did change. Git identity
+does not authenticate a release tarball, and no release signature was checked.
+[Release listing](https://www.qemu.org/download/) ·
+[Previous allocator](https://github.com/qemu/qemu/blob/4fc49f46dc95d4a27de2509e7fceb2931e91faeb/tcg/region.c) ·
+[Stable VERSION](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/VERSION).
+
+| Question | Fact/Source and consequence |
+| --- | --- |
+| What selects the interpreter? | For the ARM64 Android cross-host hypothesis the relevant selectors are `--target-list=aarch64-softmmu --enable-tcg --enable-tcg-interpreter --disable-kvm --disable-modules`, ARM virt and `-accel tcg,split-wx=off`. These describe the reviewed selection, not a qualified build recipe. Meson chooses the tci emitter, defines CONFIG_TCG_INTERPRETER, retains CONFIG_TCG and requires libffi >= 3.0. Selecting TCI takes a separate build. [Host configuration](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/meson.build#L925-L950) · [TCG dependencies](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/meson.build). |
+| What executes? | The A64 decoder translates guest instructions into TCG operations. After optimization and lowering, the TCI emitter writes encoded 32-bit operations and helper references. The compiled C function tcg_qemu_tb_exec fetches and switches on these words. Branch chaining changes the interpreted instruction pointer. Native text belongs to the packaged interpreter and helpers. A guest executable page, including guest ART output, remains guest memory subject to guest instruction fetch and translation. [A64 frontend](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/target/arm/tcg/translate-a64.c) · [Emitter](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/tci/tcg-target.c.inc) · [Interpreter](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/tci.c#L316-L391). |
+| What does the host map? | On the nonstatic POSIX path alloc_code_gen_buffer reserves private anonymous PROT_NONE memory. tcg_region_init makes usable regions RW and protects guard pages. The interpreter build excludes host_prot_read_exec and the memfd RX alias. Explicit split-wx=on fails for this build. The RWX branch in the shared source is unreachable for this selection. Host executable text for an admitted ELF and its loader still needs ordinary mapping authority. [Allocator](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/region.c#L680-L731) · [Protection selection](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/region.c#L820-L853). |
+| Do helper calls generate host code? | QEMU prepares ffi_cif descriptions and calls ffi_call on compiled helper addresses. In the PDVA-pinned libffi 3.5.2 AArch64 SYSV path, ffi_call_int marshals arguments and calls assembled ffi_call_SYSV. This path needs no executable closure trampoline. Other users of libffi, optional callbacks, graphics backends and modules require their own reachability review. [Helper preparation](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/tcg.c) · [AArch64 call path](https://github.com/libffi/libffi/blob/e2eda0cf72a0598b44278cc91860ea402273fa29/src/aarch64/ffi.c#L643-L865). |
+
+**Ordinary-app authority — Inference and Unknown.** The translation loop requires
+neither a hypervisor device nor elevated Android permission. It still depends on
+Bionic's loader, ordinary mmap/mprotect for data, signals, clocks, synchronization,
+threads and backend FD operations admitted under the actual isolated UID,
+SELinux domain and inherited seccomp filter. The prior API-30/NDK ARM64 PIE
+cross-build established a different linked artifact. API symbols, 4/16 KiB page
+compatibility, static archive selection, executable segment alignment, installed
+native-library extraction or JNI loading and every backend's syscalls remain to
+be matched to this precise worker. A system-owned app service and its vCPU/I/O
+threads require lifecycle evidence. Root, privileged/OEM services, shell grants,
+debugger-only access, /dev/kvm or host policy changes reject any pairing that
+depends on them. Downloaded guest bytes must stay data. Distribution requires
+admitted packaged host code, authorized signed guest resources and a reviewed
+delivery channel. Store acceptance is Unknown.
+[NDK build](gate-0-qemu-android-linux-crossbuild.md) ·
+[Native launch](gate-0-isolated-native-launch.md) ·
+[Android filter and linker](gate-0-android-seccomp-bootstrap.md).
+
+**Full-system scope — Fact/Source.** TCI loads/stores carry the memory-operation
+and MMU index and interpreter return position into the normal helper_ld/st_mmu
+paths. ARM page-table walks, permission faults and exception delivery are still
+generic system/target responsibilities. A64 exclusives lower to atomic operations
+including compare-exchange, and TCI's memory-barrier opcode calls smp_mb.
+The accelerator selects multi-threaded TCG according to target support and icount,
+or can schedule vCPUs on one thread. Timer deadlines and GIC delivery still
+depend on the ARM virtual machine, its clocks and execution-loop interrupt checks.
+A helper implementation alone cannot establish target-wide opcode coverage,
+SMP ordering, interrupt latency or progress under load. The upstream TCI README
+records limited historical tests and missing operations. AArch64 Ubuntu has a
+manual, allowed-to-fail TCI CI job. Neither is a stock Android execution receipt.
+[MMU access and barriers](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/tci.c) · [Page walker](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/target/arm/ptw.c) ·
+[SMP selection](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/accel/tcg/tcg-all.c) · [Machine](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/hw/arm/virt.c) ·
+[TCI status](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/tci/README) · [CI definition](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/.gitlab-ci.d/custom-runners/ubuntu-24.04-aarch64.yml).
+
+**Complete guest and containment — Inference.** Changing the emitter adds no
+VIRTIO_PCI to the earlier build, matching guest kernel modules, admitted
+firmware/DTB and partitions, AVB rollback enforcement, VINTF/HAL closure,
+SurfaceFlinger buffers, touch transport or backend endpoints. The existing
+device mismatch still rejects that concrete pairing. A compromised interpreter,
+native helper or device backend can exercise all authority held by its worker.
+Removing the translated-code executable mapping gives the manager no independent
+power over surviving descendants, retained FDs/mappings, revocation completion
+or manager loss. Android's system-owned cgroup cleanup does not supply the
+missing bounded acknowledgement.
+[Guest matrix](gate-0-integrated-feasibility-decision.md#necessary-condition-matrix) ·
+[Hostile-worker findings](gate-0-worker-containment.md) ·
+[Backend endpoints](gate-0-backend-endpoints.md).
+
+**Performance.** Upstream Claim — QEMU warns of substantial performance loss.
+Upstream-reported measurements on x86-64 Linux put the mixed test suite at
+26 min 50.51 s with TCI and 21 min 49.78 s with native TCG. The AArch64 migration
+qtest took 223.49 s and 201.15 s respectively. These workloads include host and
+device-test work. Applying either ratio to guest frames or touch latency is
+Unsupported. No comparable upstream Android 17 interactive measurement was
+found. Runtime Observation for PDVA TCI on Android — none.
+[QEMU guidance](https://www.qemu.org/docs/master/about/build-platforms.html) ·
+[Maintainer's paired measurements](https://www.mail-archive.com/qemu-devel%40nongnu.org/msg1037078.html).
+
+**Single next proof — Hypothesis.** Establish the complete executable-mapping
+and loader call paths for one exact ordinary-app worker configuration, including
+the transitive native dependencies and selected devices from startup through
+translation and helper dispatch. A reachable mandatory generated-code mapping,
+writable executable alias, unadmitted native module or privileged backend
+rejects the proposed no-generated-executable-code configuration. An unresolved
+indirect call leaves the whole-worker conclusion Unknown. This proof tests the
+gap beyond the already traced allocator. It does not require repeating the
+Java mapping diagnostic.
+
+The minimum *later* usability falsifier requires an independently admitted
+complete guest on the intended stock ARM64 host. Predeclare the roadmap's
+startup, frame, input-latency and memory limits, then cold boot to guest SystemUI,
+open Settings by touch and scroll through sustained guest-rendered updates.
+Measure boot-to-interaction, input-to-present latency, frame intervals and
+peak working set under sustained load. A missed limit or lost input/guest progress
+rejects that configuration. A passing run covers only the observed device and
+workload. No engine/APK build, image acquisition, SDK change, signing or device
+test ran. The diagnostic and native execution locks retain their dispositions.
+[Usability criteria](../roadmap.md#5-first-full-interactive-guest-demonstration-and-measured-usability).
+
+**Maintenance and redistribution — Fact/Source and Unknown.** Upstream lists TCI
+as Maintained. QEMU is GPLv2 overall with per-file terms. The interpreter carries
+GPLv2-or-later. libffi carries permissive notices. Static GLib brings LGPL
+relinking considerations alongside the PCRE2, libfdt and other selected objects.
+Binary redistribution needs a file-level inventory, notices, corresponding
+source and applicable relinking materials. Firmware and guest-image rights
+require separate review. Only documentation is distributed here. No Android TCI
+binary corresponds to these inspected source commits, and production license or
+distribution approval remains Unknown.
+[Maintainers](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/MAINTAINERS#L4251-L4255) · [QEMU license](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/LICENSE) ·
+[Dependency and distribution record](gate-0-qemu-worker-integration.md).
