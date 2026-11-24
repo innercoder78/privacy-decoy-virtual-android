@@ -3472,3 +3472,145 @@ through that handler to the delegated modem and the matching OK back to the
 guest RX ring, with device open and pathname connect unavailable. A complete
 trace would falsify the blocker for that revised selection. Until such a source
 is identified, stop this branch of research.
+
+## Delegated-stream adaptation of the original vsock backend
+
+**2026-11-24 · Disposition D · STOP/Unknown for an Android implementation experiment.**
+The original backend has identifiable insertion points for both connection directions.
+A one-session adapter is technically defensible as a source hypothesis. Two details affect
+what it must implement. The guest refusal helper only prints a diagnostic. The
+host-initiated connection writes a text acknowledgement into the same stream that would
+carry the service payload. Neither behavior satisfies the proposed direct endpoint
+contract. Exact Android compiler and runtime provenance remains the first experiment gate.
+
+**Fact/Source.** Remote main, fetched main and `git rev-parse origin/main` agreed on
+`42f87a3f3f8ba5d886f76914a2fb5df60c419274`. The open PR inventory was empty, so there
+were no open heads, bases, diffs, modes, checks, jobs, logs, reviews, comments or threads.
+GitHub Status reported all systems operational. Merged PRs #107–109 establish the TCI
+selection, the original endpoint contradiction and the subsequent comparison, respectively.
+Independent canonical Git tag lookups peeled Android 17 r1 to the following commits.
+The source review read pinned Gitiles text and compared the functions and build modules
+with the [endpoint ledger](gate-0-backend-endpoints-sources.md). Tag resolution supplies
+identity. Release signature verification and linked artifacts are outside that observation.
+
+| Source | Tag object | Peeled commit |
+| --- | --- | --- |
+| [Backend V](https://android.googlesource.com/platform/external/rust/crates/vhost-device-vsock/+/28233ae213b24a9a35f25e9e49bcadee2bf93821/) | `3bd5e30d0ce663b7f828f3c11f2c5414964ac467` | `28233ae213b24a9a35f25e9e49bcadee2bf93821` |
+| [Release crates D](https://android.googlesource.com/platform/external/rust/android-crates-io/+/1f5e95cd6e996995023c9c0f7df0f15a8a43269e/) | `76914b4705208e870f8ef1ddcef0343fbc622c39` | `1f5e95cd6e996995023c9c0f7df0f15a8a43269e` |
+
+### One-session source design
+
+| Existing source behavior | Proposed change and boundary |
+| --- | --- |
+| V's host CLI starts one looping `start_backend_server` per configuration. Each iteration constructs the backend, binds a control listener, registers epoll handlers, waits and signals exit. | Add a real Android arm64-v8a shared-library target with a narrow native entry called by a framework-created isolated service. Give it one owned connected control stream, a bounded route manifest and individually owned service endpoints. Move fallible one-session initialization out of the CLI. Return a terminal result after signaling and joining workers on every exit. Eliminate CLI config reads, process exit, listener creation and the restart loop from this entry. [Startup](https://android.googlesource.com/platform/external/rust/crates/vhost-device-vsock/+/28233ae213b24a9a35f25e9e49bcadee2bf93821/src/main.rs) |
+| D has a public connected-stream request handler. The daemon owns a private handler and request-thread launcher. | Add a daemon method inside D that moves the connected UnixStream to `BackendReqHandler::from_stream` with the daemon's handler and calls its private `start_daemon`. Retain epoll setup, request handling and wait. Do not wrap this FD in `Listener::from_raw_fd`, which requires a listening socket. Require unique ownership at native handoff, validate connected AF_UNIX stream state and record each duplicate. QEMU's counterpart needs the FD chardev with reconnect disabled and SCM_RIGHTS support. [Daemon](https://android.googlesource.com/platform/external/rust/android-crates-io/+/1f5e95cd6e996995023c9c0f7df0f15a8a43269e/crates/vhost-user-backend/src/lib.rs), [control and ancillary trace](gate-0-backend-endpoints.md) |
+| `VsockThreadBackend::send_pkt` checks source CID, can route to sibling CIDs and dispatches a new guest connection. `handle_new_guest_conn` builds a pathname. `add_new_guest_conn` clones the stream and uses `new_peer_init`. Its failure path calls the stub `enq_rst`. | Select exactly one guest and host CID 2, with sibling routing unreachable. Match an authorized guest-originated destination port, direction and current generation to a fresh one-use endpoint. Set nonblocking and reuse the registration and peer-init path. Implement an actual reversed-tuple RST queued for guest RX on refusal, with bounded pending replies and notification. On partial registration unwind epoll, both FD owners and map entries. Reject duplicate active tuples. Exhausted reply capacity must terminate the session within its budget. [Guest dispatch](https://android.googlesource.com/platform/external/rust/crates/vhost-device-vsock/+/28233ae213b24a9a35f25e9e49bcadee2bf93821/src/thread_backend.rs) |
+| `VhostUserVsockThread::new` binds a host socket. Its event path accepts, parses CONNECT, allocates a local port and calls `new_local_init`. Drop unlinks the path. On guest RESPONSE the connection writes an OK line with an unchecked write. | Replace bind, accept, text port selection and unlink on this entry. Submit the authorized guest port and a connected service stream out of band. Reuse local port allocation, connection state and scheduling of the guest REQUEST. Deliver ready/refused status separately from payload, only marking ready after the matching guest RESPONSE. Convert socket failure to a connection result. Sending the local OK line into lights or camera corrupts framing. [Thread](https://android.googlesource.com/platform/external/rust/crates/vhost-device-vsock/+/28233ae213b24a9a35f25e9e49bcadee2bf93821/src/vhu_vsock_thread.rs), [connection](https://android.googlesource.com/platform/external/rust/crates/vhost-device-vsock/+/28233ae213b24a9a35f25e9e49bcadee2bf93821/src/vsock_conn.rs) |
+| D maps SET_MEM_TABLE backing files and passes vrings to V. V's `update_memory`, `process_tx_queue`, `process_rx_queue` and connection send/receive paths already move packet headers and payloads. | Retain these paths, used-ring notification, peer credit accounting and nonblocking I/O. Validate descriptor direction, chain lengths, offsets, integer bounds and negotiated features on each use. Preserve partial writes across readiness changes and stop at zero peer credit. Cap queued bytes and work per wakeup. Handle EOF, reset, shutdown, ring removal and control loss explicitly. Retire tuple, epoll registration, pending data and clones before any fresh endpoint. A delayed event for a reused FD number must fail the generation check. [Queue and memory sources](gate-0-userspace-communication-sources.md) |
+
+**Guest contract.** Goldfish radio initiates from the guest to CID 2 and the configured
+positive modem port (reference base 9600). Guest TX carries `ATE0Q0V1` plus CR to the
+synthetic modem. Modem readiness and guest RX must return a parser-accepted OK on that
+conversation. Subsequent init commands require their own replies, including the state
+line and final OK for `AT+CFUN?`. Preserve ordering, partial frames, unsolicited
+indications, multiline results and SMS prompt/PDU handling. Losing a connection requires
+fresh admission and a clean protocol state. The observed source-level EOF success loop,
+command accumulation, parser and queue defects still block bounded modem continuity.
+The transport cannot repair them. Actual selected guest/modem binaries remain Unknown.
+[Radio source and independent EOF review](gate-0-android17-radio-service-closure.md).
+
+Lights listens on the positive boot-configured guest port. A host request must reach its
+accept path and carry little-endian u32 lengths plus JSON start/update/stop events back
+to the host. Backpressure reaches an existing unbounded guest channel when the host is
+absent. For the external-vsock camera product variant, host initiation must deliver valid
+JSON width, height and frame rate, followed by the session/frame exchange and removal on
+disconnect. Product selection and emulated-camera closure remain separate obligations.
+Refusal on a closed guest port, peer death and a second connection with fresh FDs must be
+observable in both directions. [Guest service contracts](gate-0-userspace-communication.md).
+
+**Authority assumption and limits.** A trusted owner outside both isolated workers creates
+each socketpair, enrolls each recipient against its live identity and binds direction,
+port, instance and epoch before transfer. Service peers enforce frame/byte/rate limits
+and authorize synthetic responses independently. A hostile backend holding two streams can
+cross-wire their contents or impersonate guest requests. A port table inside it gives no
+independent proof of origin. Treat every byte on each service peer as attacker-controlled.
+Supply only session-scoped synthetic data and independently gate all protected actions.
+No protected management or Persona master object may enter either worker.
+
+The kernel mediates FD transfer, mapping and object access. An independent allocator must
+restrict backing objects to dedicated guest RAM and supply only matching kick/call eventfds.
+Treat the whole writable object as exposed, including through cloned FDs and old memory
+snapshots. A hostile frontend controls ancillary messages. Check object provenance,
+size, seals, direction, counts and offsets before accepting a region or replacing a ring.
+The trusted resource owner must constrain which objects either sender can obtain in the
+first place. Isolated UID, SELinux and inherited syscall policy would have to exclude
+ambient paths, devices, host AF_VSOCK, network and process creation while permitting the
+necessary threads. Independent FD/memory/process/CPU ceilings, deadlines and prevention
+of restart after manager loss remain unproved on stock Android. Persist uncertain state
+before delegation, invalidate the epoch on loss and withhold reuse while descendants,
+duplicates or maps could survive. Close, Binder death, timeout and shutdown acknowledgement
+provide no complete revocation receipt. [Worker containment](gate-0-worker-containment.md),
+[retained capabilities](gate-0-capability-revocation.md).
+
+### Build decision and reopening condition
+
+**Fact/Source.** V 0.1.0 declares a host binary. Its cargo_embargo.json explicitly sets device_supported to false and run_cargo to false. The pinned patch inventory includes fix_copy.diff and no_about.diff. Standalone Cargo requests vhost 0.8,
+backend 0.10, vm-memory 0.12, virtio-queue 0.9 and vmm-sys-util 0.11. D's corresponding
+Soong versions are 0.13.0, 0.17.0, 0.16.2, 0.17.0 and 0.15.0, with virtio-bindings
+0.2.7 and virtio-vsock 0.11.0. All six inspected transport modules other than vmm-sys-util
+declare host libraries. Device variants must carry the actual release features, Android
+patches, generated inputs and transitive rustlibs through to Bionic. The complete direct
+edge list, including the CLI-only candidates for exclusion, is in the
+[build graph](gate-0-backend-endpoints.md#build-closure-and-invocation).
+
+**Upstream claim and Unknown.** Build 14933020 records Rust 1.93.1. Linux-x86 prebuilt
+`fa2b1777b1f5c0471bb54ad4026feb1f6e94ea70` lists std, core, alloc, panic, unwind and
+compiler builtins for `aarch64-linux-android`. Availability of names and matching
+manifests establishes neither obtainable verified component bytes nor compatibility with
+the proposed app ABI. The NDK alone lacks this Rust sysroot. Reopen only with authorized
+exact sources or authoritative correspondence covering **both** rustc
+`3b396167a567d74f6fe75444780fc25832928858` and android_rust
+`fd3c251016559fa70d31861d507dde14160515a2`, including the applied patches, and a
+verifiable component inventory binding compiler, target std/builtins, runtime and linker
+to the release. The owner can authorize read-only verification of that new packet first.
+No prior failed source retrieval was repeated. [Toolchain prerequisites](gate-0-rust-toolchain-prerequisites.md),
+[reconstruction and mirror limits](gate-0-rust-release-reconstruction.md).
+
+**One conditional experiment, unrun.** After provenance review and separate owner
+approval of the exact patch, build inputs, runner limits and fixture execution, test the
+one-session adapter above. Use a disposable Linux x86-64 desktop or hosted runner with
+reviewed, read-only inputs, no production secrets, network denied during build/test and
+a fixed job deadline. Require the pinned Soong graph, verified Rust components and
+NDK r28c/API 30 Bionic link inputs. Produce one research-only Android AArch64 shared ELF
+and its link map. Independently inspect crate identities/features, exported entry,
+public imports, DT_NEEDED, relocations, GNU_STACK and 4/16 KiB LOAD alignment. Build a
+host fixture from the same adapted modules to exercise the real original queue handlers.
+Record target-specific differences. Host execution cannot establish Android execution.
+
+Proposed fixture ceilings are one guest, one control stream, one dedicated 1 MiB RAM
+object, one RX/TX/event queue set, two live service connections, 64 KiB buffered per
+connection and a 60-second run. An independent frontend owns the rings and inspects
+used entries and packet tuples. An independent service peer checks exact radio bytes
+and returns a framed OK. Reverse direction must deliver a lights message without host
+handshake bytes. Exhaust credit, restore it and verify byte order. Refuse an unregistered
+port with an actual RST, reject a stale epoch and wrong FD type, and exercise disconnect
+and a fresh connection. Deny endpoint pathname operations and host networking independently
+during the fixture. Any leak into another stream, false ready, hang, silent refusal,
+unexpected open, excess resource or unresolved linked input fails the experiment.
+Build capacity, runner enforcement and fit of the pinned inputs require verification
+before scheduling. The unavailable physical diagnostic worker supplies no prerequisite
+for this research-only artifact. A passing run would establish source-derived transport
+behavior on the fixture and one cross-link. Android policy, hostile-worker revocation,
+complete radio/camera behavior, performance and APK installation eligibility stay Unknown.
+
+V's Soong license identifies Apache-2.0 and Cargo offers Apache-2.0 OR BSD-3-Clause. Inventory per-file and transitive terms,
+retain required licenses, attribution and NOTICE material, and identify modified files
+before any source or binary redistribution. Resolve Rust, LLVM/runtime and linked-crate
+rights against the actual artifact. Only original assessment text is distributed here.
+**Runtime Observation:** none for the backend. Success of the unchanged backend is
+**Unsupported**. The proposed changes and fixture are **Hypothesis**, their feasibility
+an **Inference** from the cited interfaces. No implementation, dependency acquisition,
+compilation, native execution, workflow change, APK or device operation occurred.
+ADR-0004 Option A governs the complete interactive Android 17 phone in an ordinary stock
+nonrooted app. ADR-0006/0007 and the execution locks retain their recorded dispositions.
+Gate 0 remains **Unresolved** and Gates A–G remain **Not reached**.
