@@ -1,5 +1,8 @@
 # Evidence index
 
+The [complete TCI worker review](gate-0-companion-source-controls.md#complete-tci-worker-with-delegated-endpoints)
+traces host mappings and identifies the required vsock pathname outside the selected peer's delegated authority.
+
 The owner accepted the [one-attempt Java diagnostic policy](../decisions/ADR-0006-one-attempt-java-memory-diagnostic.md)
 on 2026-11-23. The [build worker assessment](gate-0-companion-source-controls.md#adr-0006-build-worker-assessment) records the blocker for the first build.
 The [proposed first-build decision](gate-0-companion-source-controls.md#proposed-decision-on-the-first-unsigned-diagnostic-build) compares the worker options and records the alternatives for the exact source binding.
