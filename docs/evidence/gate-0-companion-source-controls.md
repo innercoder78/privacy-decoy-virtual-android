@@ -3241,3 +3241,112 @@ binary corresponds to these inspected source commits, and production license or
 distribution approval remains Unknown.
 [Maintainers](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/MAINTAINERS#L4251-L4255) · [QEMU license](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/LICENSE) ·
 [Dependency and distribution record](gate-0-qemu-worker-integration.md).
+
+## Complete TCI worker with delegated endpoints
+
+**2026-11-24 — Disposition B. A specific mandatory path contradicts the configuration.**
+The Android 17 phone's selected radio client initiates a guest-to-host vsock
+connection. The pinned userspace peer constructs a destination pathname and
+connects to it after the guest chooses the port. The proposed peer holds only
+delegated connected streams and guest RAM. It has no authority to resolve and
+connect to that endpoint. This is a backend authority contradiction even if
+every instruction in the worker comes from packaged native text. It does not
+establish that Android generally requires root for Unix sockets. Mandatory
+generation of executable host code remains **Unknown** for the entire worker.
+
+**Selection under review.** Use the software-device hypothesis in the
+[integrated phone matrix](gate-0-integrated-feasibility-decision.md#necessary-condition-matrix).
+Select an installed arm64-v8a dynamic PIE launched by a bound isolated service,
+Bionic, NDK r28c/API 30, AArch64 full-system ARM virt/GICv3, CPU max, two vCPUs,
+single-thread TCG scheduling and split-wx off. Select
+`--target-list=aarch64-softmmu --enable-tcg --enable-tcg-interpreter --disable-kvm
+--disable-modules --disable-plugins --with-coroutine=sigaltstack`.
+Require built-in virtio PCI block, RNG, serial, GPU (2D non-blob), input
+(multitouch and keyboard), sound, net and USER vsock. Select guest SwiftShader,
+plain Pixman scanout and a bounded copy to the manager's window. Select PCM
+playback via a bounded stream to the manager's AudioTrack, synthetic HAL peers,
+and libslirp with egress confined to the approved transport. Display, PCM and
+egress adapters are required interfaces with missing source correspondence.
+Keep the pinned vsock peer unchanged in its own isolated scope, with preopened
+streams and dedicated shared guest RAM. Exclude host GL/virgl/rutabaga, kernel
+vhost, TAP and direct host device passthrough. These are prospective source
+predicates. No generated headers, device list, link map or ELF exist here for
+this configuration. The older ARM64 native-TCG PIE omitted required devices.
+
+**Procedure and identities.** Remote main, fetched main and the local tracking ref
+agreed on `590d597a27ef0d8b9d9413c023ee97638a8a9799`. GitHub Status reported
+operational. The open PR inventory was empty, so there were no open diffs, file
+modes, checks, jobs, logs, reviews, comments or threads to inspect. Reviewed the
+merged [PR #107](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/107),
+requirements, ADRs, roadmap, worker integration, dependency, containment and
+guest decision records. Independently resolved QEMU's annotated v11.1.3 tag
+`34105b228c52e1d1d055003fab74d0503fa4bc37` to
+`005c61c0ef6f6ae615283440b4bb7be51b2c6ddd` (Q below), checked VERSION and the
+Q and libffi tracked trees against HEAD. Followed call sites, build predicates
+and callbacks in those sources. Retrieved the pinned Android backend request
+handler and Pixman build description. Git correspondence supplies no release
+signature or installed-device observation.
+
+| Component and source | Selection and reachable operation | Android authority | Evidence class and remaining uncertainty | Concrete falsifier |
+| --- | --- | --- | --- | --- |
+| [Q entry](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/system/main.c), [startup](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/system/vl.c), [launch record](gate-0-isolated-native-launch.md) | Installed PIE → Bionic interpreter and DT_NEEDED → constructors → qemu_init → machine creation → board init and device realization. | Execute packaged app text and public platform libraries in the inherited isolated domain and linker namespace. | A for known native entry, E for actual objects, relocations, constructors and entry permissions. | Unavailable API, private DSO, text relocation, writable executable segment or required unpack-to-writable-path launch rejects the selection. |
+| [Q modules](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/util/module.c), [selectors](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/scripts/meson-buildoptions.sh) | Built-in QOM initialization calls registered functions. CONFIG_MODULES gates g_module_open. TCG shared plugins explicitly disabled. | No external module authority admitted. | D for those two loaders under the predicates. E for transitive dlopen, function-pointer targets and compiler-generated trampolines. | Required external plugin, executable stack, generated callback stub or indirect target outside admitted text. A non-executable GNU_STACK header alone cannot settle runtime targets. |
+| [Q execution](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/accel/tcg/cpu-exec.c), [region](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/region.c), [interpreter](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/tci.c) | vCPU cpu_exec_loop → translated block → tcg_qemu_tb_exec. TCI writes opcode words. POSIX reserves PROT_NONE, grants RW to usable regions and protects guards. Interpreter predicate excludes the RX alias. | Data mmap/mprotect, clocks, pthread synchronization. | A for dispatch code, B for block words, D for the native-TCG executable alias. E for opcode coverage and installed policy. | Any selected instruction dispatched by branching the host PC into emitted storage, or mandatory executable alias. |
+| [Q helper preparation](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/tcg/tcg.c), [libffi 3.5.2](https://github.com/libffi/libffi/blob/e2eda0cf72a0598b44278cc91860ea402273fa29/src/aarch64/ffi.c) | INDEX_op_call reads a CIF and helper pointer, ffi_call marshals to ffi_call_SYSV and invokes the compiled helper. ffi_prep_closure_loc has distinct static/dynamic trampoline cases. | Ordinary stack/data and execution of packaged helper text. | A for outbound ABI stub, B for CIF. E for other consumers, callbacks and generated libffi settings. | A mandatory caller prepares a closure that writes executable instructions or requires a writable executable alias. |
+| [Q coroutine](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/util/coroutine-sigaltstack.c), [stack allocator](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/util/oslib-posix.c) | qemu_alloc_stack rounds to real page size, maps RW and guards a page. The backend installs its compiled coroutine_trampoline as the SIGUSR2 handler, signals its own thread and restores the old disposition and mask. siglongjmp resumes saved context. | Own pthread, signal mask, process-wide sigaction, alternate stack and data-page protection. | A for handler, B for stack/context. E for inherited filter, signal collisions and lifecycle. | Denial of self-signal or an incompatible process-wide signal owner prevents coroutine creation even with executable data pages forbidden. |
+| [Q guest RAM](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/util/mmap-alloc.c), [physical memory](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/system/physmem.c) | File-backed shared RAM uses read and optional write protection. ARM guest instruction fetch translates bytes, including ART and guest SwiftShader output, through TCI. | Dedicated RAM FD and RW mapping for the selected peer. | B on the host for guest instructions and pixels. E for backing-object provenance and receiver lifetime. | Host execution from a guest frame, or sharing a manager/Persona backing object, rejects the pairing. |
+| [Q GPU](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/hw/display/virtio-gpu.c), [Pixman allocation](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/ui/qemu-pixman.c), [memfd](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/util/memfd.c), [Android Pixman 0.44.2](https://android.googlesource.com/platform/external/pixman/+/94a1ec36e51d40fd4fdc2b9cbe3db392b8ad53db/Android.bp) | CREATE_2D allocates a shareable image, TRANSFER_TO_HOST_2D copies bytes, SET_SCANOUT sets image/destructor callbacks. POSIX allocator tries memfd then mkstemp/unlink on failure and maps MAP_SHARED RW. Android.bp lists static C implementations. | Anonymous FD, truncate, RW map and bounded display delivery. No writable temp directory delegated. | A/B for inspected calls and pixels. E for static dispatch closure, actual memfd admission, receiver and format/fence correspondence. Fallback is conditional. | If both memfd attempts fail and only a temp pathname succeeds, the selected scanout cannot allocate. An indispensable host shader JIT also rejects it. |
+| [Q sound](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/hw/audio/virtio-snd.c), [phone HAL matrix](gate-0-integrated-feasibility-decision.md#necessary-condition-matrix) | Realize checks audio_be, stream setup opens a backend voice and output callback writes PCM. Input, serial and RNG also need realized devices and confined producers. | Delegated audio/input streams, app-owned window and manager playback. No host input injection, microphone or sound device delegated. | A for known device code, E for backend target, touch cancellation, PCM delivery and HAL peers. | Discarded PCM, absent receiver or compulsory host hardware access fails full-phone selection. |
+| [Q user vsock](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/hw/virtio/vhost-user-vsock.c), [peer request handler](https://android.googlesource.com/platform/external/rust/crates/vhost-device-vsock/+/28233ae213b24a9a35f25e9e49bcadee2bf93821/src/thread_backend.rs), [peer entry and transport ledger](gate-0-backend-endpoints-sources.md) | vuv_device_realize requires chardev, vhost_user_init, USER vhost_dev_init and a configuration reply. On a new guest VSOCK_OP_REQUEST the selected Rust peer calls handle_new_guest_conn → UnixStream::connect on host_socket_path plus destination port. | Frontend needs connected Unix transport, FD passing and shared RAM. Peer additionally needs fresh pathname lookup/connect. | Source fact. A for compiled protocol logic if packaged, E for actual Android peer ELF. The positive pathname call contradicts the delegated-only contract. The pinned Soong peer is also host-only. | An immutable Android-target peer source selection consuming the delegated stream on this exact request, with no pathname reopen, overturns this authority finding for that revised pairing. |
+| [Q storage](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/block/file-posix.c), [SLIRP selection](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/subprojects/slirp.wrap), [integration record](gate-0-qemu-worker-integration.md) | Raw block file open/reopen, ARM firmware/DTB loading and libslirp network callbacks require backing resources. Select Q's libslirp revision 26be815b86e8d49add8c9a8b320239b9594ff03d. | Bounded authenticated read-only boot FDs, separate writable guest storage and brokered network. | E for each reopen, backend socket, guest disk/driver match and libslirp dependency closure. | An indispensable pathname, ambient internet socket, TAP or unbounded disk delegation rejects the associated path. |
+| [Q shutdown](https://github.com/qemu/qemu/blob/005c61c0ef6f6ae615283440b4bb7be51b2c6ddd/system/runstate.c), [independent containment](gate-0-worker-containment.md) | qemu_main_loop returns to qemu_cleanup, which closes block devices and character backends. Hostile code can skip cleanup. | External framework lifecycle and independent completion across worker, peers and descendants. | A for cooperative cleanup. E for enforceable deadlines, FD/map revocation, quotas and recovery after manager loss. | A surviving writable alias, descendant, secret-bearing FD or restart after uncertain cleanup defeats containment. |
+
+A denotes ordinary packaged code by source role, B interpreted or other
+non-executable data, C dynamically generated executable host code, D a path
+excluded by its selection predicate and E Unknown. No traced mandatory edge
+establishes C. Unresolved callback targets and missing backend selections remain E.
+
+**Authority and full-phone limits.** Ordinary app authority covers management
+of the app's own window and playback. The framework assigns a separate isolated
+UID to each worker. Inherited SELinux and seccomp restrictions, Bionic API
+availability, exec transitions, Binder FD transfers, 4/16 KiB ELF LOAD alignment
+and segment offsets, real page sizes, thread limits and working set all need
+correspondence to the installed configuration. Platform-privileged services,
+root, OEM policy exceptions, shell/ADB grants and development-only debugger
+access are each outside the selection. A delegated FD does not confer pathname
+access or revoke another process's mapping. See the [Android authority record](gate-0-android-seccomp-bootstrap.md).
+
+TCI changes the translation-buffer requirement alone. Boot firmware, matching
+kernel/modules, signed partitions, AVB rollback, init/VINTF/HALs, SurfaceFlinger
+buffers, touch, audio, sensors, radio, storage and app installation still need
+one matching guest. The current pairing cannot deliver every mandatory service.
+Independent enforcement must withstand compromised interpreter, helper, native
+library and device code, protect management secrets and account for descendants,
+revocation and recovery. Interactive latency and resource budgets are unmeasured.
+
+**Provenance and maintenance.** Reuse the [dependency pins and license ledger](gate-0-qemu-android-linux-crossbuild.md)
+for static GLib 2.90.1, PCRE2 10.46 with JIT disabled, libffi 3.5.2, libfdt,
+gvdb, proxy-libintl and NDK inputs. The old shared-memory and libfdt adaptations
+require fresh correspondence to Q. Pixman is pinned above to the peeled Android
+17 r1 tag, with MIT and BSD-3-Clause notices. Its Android.bp identifies a
+restricted-visibility platform target. It supplies source evidence only.
+The vsock peer and transport dependencies retain the [pinned Soong ledger](gate-0-backend-endpoints.md).
+QEMU GPL corresponding source, static GLib LGPL relinking materials, file-level
+notices and complete third-party, firmware and guest rights must accompany any
+applicable redistribution. No whole-worker object inventory, security-update
+commitment or redistributable guest was established. Upstream's maintained TCI
+status supplies no Android support or performance guarantee.
+
+**Single next proof.** Source-review one immutable Android-target vsock peer
+against the selected radio request. Starting from its actual entrypoint, trace
+the preconnected FD through startup, guest-selected destination dispatch and
+reply. Require the peer to consume only the delegated endpoint and dedicated
+guest RAM. A host-only entry, pathname bind/connect or missing return path
+fails this proof. Success would remove this particular contradiction and reopen
+whole-worker closure, including the unresolved native targets in the table.
+This proof needs candidate source, not a cross-build or runtime experiment.
+
+No QEMU/APK build, image acquisition, native execution, SDK mutation, signing,
+Java mapping diagnostic or device operation ran. ADR-0004 Option A remains
+accepted. ADR-0006 and ADR-0007 retain their existing conditions. Gate 0 remains
+**Unresolved** and Gates A–G remain **Not reached**.
