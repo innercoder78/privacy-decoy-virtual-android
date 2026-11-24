@@ -1,5 +1,7 @@
 # Evidence index
 
+The [upstream Rust qualification](gate-0-companion-source-controls.md#independent-upstream-rust-qualification-for-delegated-streams) identifies a signed Rust 1.100.0 distribution and proposes one cross-link of the release FD-passing code. Owner authorization is pending.
+
 The [delegated-stream adaptation review](gate-0-companion-source-controls.md#delegated-stream-adaptation-of-the-original-vsock-backend)
 identifies the missing refusal and host handshake interfaces. Disposition D keeps an Android build experiment stopped pending exact Rust provenance.
 
