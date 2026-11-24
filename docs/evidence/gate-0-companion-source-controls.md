@@ -3350,3 +3350,125 @@ No QEMU/APK build, image acquisition, native execution, SDK mutation, signing,
 Java mapping diagnostic or device operation ran. ADR-0004 Option A remains
 accepted. ADR-0006 and ADR-0007 retain their existing conditions. Gate 0 remains
 **Unresolved** and Gates A–G remain **Not reached**.
+
+## Android 17 crosvm radio endpoint trace
+
+**2026-11-24 · Disposition C — STOP for the reviewed pairing.** Android 17
+crosvm accepts an already-connected QEMU control socket. Before servicing its
+first control request it opens a separate kernel vhost-vsock device. Its Android
+backend gives the kernel the data queues and has no input for a connected modem
+stream. Under the selected authority, the first modem command and its reply
+therefore have no delivery path. This is a source finding about this pairing.
+
+**Procedure and selection.** Live main, fetched main and origin/main agreed on
+`352b5e2b710ece727916006e48bcb0e8c6fb7f1a`. GitHub Status reported all systems
+operational. The open PR inventory was empty, including its associated diffs,
+modes, checks, jobs, logs and discussion. Reviewed the requirements, ADRs,
+roadmap, [PR #107](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/107),
+[PR #108](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/108)
+and the endpoint, worker and guest evidence linked here. Searched upstream
+documentation and source for a device-target backend with FD input. Selected
+crosvm because both its Android build declaration and its connected-FD entry
+are present. Resolved the annotated AOSP android-17.0.0_r1 tag
+`89058b8d8fa1c31146eb1116fd5d063a7b970435` to commit
+`c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8` and read that checkout. Inspected
+libkrun's Unix port API as a userspace comparison. PR #108's host-only peer at
+`28233ae213b24a9a35f25e9e49bcadee2bf93821` retains its separate startup and
+guest-port pathname blockers.
+
+| Stage | Fact / Source | Consequence under the selected authority |
+| --- | --- | --- |
+| Android entry | Soong `rust_binary crosvm` uses `src/main.rs`, an arm64 `libaarch64` dependency, Android `libprocessgroup` and the virtualization APEX. `main → crosvm_main → start_device → sys::start_device → run_vsock_device` selects the Android/Linux backend. [Build](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/Android.bp), [entry](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/src/main.rs), [dispatch](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/src/sys/linux/main.rs) | Platform build evidence. App linker namespace, public NDK API 30 closure, Bionic ABI, 4/16 KiB ELF alignment and actual device ELF remain Unknown. |
+| Control FD | The executor is created first. FD-only `from_opts` selects a stream. It stats the launch-supplied FD through procfs, checks socket file type, rejects an invalid or close-on-exec input and owns a close-on-exec duplicate. The stream becomes the backend server connection after device construction. [Options](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/devices/src/virtio/vhost_user_backend/connection/sys/linux.rs), [stream](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/devices/src/virtio/vhost_user_backend/connection/sys/linux/stream.rs), [FD validation](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/base/src/sys/linux/mod.rs) | No Unix bind/connect on this control branch. Procfs metadata still requires permission. Socket type alone authenticates neither the peer nor its session. The original FD can survive. |
+| Required device | `run_vsock_device` calls `VhostUserVsockDevice::new` before `conn.run_device`. The constructor opens the configured path read/write, nonblocking and close-on-exec. Default is `/dev/vhost-vsock`. [Backend](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/devices/src/virtio/vhost_user_backend/vsock.rs) | First decisive failure. Preopening the device in a parent still requires device authority. Substituting a Unix stream cannot satisfy vhost ioctls. |
+| Memory and events, conditional on device access | SET_MEM_TABLE requires as many files as regions. The handler wraps each supplied file, maps its size, offset and guest address and retains GuestMemory and address translations. The backend forwards the memory table, translated RX/TX ring addresses and call/kick event descriptors to vhost. It handles the third event queue separately. [Memory](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/devices/src/virtio/vhost_user_backend/handler.rs), [queue operations](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/devices/src/virtio/vhost_user_backend/vsock.rs) | File count and translated addresses do not establish backing-object provenance. Only dedicated guest RAM may be delegated. The trusted launcher must exclude management and Persona objects from every transferable FD. |
+| Port dispatch and return | When both data queues are ready, the backend sets guest CID and starts the kernel device using VHOST_VSOCK_SET_RUNNING. Android selects the vhost implementation; the separate Windows device is outside this target. [Ioctls](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/vhost/src/vsock.rs), [target selection](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/devices/src/virtio/vsock/sys.rs) | No Android userspace dispatch from the guest destination port to a modem FD. Guest AF_VSOCK needs no host AF_VSOCK creation in principle. This implementation delegates transport to kernel vhost; a host vsock listener would be an additional resource. |
+
+**Selected exchange.** Goldfish radio opens a guest stream to host CID 2 and
+the positive port from `ro.boot.modem_simulator_ports` (base 9600 in the
+reference configuration). The first conversation sends `ATE0Q0V1` followed
+by CR. Its intended synthetic modem must consume those bytes and return a
+parseable OK on that conversation. Init continues through the power query
+`AT+CFUN?`. Without device access startup exits before a VSOCK_OP_REQUEST can
+be handled. There is no observed refusal packet, accepted connection, modem
+write or reply. Repeating the request cannot supply the missing transport.
+With the device available the source disables a data ring by stopping the
+driver and delegates reset-owner to vhost. Frontend disconnect exits the
+control loop. None proves bounded guest reconnect, peer teardown or reclamation
+of all mappings. The existing parser, EOF, build-correspondence and bounded
+continuity findings still apply. [Radio service and source pins](gate-0-android17-radio-service-closure.md),
+[control loop](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/devices/src/virtio/vhost_user_backend/handler/sys/linux.rs).
+
+**Userspace comparison.** At libkrun `715c1c9857576c7a1e2057abcaf4a782ba527f97`,
+`krun_vsock_device_add_unix_port` takes a port, path and listen flag.
+`process_op_request` checks the destination in its configured map. An unmapped
+new request gets a reset. A matching outbound route constructs a UnixProxy,
+creates a socket and connects to the configured pathname. This limits name
+selection but still needs fresh host authority. The Unix error branch also
+defines its errno value under Linux or macOS target predicates. No Android
+app build or QEMU vhost-user entry was established for this library. Replacing
+crosvm's kernel data plane, or extracting and porting libkrun's in-process
+device, exceeds a change to one endpoint argument. Neither justifies a bounded
+adaptation on this evidence. [API](https://github.com/libkrun/libkrun/blob/715c1c9857576c7a1e2057abcaf4a782ba527f97/include/libkrun.h),
+[dispatch](https://github.com/libkrun/libkrun/blob/715c1c9857576c7a1e2057abcaf4a782ba527f97/src/devices/src/virtio/vsock/muxer.rs),
+[constructor](https://github.com/libkrun/libkrun/blob/715c1c9857576c7a1e2057abcaf4a782ba527f97/src/devices/src/virtio/vsock/unix_proxy/mod.rs),
+[connect](https://github.com/libkrun/libkrun/blob/715c1c9857576c7a1e2057abcaf4a782ba527f97/src/devices/src/virtio/vsock/unix_proxy/unix.rs).
+
+**Authority and negative controls.** Assume compromise of guest, interpreter,
+backend and native libraries. The ordinary-app manager could create a Unix
+socket pair and allocate session-specific shared memory. Android Binder and
+SELinux mediate FD transfer to an isolated service. Exec inheritance, procfs
+access, mapping protections, eventfd, executor threads and their syscalls still
+depend on the actual linker, credentials, SELinux domain and seccomp filter.
+Kernel DAC, SELinux and driver ioctls govern vhost access. Platform-privileged
+virtualization services, root, OEM policy changes, shell grants and development
+harnesses each exceed the ordinary-app selection. No unrestricted network,
+guest-controlled pathname, device or manager-state capability is admissible.
+[Android authority](gate-0-android-seccomp-bootstrap.md), [FD and mapping lifetime](gate-0-capability-revocation.md).
+
+An independent owner would have to bind each endpoint to a peer, direction and
+session, reject replay, wrong ports, stale replies and duplicate sessions, and
+bound memory, bytes, queues, threads, FDs and deadlines. Controls must reject
+wrong FD types, aliasing to manager memory, out-of-range rings and excess
+registrations before delegation. Peer death or manager loss must invalidate
+the session, prevent reuse and account for every surviving process, duplicate
+FD and writable mapping before restart. Closing the control FD or receiving
+an acknowledgement proves none of these properties. Enforcement under hostile
+workers remains Unknown. [Independent containment](gate-0-worker-containment.md).
+
+**Guest consequences.** Lights needs the opposite direction, a host connection
+to a guest listener for length-prefixed JSON. The external camera variant also
+needs host initiation, settings and frame/session delivery when selected.
+Preserve mandatory functionality and the selected product's camera contract.
+The QEMU TCI worker remains hypothetical. Boot, graphics, input, audio,
+storage, networking, performance and containment retain their separate gates.
+[Guest service matrix](gate-0-userspace-communication.md).
+
+**Provenance and limits.** The crosvm pin has upstream ownership records and
+an Android release integration. Its tree supplies base, cros_async, devices,
+vm_memory, vmm_vhost and vhost. Soong also names libc, zerocopy, minijail and
+platform dependencies. The root BSD license requires retention of notices and
+disclaimer and restricts endorsement. Soong additionally lists Apache-2.0 and
+MIT kinds. libkrun carries a root Apache-2.0 license. Any redistribution needs
+the corresponding file and dependency notices and a resolved artifact inventory.
+Neither upstream supplies a verified support or security-update commitment for
+this proposed APK. Only documentation is distributed.
+[crosvm license](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/LICENSE),
+[ownership](https://android.googlesource.com/platform/external/crosvm/+/c7dd8d6950912fa5e6fde7ec2d1616e0ddc090f8/OWNERS),
+[libkrun license](https://github.com/libkrun/libkrun/blob/715c1c9857576c7a1e2057abcaf4a782ba527f97/LICENSE).
+
+The operations traced above are Fact/Source. Upstream platform descriptions
+are claims. Failure under the delegated-resource assumption is an inference
+from a required call. Ordinary-app execution is an untested hypothesis;
+successful modem delivery on either reviewed path is unsupported. No backend
+runtime observation, build, guest image, signing, SDK change, Java diagnostic
+or device operation. ADR-0004 Option A remains accepted. ADR-0006 and ADR-0007
+remain unchanged. Gate 0 remains **Unresolved** and Gates A–G **Not reached**.
+
+**Single next proof, conditional on new evidence.** Reopen only on an immutable
+Android-target implementation identifying a userspace RX/TX request handler
+with an owned, connected service FD. Trace one fresh CID 2 radio connection
+through that handler to the delegated modem and the matching OK back to the
+guest RX ring, with device open and pathname connect unavailable. A complete
+trace would falsify the blocker for that revised selection. Until such a source
+is identified, stop this branch of research.
