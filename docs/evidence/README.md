@@ -1,5 +1,8 @@
 # Evidence index
 
+The [delegated-stream adaptation review](gate-0-companion-source-controls.md#delegated-stream-adaptation-of-the-original-vsock-backend)
+identifies the missing refusal and host handshake interfaces. Disposition D keeps an Android build experiment stopped pending exact Rust provenance.
+
 The [Android 17 crosvm radio endpoint trace](gate-0-companion-source-controls.md#android-17-crosvm-radio-endpoint-trace)
 shows where the connected control socket leads to a required kernel vhost device. The selected radio path stops there.
 
