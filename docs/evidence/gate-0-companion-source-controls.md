@@ -3992,3 +3992,1832 @@ Android, working FD transfer, TLS/panic behavior at runtime, backend or guest fe
 independent reproducibility and production suitability remain Unknown. ADR-0004 Option A
 stands, ADR-0006/0007 retain their dispositions, Gate 0 is **Unresolved** and Gates A–G
 are **Not reached**.
+
+## Prepared Rust cross-link source transition
+
+**Prepared for review, 2026-11-25. Registration and execution require separate decisions.**
+The patch below is the complete five-file candidate against
+3f3796b7b9be3904b8fb64d346e825b10503a101. Only this document and the evidence index change in the preparation PR.
+The original checker rejects the candidate at `protected-checks`. The proposed
+checker accepts its exact new protected bytes, reconstructs the predecessor
+foundation bytes and replays the historical verifier. Its reviewed-files set,
+historical group receipts, ADR blobs, diagnostic checkout and execution locks
+keep their existing identities. The checker itself still requires independent
+full-diff review. No experimental workflow is registered by this PR.
+
+Canonical main, fetched main and the tracking ref agreed at 3f3796b7b9be3904b8fb64d346e825b10503a101.
+There were zero open PRs at preflight and no associated heads, diffs, jobs,
+logs, reviews, comments or threads. GitHub Status reported operational.
+The source and recipe are bound to the [qualification](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/111)
+and [preparation mandate](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/112).
+
+### Exact source and input evidence
+
+The remote Android 17 r1 tag object and peeled commit matched the release
+identities above. For each selected crate, reconstruction from the Gitiles
+path, mode and blob listing reproduced its Git tree. Independently reading
+the immutable source tar stream reproduced every listed blob and mode.
+The three inventories contain 451 entries. Each has exactly one mode 120000
+LICENSE link. Bitflags and libc link to LICENSE-APACHE and vmm-sys-util to
+LICENSE-BSD-3-Clause. The verifier preserves those links and rejects other
+links. Source paths are relative to release D.
+
+| Crate subtree | Git tree | Entries |
+| --- | --- | --- |
+| extra_versions/crates/bitflags | `e775d9fbf16e476410d0b632bb6c8799ea2438de` | 41 |
+| crates/libc | `e74103e9adb95bdc9755bc8366d30c455c158602` | 369 |
+| crates/vmm-sys-util | `e788dce7bc549fcc32ff9ddcd185bddc72007385` | 41 |
+
+The checked-in patches include bitflags Cargo metadata and libc Android.bp,
+rules.mk, Android constants and musl corrections. No patch is reapplied.
+Inspection of src Rust text found no literal include!, include_str!,
+include_bytes!, option_env! or env! invocations matching the source scan.
+The scan is lexical. The sealed tree, explicit package-version environment
+and offline compiler remain the enforcement boundary.
+
+Fresh gpgv verification of the versioned manifest returned the approved
+primary fingerprint. The manifest SHA-256, three dated xz URLs and archive
+digests matched the earlier signed inventory. The component archives and NDK
+were not acquired. NDK r28c remains unsupported. Its publisher size and SHA-1
+and independently corroborated SHA-256 are the proposed authentication basis.
+Source correspondence and authenticated distribution identity do not establish
+source-to-binary equivalence, independent reproducibility or production adoption.
+
+### Review and operational boundaries
+
+The workflow declares only manual dispatch, one standard Ubuntu 24.04 job,
+contents-read permission, the existing checkout pin, a 30-minute job limit
+and one concurrency group. After registration, the owner would provision the
+protected `rust-cross-link` environment with required reviewers, restricted main
+deployment and owner-controlled environment variables.
+For one allocated run awaiting approval, independently verify its event, full
+reviewed main SHA, actor ID, standard free eligibility and image release, then
+set RUST_LINK_RUN_ID, RUST_LINK_SHA, RUST_LINK_ACTOR_ID and RUST_LINK_IMAGE_VERSION
+for that run and release the environment. Verify the values are visible to
+the job at release on the selected hosting plan. Empty or mismatching values
+stop before checkout. A separate dispatch has a different ID. Run attempt 1
+only excludes reruns of an existing ID. A queued replacement needs a new owner
+decision. No credentials, secret input, automatic retries or artifact uploads
+are part of the proposed experiment.
+
+Privileged setup requiring later authorization includes the systemd transient
+unit and memory delegation, fixed loop-backed ext4 mount, private mount tree,
+PID/network namespaces, root-owned cgroups, UID/GID changes and syscall filtering.
+The independent 28-minute unit deadline covers acquisition, build and inspection.
+The 8 GiB memory and zero-swap limits include descendants. One preallocated
+10 GiB filesystem contains experimental downloads, expansions, selected host
+tools, source objects, scratch and output. Compile and inspection have different
+unprivileged identities. Before acquisition the candidate requires the actual
+runner capacity and positive confinement probe plus isolated missing-namespace
+and missing-filter controls. The build has only a noexec writable output mount.
+The inspector reads sealed outputs after build cgroup termination. Unexpected
+limits, writable mounts, inherited FDs, routes, capabilities, archive paths,
+tool versions or dependencies reject. The hosted kernel and reviewed image
+remain trusted for this research.
+
+The independent inspector reads ELF headers and loader tables, compares the
+dynamic symbols with host readelf and authenticated arm64 API 30 stubs, and
+binds direct AArch64 PLT stubs to actual JUMP_SLOT relocations. It checks lld
+map origins and selected archive member names. The static witness follows
+the sole export with fixed caller FDs, tracks stack and allocation contents,
+and checks SCM_RIGHTS fields, the successful send continuation, receipt and
+descriptor closure. It does not launch or emulate Android. Its instruction and
+runtime models are deliberately limited. Unknown instructions, call targets,
+conditions, archive families, relocations or ownership fail the inspection.
+The synthetic witness covers specified successful inputs. It cannot establish
+behavior for arbitrary inputs or Android runtime behavior. The map is produced
+by the candidate linker. Matching a named member in a sealed archive is not an
+independent reproduction of its machine code.
+
+**Local preparation results.** The proposed supervisor and inspector self-tests
+passed. They exercised archive traversal and corrupt input, fingerprint/status,
+memory and swap, storage size, network namespace and socket refusal, and a real
+sleeping host process stopped at its test deadline. ELF checks exercised a
+positive layout and 22 specific mutations, synthetic ELF import/export/NEEDED
+changes, an inert export, an infeasible continuation, altered transferred FD,
+relocation target and count, wrong PLT binding and unexpected archive member.
+Only the specified refusal counted in each negative. Historical admission,
+ADR and checkout audits, the proposed transition tests, foundation and
+repository validation passed on the isolated candidate. Repository validation
+ran 152 tests with four platform skips. The current checker, foundation
+Markdown links, harness manifest and whitespace checks also apply to the
+two-document publication. No privileged Linux preflight, experimental binary
+authentication, cross-link, Android load or target execution was performed.
+Actual runner capacity, image and utility availability, mount/cgroup behavior,
+archive fit, installed payloads, emitted instructions, import versions,
+TLS/panic/allocator selection and runtime member correspondence remain unverified.
+No independent private backup is asserted. The entire public-safe candidate
+is recoverable from the patch and base commit.
+
+**Decision required.** Review and approve these precise bytes and ordinary CI
+effects before registration. The evidence-only PR selects ordinary foundation
+CI. A later registration PR touches .github and also selects the existing
+Android harness workflow, including its SDK/tool installation and build work.
+The QEMU research path filters do not match. Registration alone cannot trigger
+the Rust workflow. Separate approvals cover binary acquisition and its trust
+anchors, privileged runner setup and one specific dispatch. This static
+research transition changes no product, architecture or evidence gate and
+requires no new numbered ADR under PDVA-REQ-008. A material change requires
+a new ADR and explicit approval. ADR-0004 Option A and ADR-0006/0007 stand.
+Gate 0 is **Unresolved** and Gates A–G are **Not reached**.
+
+### Candidate patch and blob inventory
+
+| Proposed path | Git mode | Git blob | Bytes |
+| --- | --- | --- | ---: |
+| `.github/scripts/inspect-rust-cross-link.py` | 100644 | `de096abb3b165bd188298361c5443a0e39dcd6bc` | 36185 |
+| `.github/scripts/rust-cross-link.py` | 100644 | `ebad3d32e6a2d4224b9a54497d95b76d9a643beb` | 33651 |
+| `.github/scripts/test-memory-diagnostic.py` | 100644 | `647624be62541178f8f6dafbf6c6ed9d16ea2947` | 146445 |
+| `.github/scripts/validate-foundation.py` | 100644 | `16812f275cad3d8e92ad8fe2e1587607e51f0b0e` | 11670 |
+| `.github/workflows/rust-cross-link.yml` | 100644 | `b86b09fbf5e49f58a026d26404b1ae56fbf79a99` | 1915 |
+
+The following UTF-8, LF-terminated, zero-context Git patch has SHA-256
+`bc90bbb70f4a280eac4e218b9630b13e34ede1b05ab9e850d6c5b0c92d061a1a`. To reproduce it in a disposable checkout at the
+base above, extract only the bytes between the diff fences, including the
+last LF. Check with `git apply --check --unidiff-zero`, apply only to that
+disposable copy, and compare each file with `git hash-object --no-filters`
+and the table. The two modified files are reconstructible from their full
+predecessor blob IDs and the exact edits. Source admission remains inactive.
+
+````diff
+diff --git a/.github/scripts/inspect-rust-cross-link.py b/.github/scripts/inspect-rust-cross-link.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..de096abb3b165bd188298361c5443a0e39dcd6bc
+--- /dev/null
++++ b/.github/scripts/inspect-rust-cross-link.py
+@@ -0,0 +1,822 @@
++"""Static inspection only. A layout pass is never a cross-link qualification."""
++import re
++import struct
++import sys
++from pathlib import Path
++
++HEADER = struct.Struct("<16sHHIQQQIHHHHHH")
++PHDR = struct.Struct("<IIQQQQQQ")
++DYN = struct.Struct("<qQ")
++STACK = 0x6474E551
++
++
++class Reject(ValueError):
++    pass
++
++
++def check(ok, reason):
++    if not ok:
++        raise Reject(reason)
++
++
++def layout(data):
++    check(len(data) >= HEADER.size, "header-extent")
++    ident, kind, machine, version, entry, offset, _, flags, size, stride, count, *_ = HEADER.unpack_from(data)
++    check(ident[:7] == b"\x7fELF\x02\x01\x01", "elf-class-data")
++    check(kind == 3 and machine == 183 and version == 1 and flags == 0, "elf-target")
++    check(entry == 0, "entry-point")
++    check(size == HEADER.size and stride == PHDR.size and 0 < count < 256 and
++          offset >= size and offset + stride * count <= len(data), "program-table")
++    loads, stacks, dynamics = [], [], []
++    for i in range(count):
++        typ, perms, off, addr, _, filesz, memsz, align = PHDR.unpack_from(data, offset + i * stride)
++        check(off + filesz <= len(data) and filesz <= memsz and addr + memsz < 2**64, "segment-extent")
++        check(typ != 3, "interpreter")
++        if typ == STACK:
++            stacks.append(perms)
++        if typ == 2:
++            dynamics.append((off, addr, filesz))
++        if typ != 1:
++            continue
++        check(perms & 3 != 3, "writable-executable")
++        check(align >= 16384 and align & (align - 1) == 0, "load-alignment")
++        check((off - addr) % align == 0, "load-congruence")
++        loads.append((addr, off, filesz, memsz, perms))
++    check(stacks == [6], "gnu-stack")
++    check(loads and any(p & 1 for _, _, _, _, p in loads), "executable-load")
++    for page in (4096, 16384):
++        for i, (addr, _, _, mem, perm) in enumerate(loads):
++            for other, _, _, length, protection in loads[:i]:
++                overlaps = addr // page < (other + length + page - 1) // page and (
++                    other // page < (addr + mem + page - 1) // page)
++                check(not overlaps or (perm | protection) & 3 != 3, "page-alias")
++    check(len(dynamics) == 1, "dynamic-table")
++    start, va, length = dynamics[0]
++    check(any(off <= start and start + length <= off + n and va - addr == start - off
++              for addr, off, n, _, _ in loads), "dynamic-mapping")
++    check(length and length % DYN.size == 0, "dynamic-extent")
++    entries = []
++    for pos in range(start, start + length, DYN.size):
++        tag, value = DYN.unpack_from(data, pos)
++        if tag == 0:
++            break
++        check(tag not in (15, 29), "dynamic-search-path")
++        check(tag != 22 and not (tag == 30 and value & 4), "text-relocation")
++        entries.append((tag, value))
++    else:
++        raise Reject("dynamic-terminator")
++    return entries
++
++
++def fixture():
++    ident = b"\x7fELF\x02\x01\x01" + bytes(9)
++    data = bytearray(512)
++    HEADER.pack_into(data, 0, ident, 3, 183, 1, 0, 64, 0, 0, 64, 56, 3, 0, 0, 0)
++    for i, row in enumerate(((1, 5, 0, 0, 0, 512, 512, 16384),
++                             (STACK, 6, 0, 0, 0, 0, 0, 16),
++                             (2, 4, 448, 448, 0, 32, 32, 8))):
++        PHDR.pack_into(data, 64 + 56 * i, *row)
++    return data
++
++
++def controls():
++    check(layout(fixture()) == [], "positive-control")
++    cases = (
++        (4, "B", 1, "elf-class-data"), (16, "H", 2, "elf-target"),
++        (18, "H", 62, "elf-target"), (24, "Q", 1, "entry-point"),
++        (56, "H", 100, "program-table"), (96, "Q", 513, "segment-extent"),
++        (68, "I", 7, "writable-executable"), (112, "Q", 4096, "load-alignment"),
++        (80, "Q", 1, "load-congruence"), (124, "I", 7, "gnu-stack"),
++        (120, "I", 3, "interpreter"), (176, "I", 0, "dynamic-table"),
++        (192, "Q", 449, "dynamic-mapping"), (208, "Q", 17, "dynamic-extent"),
++        (448, "q", 15, "dynamic-search-path"), (448, "q", 29, "dynamic-search-path"),
++        (448, "q", 22, "text-relocation"),
++    )
++    def refused(data, reason):
++        try:
++            layout(data)
++        except Reject as exc:
++            check(str(exc) == reason, "wrong-detector-" + reason)
++        else:
++            raise AssertionError("accepted-" + reason)
++
++    for offset, fmt, value, reason in cases:
++        data = fixture()
++        struct.pack_into("<" + fmt, data, offset, value)
++        refused(data, reason)
++    refused(fixture()[:32], "header-extent")
++    data = fixture()
++    struct.pack_into("<I", data, 68, 4)
++    refused(data, "executable-load")
++    data = fixture()
++    DYN.pack_into(data, 448, 30, 4)
++    refused(data, "text-relocation")
++    DYN.pack_into(data, 448, 1, 0)
++    DYN.pack_into(data, 464, 1, 0)
++    refused(data, "dynamic-terminator")
++    data = fixture()
++    struct.pack_into("<H", data, 56, 4)
++    PHDR.pack_into(data, 232, 1, 6, 16, 16, 0, 16, 16, 16384)
++    refused(data, "page-alias")
++    print("PASS layout positive and 22 specific negative fixtures")
++
++
++def library_contract(exports, imports, needed, stubs, allowed):
++    """Inputs use (symbol, version) pairs, including weak undefined symbols."""
++    check(exports == {"pdva_scm_probe"}, "export-allowlist")
++    check(set(needed) == {"libc.so"} and len(needed) == 1, "needed-allowlist")
++    check(imports <= allowed and imports <= stubs["libc.so"], "import-allowlist")
++    check({"sendmsg", "recvmsg"} <= {sym for sym, _ in imports}, "required-imports")
++
++
++def direct_edges(words, start):
++    """Reachable immediate control transfers. Refuse unresolved computed jumps."""
++    active = [start]
++    visited = set()
++    calls = set()
++    while active:
++        pc = active.pop()
++        if pc in visited:
++            continue
++        visited.add(pc)
++        check(pc in words, "instruction-extent")
++        op = words[pc]
++        def dest(shift, bits):
++            value = (op >> shift) & ((1 << bits) - 1)
++            if value & (1 << (bits - 1)):
++                value -= 1 << bits
++            return pc + 4 * value
++        if op == 0xd65f03c0:
++            continue
++        if op & 0xfc000000 == 0x94000000:
++            calls.add((pc, dest(0, 26)))
++            active.append(pc + 4)
++        elif op & 0xfc000000 == 0x14000000:
++            active.append(dest(0, 26))
++        elif op & 0xff000010 == 0x54000000 or op & 0x7e000000 == 0x34000000:
++            active.extend((pc + 4, dest(5, 19)))
++        elif op & 0x7e000000 == 0x36000000:
++            active.extend((pc + 4, dest(5, 14)))
++        else:
++            check(op & 0xfe000000 != 0xd6000000, "indirect-control")
++            active.append(pc + 4)
++    return calls
++
++
++def direct_call_controls():
++    def rejected(fn, reason):
++        try:
++            fn()
++        except Reject as exc:
++            check(str(exc) == reason, "wrong-specific-rejection")
++        else:
++            raise AssertionError("accepted-" + reason)
++
++    def endpoints(words):
++        calls = {target for _, target in direct_edges(words, 0)}
++        check({32, 64} <= calls, "missing-reachable-endpoint")
++    both = {0: 0x94000008, 4: 0x9400000f, 8: 0xd65f03c0}
++    endpoints(both)
++    rejected(lambda: endpoints({**both, 0: 0xd65f03c0}), "missing-reachable-endpoint")
++    rejected(lambda: endpoints({**both, 0: 0x14000002}), "missing-reachable-endpoint")
++    rejected(lambda: endpoints({**both, 0: 0xd61f0020}), "indirect-control")
++    rejected(lambda: endpoints({**both, 0: 0x14001000}), "instruction-extent")
++    exports = {"pdva_scm_probe"}
++    imports = {("sendmsg", "LIBC"), ("recvmsg", "LIBC")}
++    stubs = {"libc.so": imports}
++    def contract(e=exports, i=imports, n=("libc.so",), s=stubs):
++        library_contract(e, i, n, s, imports)
++    contract()
++    rejected(lambda: contract(e=exports | {"extra"}), "export-allowlist")
++    rejected(lambda: contract(i=imports | {("hidden", "LIBC")}), "import-allowlist")
++    rejected(lambda: contract(n=("libc.so", "extra.so")), "needed-allowlist")
++    rejected(lambda: contract(s={"libc.so": set()}), "import-allowlist")
++    rejected(lambda: contract(i={("recvmsg", "LIBC")}), "required-imports")
++    print("PASS direct-branch and library-contract controls on synthetic inputs")
++
++
++
++def plt_endpoints(data, parts, labels, relocations):
++    slots = {}
++    for line in relocations.splitlines():
++        match = re.match(r"^\s*([0-9a-fA-F]+)\s+\S+\s+R_AARCH64_JUMP_SLOT\s+\S+\s+([^\s@]+)",line)
++        if match:
++            address = int(match[1],16)
++            check(address not in slots, "duplicate-jump-slot")
++            slots[address] = match[2]
++    endpoints = {}
++    for name, address in labels.items():
++        if not name.endswith("@plt"):
++            continue
++        code = next((data[off+address-va:off+address-va+16] for va,off,size,flags in parts
++                     if flags & 1 and va<=address and address+16<=va+size), None)
++        check(code is not None, "plt-extent")
++        adrp, ldr, add, br = struct.unpack("<4I",code)
++        check(adrp & 0x9f00001f == 0x90000010 and ldr & 0xffc003ff == 0xf9400211 and
++              add & 0xffc003ff == 0x91000210 and br == 0xd61f0220, "plt-sequence")
++        imm = ((adrp >> 5 & 0x7ffff) << 2) | (adrp >> 29 & 3)
++        if imm & (1<<20):
++            imm -= 1<<21
++        offset = (ldr >> 10 & 4095)*8
++        check((add >> 10 & 4095)==offset, "plt-offset")
++        slot=(address & ~4095)+(imm<<12)+offset
++        check(slots.get(slot)==name[:-4], "plt-binding")
++        endpoints[address]=name[:-4]
++    return endpoints
++
++
++def account_map(text, inputs, sealed, tool):
++    """Resolve each contributing input and named archive member in the lld map."""
++    origins=[]
++    members={}
++    for line in text.splitlines():
++        m=re.match(r"^\s*([0-9a-fA-F]+)\s+[0-9a-fA-F]+\s+([0-9a-fA-F]+)\s+\d+\s+(.+?):\(([^)]*)\)\s*$",line)
++        if not m:
++            check(":(" not in line, "map-format")
++            continue
++        addr,size,src,section=int(m[1],16),int(m[2],16),m[3].strip(),m[4]
++        if src=="<internal>":
++            continue
++        archive=re.fullmatch(r"(.+)\(([^()/]+)\)",src)
++        path=Path(archive[1] if archive else src)
++        if path.is_relative_to("/out"):
++            file=sealed/path.relative_to("/out")
++            if archive:
++                check(path.name in {"libvmm_sys_util.rlib","liblibc.rlib","libbitflags.rlib"},
++                      "project-archive")
++                family=path.name
++            else:
++                check(path.name.endswith(".rcgu.o") and path.name.startswith("probe."), "probe-object")
++                family="probe"
++        elif path.is_relative_to(inputs/"rust/lib/rustlib/aarch64-linux-android/lib"):
++            match=re.fullmatch(r"lib(std|core|alloc|compiler_builtins|libc|unwind|panic_abort|"
++                               r"panic_unwind|std_detect|hashbrown|rustc_demangle|addr2line|gimli|object|"
++                               r"memchr|adler2|miniz_oxide|cfg_if|rustc_std_workspace_core)-[0-9a-f]+\.rlib",path.name)
++            check(match and archive,"rust-runtime")
++            family=match[1]
++            file=path
++        elif path.is_relative_to(inputs/"ndk/android-ndk-r28c/toolchains/llvm/prebuilt/linux-x86_64"):
++            check(path.name in {"crtbegin_so.o","crtend_so.o","libunwind.a",
++                                 "libclang_rt.builtins-aarch64-android.a"},"native-runtime")
++            family=path.name
++            file=path
++        else:
++            raise Reject("map-input")
++        if archive:
++            check(file.is_file() and file.resolve().is_relative_to(sealed if path.is_relative_to("/out") else inputs),
++                  "archive-location")
++            if file not in members:
++                members[file]=set(tool("ar","t",file).splitlines())
++            check(archive[2] in members[file],"runtime-member")
++        if size:
++            origins.append((addr,addr+size,family,section))
++    check(bool(origins), "empty-map")
++    return origins
++
++
++
++def witness(instructions, root, external, read_byte, budget=200000, observe=lambda address: None, received_fd=47):
++    """Constant propagation for one ABI witness. Unsupported states have no proof.
++
++    Track a fresh abstract stack, returned allocation addresses and owned test FDs.
++    An unknown branch condition, unresolved target, unread byte or unsupported
++    instruction refuses the witness. No machine code is run.
++    """
++    import re
++    registers = {f"x{i}": 0 for i in range(31)}
++    registers.update(x0=31, x1=32, x2=33, x30=0xfffffff0, sp=1 << 48)
++    memory = {}
++    frames = []
++    next_alloc = 1 << 47
++    allocations = {}
++    closed = set()
++    phase = 0
++    flags = {}
++    pc = root
++    def num(x):
++        return int(x.strip().removeprefix("#"), 0)
++    def width(r):
++        return 4 if r.startswith("w") else 8
++    def reg(r):
++        if r in ("xzr", "wzr"):
++            return 0
++        key = "x" + r[1:] if r.startswith("w") else r
++        check(key in registers, "unknown-register")
++        return registers[key] % (1 << (width(r) * 8))
++    def put(r, value):
++        if r not in ("wzr", "xzr"):
++            check(re.fullmatch(r"(?:[wx](?:[0-9]|[12][0-9]|30)|sp)", r), "unsupported-register")
++            registers["x" + r[1:] if r.startswith("w") else r] = value % (1 << (width(r) * 8))
++    def atom(x):
++        return num(x) if x.startswith("#") else reg(x)
++    def read(addr, length):
++        value = 0
++        for i in range(length):
++            byte = memory.get(addr + i)
++            if byte is None:
++                byte = read_byte(addr + i)
++            check(byte is not None, "unknown-memory")
++            value |= byte << (8 * i)
++        return value
++    def write(addr, value, length):
++        check(((1 << 48) - (1 << 22) <= addr and addr + length <= 1 << 48) or
++              any(a <= addr and addr + length <= a+n for a,n in allocations.items()), "write-region")
++        for i in range(length):
++            memory[addr + i] = value >> (8*i) & 255
++    def message(sending):
++        msg = reg("x1")
++        check(read(msg,8)==0 and read(msg+8,4)==0, "message-name")
++        iov = read(msg + 16, 8)
++        ctrl = read(msg + 32, 8)
++        check(read(msg + 24, 8) == 1 and read(iov+8, 8) == 1 and read(msg+40, 8) >= 24,
++              "msghdr-contract")
++        buf = read(iov, 8)
++        if sending:
++            check(reg("w0") == 31 and reg("w2") == 0x4000 and read(buf, 1) == 0x51 and
++                  read(ctrl, 8) == 20 and read(ctrl+8, 4) == 1 and read(ctrl+12, 4) == 1 and
++                  read(ctrl+16, 4) == 33, "scm-send-contract")
++        else:
++            check(reg("w0") == 32 and reg("w2") == 0, "scm-receive-contract")
++            write(buf, 0x51, 1)
++            for off, value, size in ((0,20,8),(8,1,4),(12,1,4),(16,received_fd,4)):
++                write(ctrl+off,value,size)
++            write(msg+40,24,8)
++            write(msg+48,0,4)
++    def finish_call(result):
++        for i in range(19):
++            registers.pop("x"+str(i), None)
++        flags.clear()
++        if result is not None:
++            put("x0", result)
++    for _ in range(budget):
++        if pc in external:
++            name = external[pc]
++            if name in ("sendmsg","recvmsg"):
++                check(phase == (0 if name == "sendmsg" else 1), "message-order")
++                message(name == "sendmsg")
++                phase += 1
++                finish_call(1)
++            elif name == "close":
++                fd = reg("w0")
++                check(fd in (31,32,received_fd) and fd not in closed, "fd-ownership")
++                closed.add(fd)
++                finish_call(0)
++            elif name == "malloc":
++                size = reg("x0")
++                check(0 < size <= 65536, "allocation-size")
++                address = next_alloc
++                next_alloc += (size+31) & ~15
++                allocations[address] = size
++                finish_call(address)
++            elif name == "free":
++                address = reg("x0")
++                check(address in allocations, "allocation-ownership")
++                del allocations[address]
++                finish_call(None)
++            elif name in ("memcpy", "memset"):
++                dest, value, length = reg("x0"), reg("x1"), reg("x2")
++                check(length <= 65536, "memory-operation")
++                for i in range(length):
++                    write(dest+i, read(value+i,1) if name=="memcpy" else value, 1)
++                finish_call(dest)
++            else:
++                raise Reject("unmodeled-external")
++            check(frames and reg('x30') == frames[-1], 'call-return')
++            pc = frames.pop()
++            continue
++
++        check(pc in instructions, "instruction-extent")
++        observe(pc)
++        op, operands = instructions[pc]
++        pc += 4
++        args = [s.strip() for s in operands.split(",")] if operands else []
++        def branch():
++            return int(args[-1].split()[0],16)
++        if op in ("b","bl"):
++            if op=="bl":
++                frames.append(pc)
++                put("x30", pc)
++            pc = branch()
++        elif op == "ret":
++            if frames:
++                check(reg("x30") == frames[-1], "return-address")
++                pc = frames.pop()
++            else:
++                check(reg("x30")==0xfffffff0 and reg("sp")==1<<48 and phase==2 and closed=={31,32,received_fd} and not allocations and reg("w0")==0,
++                      "successful-scm-witness")
++                return
++        elif op in ("cbz","cbnz"):
++            if (reg(args[0])==0) == (op=="cbz"):
++                pc = branch()
++        elif op in ("tbz","tbnz"):
++            if ((reg(args[0]) >> num(args[1])) & 1) == (op=="tbnz"):
++                pc = branch()
++        elif op.startswith("b."):
++            cond = op[2:]
++            check(cond in flags, "unknown-condition")
++            if flags[cond]:
++                pc=branch()
++        elif op == "cmp":
++            a,b=reg(args[0]),atom(args[1])
++            flags={"eq":a==b,"ne":a!=b,"lo":a<b,"hs":a>=b,"hi":a>b,"ls":a<=b}
++        elif op == "mov":
++            put(args[0],atom(args[1]))
++        elif op in ("add","sub","and","orr","eor","lsl","lsr"):
++            check(len(args)==3, "shifted-operand")
++            a,b=reg(args[1]),atom(args[2])
++            if op=="add": value=a+b
++            elif op=="sub": value=a-b
++            elif op=="and": value=a&b
++            elif op=="orr": value=a|b
++            elif op=="eor": value=a^b
++            elif op=="lsl": value=a << (b % (8*width(args[0])))
++            else: value=a >> (b % (8*width(args[0])))
++            put(args[0],value)
++        elif op in ("str","ldr","strb","ldrb","strh","ldrh","stp","ldp"):
++            match=re.fullmatch(r"([wx][\w]+)(?:,\s*([wx][\w]+))?,\s*\[(sp|x\d+)(?:,\s*(#-?(?:0x[0-9a-f]+|\d+)))?\](!)?(?:,\s*(#-?(?:0x[0-9a-f]+|\d+)))?",operands)
++            check(match is not None, "address-mode")
++            first,second,base,offset,pre,post=match.groups()
++            check(bool(second)==(op in ("stp","ldp")), "pair-width")
++            addr=reg(base)+num(offset or "#0")
++            if pre:
++                put(base,addr)
++            size=1 if op.endswith("b") else 2 if op.endswith("h") else width(first)
++            for i,r in enumerate((first,second) if second else (first,)):
++                if op.startswith("st"):
++                    write(addr+i*size,reg(r),size)
++                else:
++                    put(r,read(addr+i*size,size))
++            if post:
++                put(base,reg(base)+num(post))
++        elif op == "nop":
++            pass
++        else:
++            raise Reject("unsupported-witness-instruction")
++    raise Reject("witness-budget")
++
++
++
++def witness_controls():
++    ops = []
++    def emit(op, args):
++        ops.append((op,args))
++    def store(value, off, width="x"):
++        emit("mov",width+"9, #"+str(value))
++        emit("str",width+"9, [sp, #"+str(off)+"]")
++    def pointer(dst, off):
++        emit("add","x9, sp, #"+str(off))
++        emit("str","x9, [sp, #"+str(dst)+"]")
++    emit("sub","sp, sp, #192")
++    emit("str","x30, [sp, #176]")
++    store(0,0)
++    store(0,8)
++    pointer(16,72)
++    store(1,24)
++    pointer(32,96)
++    store(24,40)
++    store(0,48)
++    pointer(72,136)
++    store(1,80)
++    store(20,96)
++    store(1,104,"w")
++    store(1,108,"w")
++    store(33,112,"w")
++    store(0x51,136)
++    for name,fd,flags in (("sendmsg",31,0x4000),("recvmsg",32,0)):
++        emit("mov","w0, #"+str(fd))
++        emit("mov","x1, sp")
++        emit("mov","w2, #"+str(flags))
++        emit("bl","0x10000" if name=="sendmsg" else "0x10004")
++        emit("cmp","x0, #1")
++        emit("b.ne","0xdeadc")
++    emit("ldr","w0, [sp, #112]")
++    emit("bl","0x10008")
++    for fd in (31,32):
++        emit("mov","w0, #"+str(fd))
++        emit("bl","0x10008")
++    emit("mov","w0, #0")
++    emit("ldr","x30, [sp, #176]")
++    emit("add","sp, sp, #192")
++    emit("ret","")
++    def prove(ops,received=47):
++        return witness(dict(enumerate_words(ops)),0,{65536:"sendmsg",65540:"recvmsg",65544:"close"},
++                       lambda address: None, received_fd=received)
++    prove(ops,83)
++    prove(ops)
++    def reject(mutant,reason):
++        try:
++            prove(mutant)
++        except Reject as exc:
++            check(str(exc)==reason,"witness-control-"+reason)
++        else:
++            raise AssertionError("accepted-"+reason)
++    reject([("ret","")]+ops[1:],"successful-scm-witness")
++    reject([(op,args) if op!="b.ne" else ("b.eq","0xdeadc")
++            for op,args in ops],"instruction-extent")
++    reject([(op, "w9, #34" if args=="w9, #33" else args) for op,args in ops],"scm-send-contract")
++    print("PASS static successful-send continuation, inert export, infeasible branch and changed descriptor")
++
++
++def enumerate_words(ops):
++    return ((4*i,pair) for i,pair in enumerate(ops))
++
++
++
++def native_artifact(elf, map_path, inputs):
++    import re
++    import subprocess
++    def tool(*args):
++        return subprocess.check_output(args, env={"PATH": "/usr/bin", "LC_ALL": "C"},
++                                       stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
++                                       close_fds=True, timeout=90, text=True)
++    data = elf.read_bytes()
++    dynamic = layout(data)
++    root_values = []
++    def symbols(path):
++        defined, imported = set(), set()
++        for row in tool("readelf", "--use-dynamic", "--syms", "--wide", path).splitlines():
++            if not re.match(r"^\s*[1-9][0-9]*:", row):
++                continue
++            fields = row.split()
++            check(len(fields) >= 8, "dynamic-symbol-row")
++            _, _, _, kind, binding, visibility, section, name = fields[:8]
++            if binding == "LOCAL":
++                continue
++            check(binding in {"GLOBAL", "WEAK"} and visibility in {"DEFAULT", "PROTECTED"}, "symbol-binding")
++            base, _, version = name.replace("@@", "@").partition("@")
++            if path == elf and section != "UND" and base == "pdva_scm_probe":
++                check(kind=="FUNC" and binding=="GLOBAL" and visibility=="DEFAULT", "probe-binding")
++                root_values.append(int(fields[1],16))
++            (imported if section == "UND" else defined).add((base, version))
++        return defined, imported
++
++    check(not any(tag in {0x7ffffffd,0x7fffffff,0x6ffffefa,0x6ffffefb} for tag,_ in dynamic), "dynamic-loader-override")
++    listing = tool("readelf", "-dW", elf)
++    needed = re.findall(r"\(NEEDED\)\s+Shared library: \[([^\]]+)\]", listing)
++    check(len(needed) == sum(tag == 1 for tag, _ in dynamic), "needed-table")
++    loader_root, loader_imports, loader_needed = loader_contract(data, dynamic)
++    exports, imports = symbols(elf)
++    check(root_values == [loader_root] and imports == loader_imports and needed == loader_needed,
++          "dynamic-tables-disagree")
++    check(exports == {("pdva_scm_probe", "")}, "export-allowlist")
++    stubs = inputs / "ndk/android-ndk-r28c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/30"
++    public, _ = symbols(stubs / "libc.so")
++    names = ("sendmsg recvmsg close malloc calloc realloc free posix_memalign memcpy memset memmove "
++             "memcmp strlen abort __stack_chk_fail __stack_chk_guard __errno read write writev "
++             "fcntl pthread_key_create pthread_key_delete pthread_getspecific pthread_setspecific "
++             "pthread_mutex_lock pthread_mutex_unlock pthread_once dl_iterate_phdr getauxval").split()
++    library_contract({name for name, _ in exports}, imports, needed, {"libc.so": public},
++                     {(name, "LIBC") for name in names})
++    segments = []
++    for i in range(HEADER.unpack_from(data)[10]):
++        header = HEADER.unpack_from(data)
++        typ, flags, _, addr, _, _, size, _ = PHDR.unpack_from(data, header[5] + i * PHDR.size)
++        if typ == 1:
++            segments.append((addr, addr + size, flags))
++    # Fail closed on packed formats until every target address can be checked.
++    check(not any(tag in {35, 36, 37, 0x6000000f, 0x60000010, 0x60000011, 0x60000012,
++                          17, 18, 19, 0x6fffe000, 0x6fffe001, 0x6fffe003} for tag, _ in dynamic),
++          "packed-relocations")
++    relocations = tool("readelf", "--use-dynamic", "-rW", elf)
++    relocation_targets(relocations, segments, dynamic)
++    text = tool("llvm-objdump-18", "-d", "--no-show-raw-insn", elf)
++    whole_map = map_path.read_text()
++    check(all(s in whole_map for s in ("libvmm_sys_util.rlib", "liblibc.rlib", "pdva_scm_probe")),
++          "missing-map-origins")
++    labels = {name: int(addr, 16) for addr, name in
++              re.findall(r"^([0-9a-fA-F]+) <([^>]+)>:$", text, re.M)}
++    required = ["pdva_scm_probe", "sendmsg@plt", "recvmsg@plt"]
++    check(all(name in labels for name in required), "missing-call-endpoint")
++    check(root_values == [labels["pdva_scm_probe"]], "export-address")
++    parts = []
++    for i in range(header[10]):
++        typ, flags, off, addr, _, length, _, _ = PHDR.unpack_from(data, header[5] + i * PHDR.size)
++        if typ == 1:
++            parts.append((addr,off,length,flags))
++    external = plt_endpoints(data, parts, labels, relocations)
++    origins = account_map(whole_map, inputs, elf.parent, tool)
++    instructions = {}
++    for line in text.splitlines():
++        row = re.match(r"^\s*([0-9a-fA-F]+):\s+([a-z.0-9]+)\s*(.*?)\s*$",line)
++        if row:
++            instructions[int(row[1],16)] = (row[2],row[3].split("//")[0].strip())
++    def readonly_byte(address):
++        for va,off,size,flags in parts:
++            if va <= address < va+size and not flags & 2:
++                return data[off+address-va]
++        return None
++    visited = set()
++    def origin(address):
++        matched=[(family,section) for lo,hi,family,section in origins if lo <= address < hi]
++        check(len(matched)==1, "instruction-map")
++        visited.update(matched)
++    for received in (47, 83):
++        witness(instructions, labels["pdva_scm_probe"], external, readonly_byte, observe=origin, received_fd=received)
++    for operation in ("send","recv"):
++        check(any(family in {"probe","libvmm_sys_util.rlib"} and
++                  ("raw_"+operation+"msg" in section or operation+"_with_fd" in section)
++                  for family,section in visited), "scm-method-origin")
++    print("PASS static witness and sealed map input inventory")
++
++
++def relocation_targets(rows, segments, dynamic):
++    accepted = {"R_AARCH64_RELATIVE","R_AARCH64_GLOB_DAT","R_AARCH64_JUMP_SLOT","R_AARCH64_ABS64"}
++    sizes = [value for tag,value in dynamic if tag in (2,8)]
++    check(all(n%24 == 0 for n in sizes), "rela-size")
++    actual = 0
++    for line in rows.splitlines():
++        if not re.match(r"^\s*[0-9a-fA-F]{8,}\s+[0-9a-fA-F]+\s+",line):
++            continue
++        parts = line.split()
++        check(len(parts)>=3 and parts[2] in accepted,"relocation-kind")
++        address=int(parts[0],16)
++        check(any(lo<=address and address+8<=hi and flags&2 for lo,hi,flags in segments)
++              and not any(address<hi and address+8>lo and flags&1 for lo,hi,flags in segments),
++              "relocation-target")
++        actual+=1
++    check(actual==sum(sizes)//24,"relocation-count")
++
++
++def binding_controls():
++    def refused(fn, reason):
++        try:
++            fn()
++        except Reject as failure:
++            check(str(failure)==reason,"binding-control-"+reason)
++        else:
++            raise AssertionError("accepted-"+reason)
++    r="00001000 0000 R_AARCH64_JUMP_SLOT 00000000 sendmsg@LIBC + 0"
++    relocation_targets(r,[(4096,8192,6)],[(2,24)])
++    refused(lambda:relocation_targets(r,[(4096,8192,5)],[(2,24)]),"relocation-target")
++    refused(lambda:relocation_targets(r,[(4096,8192,6)],[(2,48)]),"relocation-count")
++    refused(lambda:relocation_targets(r.replace("JUMP_SLOT","OTHER"),[(4096,8192,6)],[(2,24)]),"relocation-kind")
++    stub=struct.pack("<4I",0xb0000010,0xf9400211,0x91000210,0xd61f0220)
++    endpoints=plt_endpoints(stub,[(0,0,16,5)],{"sendmsg@plt":0},r)
++    check(endpoints=={0:"sendmsg"},"plt-control")
++    refused(lambda:plt_endpoints(stub,[(0,0,16,5)],{"recvmsg@plt":0},r),"plt-binding")
++    refused(lambda:plt_endpoints(bytes(16),[(0,0,16,5)],{"sendmsg@plt":0},r),"plt-sequence")
++    import tempfile
++    with tempfile.TemporaryDirectory() as temp:
++        root=Path(temp).resolve()
++        sealed=root/"sealed"
++        sealed.mkdir()
++        archive=sealed/"libvmm_sys_util.rlib"
++        archive.write_bytes(b"fixture")
++        line=" 100 100 4 4 /out/libvmm_sys_util.rlib(a.o):(.text.raw_recvmsg)"
++        listing=lambda *args: "a.o\n"
++        check(account_map(line,root/"inputs",sealed,listing)==[(256,260,"libvmm_sys_util.rlib",".text.raw_recvmsg")],
++              "map-positive")
++        refused(lambda:account_map(line.replace("a.o","b.o"),root/"inputs",sealed,listing),"runtime-member")
++        refused(lambda:account_map(line.replace("libvmm_sys_util","other"),root/"inputs",sealed,listing),"project-archive")
++    print("PASS relocation targets, counts, PLT/GOT binding and map member controls")
++
++
++
++def loader_contract(data, entries):
++    """Decode the dynamic loader's symbol inventory independently of section headers."""
++    by_tag = {}
++    for tag,value in entries:
++        by_tag.setdefault(tag,[]).append(value)
++    def one(tag):
++        check(len(by_tag.get(tag,())) == 1, "dynamic-tag")
++        return by_tag[tag][0]
++    h=HEADER.unpack_from(data)
++    parts=[PHDR.unpack_from(data,h[5]+i*PHDR.size) for i in range(h[10])]
++    def chunk(addr,count):
++        matches=[off+addr-va for typ,flags,off,va,_,length,_,_ in parts
++                 if typ==1 and va<=addr and addr+count<=va+length]
++        check(len(matches)==1,"dynamic-pointer")
++        return data[matches[0]:matches[0]+count]
++    def u32(a):
++        return struct.unpack("<I",chunk(a,4))[0]
++    if 4 in by_tag:
++        hash_addr=one(4)
++        count=u32(hash_addr+4)
++        check(0<count<=65536,"dynamic-symbol-count")
++        chunk(hash_addr,8+4*(u32(hash_addr)+count))
++    else:
++        addr=one(0x6ffffef5)
++        buckets,first,bloom,_=struct.unpack("<4I",chunk(addr,16))
++        check(0<buckets<=65536 and 0<bloom<=65536 and 0<first<=65536,"gnu-hash-size")
++        bucket_base=addr+16+bloom*8
++        indices=struct.unpack("<"+"I"*buckets,chunk(bucket_base,buckets*4))
++        last=max(indices)
++        count=first
++        if last:
++            check(first<=last<65536,"gnu-hash-index")
++            chain=bucket_base+4*buckets
++            while last<65536 and not u32(chain+4*(last-first))&1:
++                last+=1
++            check(last<65536,"gnu-hash-chain")
++            count=last+1
++    require_size=one(10)
++    check(0<require_size<=8<<20,"string-table-size")
++    strings=chunk(one(5),require_size)
++    def string(index):
++        end=strings.find(b"\0",index)
++        check(index<len(strings) and end>=index,"dynamic-string")
++        return strings[index:end].decode("ascii")
++    needed=[string(n) for n in by_tag.get(1,())]
++    check(len(needed)==1 and needed[0]=="libc.so","needed-allowlist")
++    check(one(11)==24,"symbol-stride")
++    vers={}
++    if 0x6ffffffe in by_tag:
++        addr=one(0x6ffffffe)
++        num=one(0x6fffffff)
++        check(0<num<=len(needed),"version-count")
++        for i in range(num):
++            version,n,file,aux,nxt=struct.unpack("<HHIII",chunk(addr,16))
++            check(version==1 and string(file) in needed and 0<n<=256 and aux>=16,"version-library")
++            auxaddr=addr+aux
++            for j in range(n):
++                _,_,idx,name,skip=struct.unpack("<IHHII",chunk(auxaddr,16))
++                check(1<idx<32768 and idx not in vers,"version-index")
++                vers[idx]=string(name)
++                check((skip>=16 if j+1<n else skip==0),"version-chain")
++                auxaddr+=skip
++            check((nxt>=16 if i+1<num else nxt==0),"version-chain")
++            addr+=nxt
++    versions=(struct.unpack("<"+"H"*count,chunk(one(0x6ffffff0),2*count))
++              if 0x6ffffff0 in by_tag else [1]*count)
++    table=chunk(one(6),count*24)
++    exports=[]
++    imported=set()
++    for i in range(1,count):
++        index,info,other,section,value,size=struct.unpack_from("<IBBHQQ",table,24*i)
++        if info>>4==0:
++            continue
++        check(info>>4 in (1,2) and other in (0,3),"dynamic-binding")
++        name = string(index)
++        if section==0:
++            idx=versions[i]
++            check(idx in vers or idx==1,"import-version")
++            imported.add((name,vers.get(idx,"")))
++        else:
++            check(info==0x12 and other==0 and versions[i]==1,"probe-binding")
++            exports.append((name,value))
++    check(len(exports)==1 and exports[0][0]=="pdva_scm_probe","export-allowlist")
++    return exports[0][1], imported, needed
++
++
++def loader_controls():
++    data=fixture()
++    data.extend(bytes(1024))
++    PHDR.pack_into(data,64,1,5,0,0,0,len(data),len(data),16384)
++    strings=b"\0libc.so\0pdva_scm_probe\0sendmsg\0recvmsg\0LIBC\0"
++    data[800:800+len(strings)]=strings
++    tags=[(1,1),(4,880),(5,800),(10,len(strings)),(6,960),(11,24),
++          (0x6ffffff0,1100),(0x6ffffffe,1120),(0x6fffffff,1),(0,0)]
++    PHDR.pack_into(data,176,2,4,448,448,0,16*len(tags),16*len(tags),8)
++    for i,pair in enumerate(tags):
++        DYN.pack_into(data,448+16*i,*pair)
++    struct.pack_into("<7I",data,880,1,4,1,0,2,3,0)
++    for i,name in enumerate((b"pdva_scm_probe",b"sendmsg",b"recvmsg"),1):
++        struct.pack_into("<IBBHQQ",data,960+24*i,strings.index(name),0x12,0,
++                         int(i==1),1280 if i==1 else 0,4 if i==1 else 0)
++    struct.pack_into("<4H",data,1100,0,1,2,2)
++    struct.pack_into("<HHIII",data,1120,1,1,1,16,0)
++    struct.pack_into("<IHHII",data,1136,0,0,2,strings.index(b"LIBC"),0)
++    struct.pack_into("<I",data,1280,0xd65f03c0)
++    allowed={("sendmsg","LIBC"),("recvmsg","LIBC")}
++    def inspect(raw):
++        root,imports,needed=loader_contract(raw,layout(raw))
++        library_contract({"pdva_scm_probe"},imports,needed,{"libc.so":allowed},allowed)
++        return root
++    check(inspect(data)==1280,"loader-positive")
++    for old,new,reason in ((b"libc.so",b"evil.so","needed-allowlist"),
++                           (b"sendmsg",b"badcall","import-allowlist"),
++                           (b"pdva_scm_probe",b"pdva_bad_probe","export-allowlist")):
++        changed=data.replace(old,new,1)
++        try:
++            inspect(changed)
++        except Reject as exc:
++            check(str(exc)==reason,"loader-control")
++        else:
++            raise AssertionError("accepted-"+reason)
++    root=inspect(data)
++    try:
++        witness({root:("ret","")},root,{},lambda a:None)
++    except Reject as exc:
++        check(str(exc)=="successful-scm-witness","inert-elf-control")
++    else:
++        raise AssertionError("inert-elf-accepted")
++    print("PASS synthetic ELF dynamic tables, changed NEEDED, import, export and inert entry")
++
++
++
++if __name__ == "__main__":
++    if sys.argv[1:] == ["--self-test"]:
++        controls()
++        direct_call_controls()
++        witness_controls()
++        binding_controls()
++        loader_controls()
++    elif len(sys.argv) == 5 and sys.argv[1] == "--artifact":
++        native_artifact(*map(Path, sys.argv[2:]))
++    elif len(sys.argv) == 3 and sys.argv[1] == "--layout":
++        file = Path(sys.argv[2])
++        check(file.stat().st_size <= 128 << 20, "inspection-size")
++        layout(file.read_bytes())
++        print("PASS ELF layout only")
++    else:
++        raise SystemExit("expected --self-test or --layout FILE")
+diff --git a/.github/scripts/rust-cross-link.py b/.github/scripts/rust-cross-link.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..ebad3d32e6a2d4224b9a54497d95b76d9a643beb
+--- /dev/null
++++ b/.github/scripts/rust-cross-link.py
+@@ -0,0 +1,718 @@
++"""Single disposable cross-link supervisor and exact reviewed probe."""
++import hashlib
++import json
++import os
++import stat
++import sys
++from pathlib import Path
++
++
++PROBE = r'''use std::os::fd::FromRawFd;
++use std::os::unix::net::UnixStream;
++use vmm_sys_util::sock_ctrl_msg::ScmSocket;
++
++#[no_mangle]
++pub unsafe extern "C" fn pdva_scm_probe(tx: i32, rx: i32, payload: i32) -> i32 {
++    let sender = unsafe { UnixStream::from_raw_fd(tx) };
++    let receiver = unsafe { UnixStream::from_raw_fd(rx) };
++    if !matches!(sender.send_with_fd(&[0x51_u8][..], payload), Ok(1)) {
++        return -1;
++    }
++    let mut byte = [0_u8];
++    match receiver.recv_with_fd(&mut byte) {
++        Ok((1, Some(_received))) if byte == [0x51] => 0,
++        _ => -2,
++    }
++}
++'''
++
++RECIPE = r'''set -eu
++T=aarch64-linux-android
++common=(--target "$T" --crate-type rlib -C codegen-units=1 -C panic=abort -C relocation-model=pic)
++CARGO_PKG_VERSION=1.3.2 "$R" "${common[@]}" --edition 2018 --crate-name bitflags \
++  --cfg 'feature="default"' "$D/extra_versions/crates/bitflags/src/lib.rs" -o "$O/libbitflags.rlib"
++CARGO_PKG_VERSION=0.2.183 "$R" "${common[@]}" --edition 2021 --crate-name libc \
++  --cfg freebsd12 --cfg 'feature="default"' --cfg 'feature="std"' --cfg 'feature="extra_traits"' \
++  "$D/crates/libc/src/lib.rs" -o "$O/liblibc.rlib"
++CARGO_PKG_VERSION=0.15.0 "$R" "${common[@]}" --edition 2021 --crate-name vmm_sys_util \
++  --extern "libc=$O/liblibc.rlib" --extern "bitflags=$O/libbitflags.rlib" \
++  "$D/crates/vmm-sys-util/src/lib.rs" -o "$O/libvmm_sys_util.rlib"
++"$R" --target "$T" --edition 2021 --crate-type cdylib -C codegen-units=1 -C panic=abort -C relocation-model=pic \
++  -C "linker=$N/bin/aarch64-linux-android30-clang" -C "link-arg=-Wl,-Map,$O/probe.map" \
++  -C link-arg=-Wl,--threads=1 -C link-arg=-Wl,-z,defs,-z,max-page-size=16384 -L "dependency=$O" \
++  --extern "vmm_sys_util=$O/libvmm_sys_util.rlib" probe.rs -o "$O/libprobe.so"
++"$N/bin/llvm-readelf" -h -lW -d -rW --dyn-syms --version-info "$O/libprobe.so"
++'''
++
++
++CRATE_TREES = {
++    'extra_versions/crates/bitflags': ('e775d9fbf16e476410d0b632bb6c8799ea2438de', 41, 'LICENSE-APACHE'),
++    'crates/libc': ('e74103e9adb95bdc9755bc8366d30c455c158602', 369, 'LICENSE-APACHE'),
++    'crates/vmm-sys-util': ('e788dce7bc549fcc32ff9ddcd185bddc72007385', 41, 'LICENSE-BSD-3-Clause'),
++}
++
++
++def tree_inventory(directory, license_target):
++    """Reconstruct canonical Git trees from a sealed Linux source export."""
++    inventory = {}
++    def walk(folder):
++        rows = []
++        for item in folder.iterdir():
++            key = item.relative_to(directory).as_posix()
++            name = item.name.encode('utf-8')
++            mode = item.lstat().st_mode
++            if stat.S_ISDIR(mode):
++                rows.append((name + b'/', b'40000 ' + name + b'\0' + walk(item)))
++                continue
++            if stat.S_ISLNK(mode):
++                data = os.fsencode(os.readlink(item))
++                if key != 'LICENSE' or data != license_target.encode():
++                    raise ValueError('source-link')
++                gitmode = '120000'
++            else:
++                if not stat.S_ISREG(mode) or mode & 0o111:
++                    raise ValueError('source-mode')
++                gitmode = '100644'
++                data = item.read_bytes()
++            oid = git_object('blob', data)
++            inventory[key] = (gitmode, oid.hex(), hashlib.sha256(data).hexdigest())
++            rows.append((name, gitmode.encode() + b' ' + name + b'\0' + oid))
++        return git_object('tree', b''.join(row for _, row in sorted(rows)))
++    return walk(directory).hex(), inventory
++
++
++def git_object(kind, data):
++    return hashlib.sha1(f'{kind} {len(data)}\0'.encode() + data).digest()
++
++
++def verify_sources(directory):
++    inventory = {}
++    for crate, (oid, count, license_target) in CRATE_TREES.items():
++        observed, rows = tree_inventory(directory / crate, license_target)
++        if (observed, len(rows)) != (oid, count):
++            raise ValueError('source-tree')
++        inventory[crate] = rows
++    return hashlib.sha256(json.dumps(inventory, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
++
++
++def verify_digest(stream, expected, algorithm):
++    if hashlib.file_digest(stream, algorithm).hexdigest() != expected:
++        raise ValueError('distribution-' + algorithm)
++
++
++def identity_controls():
++    import io
++    good = b'fixture'
++    for name in ('sha256', 'sha1'):
++        expected = hashlib.new(name, good).hexdigest()
++        verify_digest(io.BytesIO(good), expected, name)
++        try:
++            verify_digest(io.BytesIO(b'fixturf'), expected, name)
++        except ValueError as failure:
++            if str(failure) != 'distribution-' + name:
++                raise
++        else:
++            raise AssertionError('corrupted-input-accepted')
++    print('PASS unchanged and corrupted synthetic bytes for both digest algorithms')
++
++
++
++"""Acquisition metadata checks. Call only on sealed inputs in the disposable VM."""
++import hashlib
++import os
++import subprocess
++import tarfile
++import tomllib
++import zipfile
++from pathlib import Path
++
++PRIMARY = "108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE"
++MANIFEST = "3051e859570f64a8c5acb9d09e87425db52c7d97287c67e8f6d57d7d34ef9258"
++PINS = {
++    ("rustc", "x86_64-unknown-linux-gnu"): "f1d0b1dec81dab6f523cd098507763487b0d4bd7fd2c87582f154128719be03b",
++    ("rust-std", "x86_64-unknown-linux-gnu"): "4591b6486594ded52ecd6135db95bf9355bbd3ca7a380888b141528bbcf9a5d4",
++    ("rust-std", "aarch64-linux-android"): "5e7503cc0cb87b710457d13ec97b2e7729a1210a2fdce9ad99bd0c86e0f69186",
++}
++
++
++def require(condition, reason):
++    if not condition:
++        raise ValueError(reason)
++
++
++def gpg_status(output, returncode):
++    rows = [line.split()[1:] for line in output.splitlines() if line.startswith("[GNUPG:] ")]
++    require(returncode == 0 and all(row and row[0] in {
++        "NEWSIG", "SIG_ID", "KEY_CONSIDERED", "GOODSIG", "VALIDSIG", "VERIFICATION_COMPLIANCE_MODE"
++    } for row in rows), "signature-status")
++    valid = [row for row in rows if row[0] == "VALIDSIG"]
++    require(len(valid) == 1 and len(valid[0]) == 11 and valid[0][-1] == PRIMARY, "primary-signer")
++
++
++def authenticated(path, expected, ring):
++    result = subprocess.run(["/usr/bin/gpgv", "--homedir", str(ring.parent), "--keyring", str(ring),
++                             "--status-fd", "1", str(path) + ".asc", str(path)],
++                            close_fds=True, capture_output=True, timeout=90, text=True,
++                            env={"PATH": "/usr/bin", "LC_ALL": "C"})
++    gpg_status(result.stdout, result.returncode)
++    with path.open("rb") as stream:
++        verify_digest(stream, expected, "sha256")
++
++
++def verify_distribution(directory, ring):
++    path = directory / "channel-rust-1.100.0.toml"
++    authenticated(path, MANIFEST, ring)
++    manifest = tomllib.loads(path.read_text())
++    for (package, target), pin in PINS.items():
++        name = f"{package}-1.100.0-{target}.tar.xz"
++        row = manifest["pkg"][package]["target"][target]
++        require(row["available"] and row["xz_hash"] == pin and
++                row["xz_url"] == "https://static.rust-lang.org/dist/2026-11-12/" + name,
++                "manifest-entry")
++        authenticated(directory / name, pin, ring)
++    ndk = directory / "android-ndk-r28c-linux.zip"
++    require(ndk.stat().st_size == 722261334, "ndk-size")
++    for algorithm, pin in (("sha1", "a7b54a5de87fecd125a17d54f73c446199e72a64"),
++                           ("sha256", "dfb20d396df28ca02a8c708314b814a4d961dc9074f9a161932746f815aa552f")):
++        with ndk.open("rb") as stream:
++            verify_digest(stream, pin, algorithm)
++
++
++GIB = 1 << 30
++LIMIT = 10 * GIB
++SOURCE_TAG = "76914b4705208e870f8ef1ddcef0343fbc622c39"
++SOURCE_COMMIT = "1f5e95cd6e996995023c9c0f7df0f15a8a43269e"
++BASE_ENV = {"PATH": "/usr/bin:/bin", "LC_ALL": "C", "HOME": "/nonexistent"}
++
++
++def command(*args, output=False):
++    return subprocess.run(args, check=True, close_fds=True, env=BASE_ENV,
++                          stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
++                          stdout=subprocess.PIPE if output else subprocess.DEVNULL).stdout
++
++
++def portable(name):
++    require(name and not name.startswith("/") and "\\" not in name and
++            all(token not in ("", ".", "..") for token in name.split("/")), "archive-path")
++    return Path(name)
++
++
++def copy_stream(src, dst, maximum):
++    n = 0
++    while data := src.read(1 << 20):
++        n += len(data)
++        require(n <= maximum, "stream-extent")
++        dst.write(data)
++    return n
++
++
++def extract(path, destination):
++    import shutil
++    destination.mkdir()
++    zipped = path.suffix == ".zip"
++    with (zipfile.ZipFile(path) if zipped else tarfile.open(path, "r:xz")) as archive:
++        members = archive.infolist() if zipped else archive.getmembers()
++        size = lambda row: row.file_size if zipped else row.size
++        require(sum(size(row) + 4096 for row in members) <= shutil.disk_usage(destination).free,
++                "expansion-budget")
++        links = []
++        seen = set()
++        for row in members:
++            name = (row.filename if zipped else row.name).rstrip("/")
++            entry = destination / portable(name)
++            require(entry not in seen, "duplicate-member")
++            seen.add(entry)
++            mode = row.external_attr >> 16 if zipped else row.mode
++            if (row.is_dir() if zipped else row.isdir()):
++                entry.mkdir(parents=True, exist_ok=True)
++                continue
++            entry.parent.mkdir(parents=True, exist_ok=True)
++            if (stat.S_ISLNK(mode) if zipped else row.issym()):
++                require(size(row) <= 4096, "link-size")
++                target = archive.read(row).decode() if zipped else row.linkname
++                require(target and not os.path.isabs(target) and "\\" not in target, "link-target")
++                links.append((entry, target))
++                continue
++            require(stat.S_IFMT(mode) in (0, stat.S_IFREG) if zipped else row.isfile(), "archive-type")
++            with (archive.open(row) if zipped else archive.extractfile(row)) as src, entry.open("xb") as dst:
++                require(copy_stream(src, dst, size(row)) == size(row), "member-length")
++            entry.chmod(0o755 if mode & 0o111 else 0o644)
++        for entry, target in links:
++            entry.symlink_to(target)
++        for entry, _ in links:
++            require(entry.resolve(strict=True).is_relative_to(destination), "escaping-link")
++
++
++def prefix_install(root, prefix, expected):
++    require((root / "components").read_text().splitlines() == [expected], "component-identity")
++    for component in (expected,):
++        folder = root / portable(component)
++        for line in (folder / "manifest.in").read_text().splitlines():
++            kind, name = line.split(":", 1)
++            item = folder / portable(name)
++            require(item.resolve(strict=True).is_relative_to(folder), "component-escape")
++            require((kind == "file" and item.is_file()) or (kind == "dir" and item.is_dir()),
++                    "component-entry")
++            for src in ([item] if kind == "file" else sorted(p for p in item.rglob("*") if p.is_file())):
++                resolved = src.resolve(strict=True)
++                require(resolved.is_relative_to(folder), "payload-escape")
++                out = prefix / src.relative_to(folder)
++                out.parent.mkdir(parents=True, exist_ok=True)
++                os.link(resolved, out)
++                require(os.path.samefile(resolved, out), "installed-inode")
++
++
++def fetch(url, path, maximum):
++    import urllib.request
++    with urllib.request.urlopen(url, timeout=40) as response, path.open("xb") as stream:
++        require(response.geturl() == url, "redirect")
++        copy_stream(response, stream, maximum)
++
++
++def acquire(volume):
++    import shutil
++    data = volume / "inputs"
++    data.mkdir()
++    key = volume / "key.asc"
++    ring = volume / "release.gpg"
++    fetch("https://raw.githubusercontent.com/dariogriffo/rust-stable-debian/"
++          "ca0035d95a1c6469f88653c061c2cb5f7465566f/debian/upstream/signing-key.asc", key, 1 << 16)
++    command("gpg", "--batch", "--homedir", str(volume), "--dearmor", "-o", str(ring), str(key))
++    dist = "https://static.rust-lang.org/dist/"
++    name = "channel-rust-1.100.0.toml"
++    for ext in ("", ".asc"):
++        fetch(dist + name + ext, volume / (name + ext), 8 << 20)
++    authenticated(volume / name, MANIFEST, ring)
++    for package, target in PINS:
++        name = f"{package}-1.100.0-{target}.tar.xz"
++        for ext, limit in (("", GIB), (".asc", 1 << 16)):
++            fetch(dist + "2026-11-12/" + name + ext, volume / (name + ext), limit)
++    ndk = volume / "android-ndk-r28c-linux.zip"
++    fetch("https://dl.google.com/android/repository/" + ndk.name, ndk, 722261334)
++    verify_distribution(volume, ring)
++    for package, target in PINS:
++        name = f"{package}-1.100.0-{target}"
++        archive = volume / (name + ".tar.xz")
++        temporary = volume / "expand"
++        extract(archive, temporary)
++        prefix_install(temporary / name, data / "rust", "rustc" if package == "rustc" else "rust-std-" + target)
++        shutil.rmtree(temporary)
++        archive.unlink()
++    extract(ndk, data / "ndk")
++    ndk.unlink()
++    require("Pkg.Revision = 28.2.13676358" in
++            (data / "ndk/android-ndk-r28c/source.properties").read_text().splitlines(), "ndk-revision")
++    return data
++
++
++def release_sources(volume, data):
++    import shutil
++    db = volume / "release.git"
++    command("git", "init", "--bare", str(db))
++    def git(*args):
++        return command("git", "--git-dir", str(db), *args, output=True)
++    ref = "refs/tags/android-17.0.0_r1"
++    git("-c", "fetch.fsckObjects=true", "fetch", "--no-tags", "--depth=1",
++        "https://android.googlesource.com/platform/external/rust/android-crates-io", ref + ":" + ref)
++    require(git("rev-parse", ref, ref + "^{}").decode().splitlines() ==
++            [SOURCE_TAG, SOURCE_COMMIT], "release-tag")
++    git("fsck", "--full", "--strict", "--no-reflogs", SOURCE_TAG)
++    for crate, (oid, _, license_target) in CRATE_TREES.items():
++        require(git("rev-parse", SOURCE_COMMIT + ":" + crate).decode().strip() == oid, "release-tree")
++        for row in git("ls-tree", "-rz", oid).split(b"\0"):
++            if not row:
++                continue
++            meta, name = row.split(b"\t", 1)
++            mode, kind, blob = meta.decode().split()
++            path = data / "D" / crate / portable(name.decode())
++            path.parent.mkdir(parents=True, exist_ok=True)
++            raw = git("cat-file", "blob", blob)
++            require(kind == "blob" and git_object("blob", raw).hex() == blob, "release-blob")
++            if mode == "120000":
++                require(name == b"LICENSE" and raw == license_target.encode(), "release-link")
++                path.symlink_to(license_target)
++            else:
++                require(mode == "100644", "release-mode")
++                path.write_bytes(raw)
++    (data / "source-inventory.sha256").write_text(verify_sources(data / "D") + "\n")
++    shutil.rmtree(db)
++
++
++def memory_group():
++    fields = Path("/proc/self/cgroup").read_text().splitlines()
++    require(len(fields) == 1 and fields[0].startswith("0::/"), "cgroup-v2")
++    cg = Path("/sys/fs/cgroup") / fields[0][3:].lstrip("/")
++    memory_bounds(cg)
++    return cg
++
++
++def memory_bounds(group):
++    require((group / "memory.max").read_text().strip() == str(8 * GIB) and
++            (group / "memory.swap.max").read_text().strip() == "0", "memory-limit")
++
++
++def filesystem_limit(path):
++    usage = os.statvfs(path)
++    require(0 < usage.f_blocks * usage.f_frsize <= LIMIT, "storage-limit")
++
++
++def seccomp():
++    import ctypes
++    import errno
++    lib = ctypes.CDLL("libseccomp.so.2")
++    lib.seccomp_init.argtypes = [ctypes.c_uint32]
++    lib.seccomp_init.restype = ctypes.c_void_p
++    lib.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]
++    lib.seccomp_rule_add.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_uint]
++    lib.seccomp_load.argtypes = [ctypes.c_void_p]
++    lib.seccomp_release.argtypes = [ctypes.c_void_p]
++    ctx = lib.seccomp_init(0x7fff0000)
++    require(ctx, "filter-init")
++    try:
++        for name in ("socket", "socketpair", "connect", "unshare", "setns", "mount", "umount2",
++                     "pivot_root", "open_tree", "move_mount", "fsopen", "fsmount", "mount_setattr",
++                     "io_uring_setup", "ptrace", "bpf", "open_by_handle_at", "clone3"):
++            nr = lib.seccomp_syscall_resolve_name(name.encode())
++            error = errno.ENOSYS if name == "clone3" else errno.EPERM
++            require(nr >= 0 and lib.seccomp_rule_add(ctx, 0x50000 | error, nr, 0) == 0, "filter-rule")
++        class Compare(ctypes.Structure):
++            _fields_ = [("arg", ctypes.c_uint), ("op", ctypes.c_int),
++                        ("mask", ctypes.c_uint64), ("value", ctypes.c_uint64)]
++        lib.seccomp_rule_add_array.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int,
++                                               ctypes.c_uint, ctypes.POINTER(Compare)]
++        for bit in (0x80, 0x20000, 0x2000000, 0x4000000, 0x8000000, 0x10000000, 0x20000000, 0x40000000):
++            mask = Compare(0, 7, bit, bit)
++            require(lib.seccomp_rule_add_array(ctx, 0x50001, lib.seccomp_syscall_resolve_name(b"clone"),
++                                               1, ctypes.byref(mask)) == 0, "clone-filter")
++        require(lib.seccomp_load(ctx) == 0, "filter-load")
++    finally:
++        lib.seccomp_release(ctx)
++
++
++def network_identity(child, parent, routes):
++    require(child != parent and len(routes.splitlines()) == 1, "network-namespace")
++
++
++def socket_denial(factory):
++    import errno
++    try:
++        sock = factory()
++    except OSError as failure:
++        require(failure.errno == errno.EPERM, "network-filter")
++    else:
++        sock.close()
++        raise ValueError("network-filter")
++
++
++def audit_build(uid, parent_net):
++    import errno
++    import socket
++    status = dict(line.split(":", 1) for line in Path("/proc/self/status").read_text().splitlines())
++    require(os.getresuid() == (uid,) * 3 and os.getresgid() == (uid,) * 3 and not os.getgroups(),
++            "worker-identity")
++    require(all(int(status[k], 16) == 0 for k in ("CapPrm", "CapEff", "CapBnd", "CapAmb")) and
++            int(status["NoNewPrivs"]) == 1, "privilege")
++    network_identity(os.readlink("/proc/self/ns/net"), parent_net, Path("/proc/net/route").read_text())
++    for family in (socket.AF_INET, socket.AF_INET6, socket.AF_UNIX):
++        socket_denial(lambda: socket.socket(family))
++    for fd in Path("/proc/self/fd").iterdir():
++        try:
++            target = os.readlink(fd)
++        except FileNotFoundError:
++            continue
++        require(int(fd.name) < 3 and target == "/dev/null", "inherited-descriptor")
++    for line in Path("/proc/self/mountinfo").read_text().splitlines():
++        row = line.split()
++        if "rw" in row[5].split(","):
++            require(row[4] == "/out" and "noexec" in row[5].split(","), "writable-mount")
++    for p in ("/", "/inputs", "/proc", "/limits"):
++        require(not os.access(p, os.W_OK), "readonly-input")
++    try:
++        Path("/inputs/.write-test").touch(exist_ok=False)
++    except OSError as exc:
++        require(exc.errno in (errno.EROFS,errno.EACCES), "input-write-denial")
++    else:
++        raise ValueError("input-write-denial")
++    memory_bounds(Path("/limits"))
++    require(str(os.getpid()) in Path("/limits/cgroup.procs").read_text().split(), "group-membership")
++    require(not os.access("/limits/memory.max", os.W_OK), "delegated-limit")
++    filesystem_limit("/out")
++
++
++def worker(mode, uid, net):
++    import resource
++    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
++    if mode != "control-filter":
++        seccomp()
++    expected = {"control-net":"network-namespace","control-filter":"network-filter"}.get(mode)
++    try:
++        audit_build(uid, net)
++    except ValueError as failure:
++        if expected and str(failure) == expected:
++            return
++        raise
++    require(expected is None, "ineffective-isolation-control")
++    if mode == "preflight":
++        return
++    if mode == "inspect":
++        os.execve("/usr/bin/python3", ["python3", "-IB", "/inspector.py", "--artifact",
++                                       "/sealed/libprobe.so", "/sealed/probe.map", "/inputs"],
++                  BASE_ENV)
++    require(mode == "build", "worker-mode")
++    require(verify_sources(Path("/inputs/D")) ==
++            Path("/inputs/source-inventory.sha256").read_text().strip(), "mounted-source")
++    compiler = "/inputs/rust/bin/rustc"
++    version = command(compiler, "-vV", output=True).decode().splitlines()
++    require("release: 1.100.0" in version and
++            "commit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a" in version and
++            "host: x86_64-unknown-linux-gnu" in version, "rustc-version")
++    ndk = "/inputs/ndk/android-ndk-r28c/toolchains/llvm/prebuilt/linux-x86_64"
++    require(Path(ndk + "/bin/aarch64-linux-android30-clang").resolve(strict=True).is_relative_to(ndk),
++            "ndk-linker")
++    # RECIPE and PROBE come verbatim from the reviewed evidence apart from the two thread controls.
++    Path("/out/tmp").mkdir(exist_ok=True)
++    os.chdir("/inputs")
++    os.execve("/bin/bash", ["bash", "-eu", "-c", RECIPE], {
++        **BASE_ENV, "D": "/inputs/D", "N": ndk, "R": compiler, "O": "/out", "TMPDIR": "/out/tmp"})
++
++
++def run_cage(volume, group, mode, uid, inputs, output):
++    script = Path(__file__).resolve()
++    net = os.readlink("/proc/self/ns/net")
++    # The outer unit bounds acquisition and all children. The child cgroup can be killed independently.
++    cg = group / ("phase-" + mode)
++    cg.mkdir()
++    (cg / "memory.max").write_text(str(8 * GIB))
++    (cg / "memory.swap.max").write_text("0")
++    memory_bounds(cg)
++    args = ["bwrap", "--die-with-parent", "--unshare-net", "--unshare-pid", "--unshare-ipc",
++            "--unshare-uts", "--new-session", "--ro-bind", str(volume / "host-usr"), "/usr",
++            "--symlink", "usr/bin", "/bin", "--symlink", "usr/lib", "/lib",
++            "--symlink", "usr/lib64", "/lib64", "--proc", "/proc", "--remount-ro", "/proc",
++            "--dir", "/dev", "--ro-bind", "/dev/null", "/dev/null",
++            "--ro-bind", str(inputs), "/inputs", "--ro-bind", str(script), "/supervisor.py",
++            "--ro-bind", str(script.with_name("inspect-rust-cross-link.py")), "/inspector.py",
++            "--ro-bind", str(cg), "/limits", "--bind", str(output), "/out"]
++    if mode == "inspect":
++        args += ["--ro-bind", str(volume / "build"), "/sealed"]
++    args += ["--remount-ro", "/", "--clearenv", "--setenv", "PATH", "/usr/bin:/bin",
++             "--setenv", "LANG", "C", "--", "/usr/bin/setpriv", "--reuid", str(uid),
++             "--regid", str(uid), "--clear-groups", "--no-new-privs", "--bounding-set=-all",
++             "--inh-caps=-all", "--ambient-caps=-all", "/usr/bin/python3", "-IB",
++             "/supervisor.py", "worker", mode, str(uid), net]
++    if mode == "control-net":
++        args.remove("--unshare-net")
++    def enter():
++        (cg / "cgroup.procs").write_text(str(os.getpid()))
++    try:
++        with open("/dev/null", "r+b", buffering=0) as null:
++            child = subprocess.Popen(args, env=BASE_ENV, stdin=null, stdout=null, stderr=null,
++                                     close_fds=True, preexec_fn=enter)
++            require(watchdog(child, 27*60, lambda: (cg / "cgroup.kill").write_text("1")) == 0,
++                    "phase-" + mode)
++    finally:
++        (cg / "cgroup.kill").write_text("1")
++        import time
++        deadline = time.monotonic() + 3
++        while "populated 1" in (cg / "cgroup.events").read_text() and time.monotonic() < deadline:
++            time.sleep(0.02)
++        require("populated 0" in (cg / "cgroup.events").read_text(), "cgroup-cleanup")
++        events = dict(row.split() for row in (cg / "memory.events").read_text().splitlines())
++        require(int(events["oom"]) == 0 and int(events["max"]) == 0 and
++                int((cg / "memory.peak").read_text()) <= 8 * GIB, "memory-events")
++        cg.rmdir()
++
++
++def supervise():
++    import platform
++    import shutil
++    import tempfile
++    require(os.geteuid() == 0 and platform.machine() == "x86_64" and
++            'VERSION_ID="24.04"' in Path("/etc/os-release").read_text().splitlines(), "runner")
++    require(not any(p.name not in {"status", "register"} for p in
++                    Path("/proc/sys/fs/binfmt_misc").iterdir()), "foreign-loader")
++    require(all(shutil.which(cmd) for cmd in ("git", "gpg", "gpgv", "bwrap", "setpriv", "mount",
++                "umount", "mkfs.ext4", "readelf", "llvm-objdump-18")), "host-tools")
++    mem = next(l for l in Path("/proc/meminfo").read_text().splitlines() if l.startswith("MemAvailable:"))
++    require(int(mem.split()[1]) * 1024 >= 8 * GIB and
++            shutil.disk_usage("/var/tmp").free >= LIMIT + GIB, "runner-capacity")
++    cg = memory_group()
++    leaf = cg / "supervisor"
++    leaf.mkdir()
++    (leaf / "cgroup.procs").write_text(str(os.getpid()))
++    (cg / "cgroup.subtree_control").write_text("+memory")
++    with tempfile.TemporaryDirectory(dir="/var/tmp") as tmp:
++        volume = Path(tmp) / "volume"
++        volume.mkdir()
++        with tempfile.TemporaryFile(dir=tmp) as backing:
++            os.posix_fallocate(backing.fileno(), 0, LIMIT)
++            file = f"/proc/{os.getpid()}/fd/{backing.fileno()}"
++            command("mkfs.ext4", "-q", "-F", "-m", "0", file)
++            command("mount", "-o", "loop,nosuid,nodev", file, str(volume))
++            try:
++                filesystem_limit(volume)
++                empty = volume / "empty"
++                empty.mkdir()
++                command("mount", "--make-rprivate", "/")
++                transient = volume / "system-tmp"
++                transient.mkdir(mode=0o700)
++                command("mount", "--bind", str(transient), "/tmp")
++                host_runtime(volume)
++                for name, uid in (("preflight", 61001), ("control-net",61001), ("control-filter",61001), ("build", 61001), ("inspect", 61002)):
++                    out = volume / name
++                    out.mkdir(mode=0o700)
++                    os.chown(out, uid, uid)
++                    command("mount", "--bind", str(out), str(out))
++                    command("mount", "-o", "remount,bind,noexec,nosuid,nodev", str(out))
++                    if name == "build":
++                        inputs = acquire(volume)
++                        release_sources(volume, inputs)
++                        (inputs / "probe.rs").write_text(PROBE)
++                    run_cage(volume, cg, name, uid, inputs if name in ("build","inspect") else empty, out)
++                    if name == "build":
++                        for file_name in ("libprobe.so", "probe.map"):
++                            artifact = out / file_name
++                            st = artifact.lstat()
++                            require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
++                                    0 < st.st_size <= 128 << 20, "output-type")
++                            os.chown(artifact, 0, 0)
++                            artifact.chmod(0o444)
++                        os.chown(out, 0, 0)
++                        out.chmod(0o555)
++                events = dict(line.split() for line in (cg / "memory.events").read_text().splitlines())
++                require(int(events["oom"]) == 0 and int(events["max"]) == 0 and
++                        int((cg / "memory.peak").read_text()) <= 8 * GIB, "aggregate-memory-events")
++            finally:
++                if os.path.ismount("/tmp") and os.stat("/tmp").st_dev == volume.stat().st_dev:
++                    command("umount", "/tmp")
++                command("umount", "--recursive", str(volume))
++                require(not os.path.ismount(volume), "volume-cleanup")
++
++
++
++def host_runtime(volume):
++    """Stage the approved runner's userspace on the same volume as all other inputs."""
++    import re
++    import shutil
++    root = volume / "host-usr"
++    root.mkdir()
++    version = f"python{sys.version_info.major}.{sys.version_info.minor}"
++    require(version == "python3.12", "host-python")
++    library = Path("/usr/lib") / version
++    shutil.copytree(library, root / "lib" / version, symlinks=False,
++                    ignore=shutil.ignore_patterns("__pycache__", "site-packages", "dist-packages",
++                                                  "test", "tests", "ensurepip", "idlelib"))
++    def logical(path):
++        parts = path.parts
++        require(path.is_absolute() and parts[1] in {"usr","lib","lib64","bin"}, "host-file")
++        return root.joinpath(*(parts[2:] if parts[1] == "usr" else parts[1:]))
++    def stage(path):
++        out = logical(path)
++        src = path.resolve(strict=True)
++        require(src.is_file() and src.is_relative_to("/usr"), "host-origin")
++        out.parent.mkdir(parents=True, exist_ok=True)
++        if not out.exists():
++            shutil.copyfile(src, out)
++            out.chmod(0o555 if src.stat().st_mode & 0o111 else 0o444)
++        return src
++    files = list((library/"lib-dynload").glob("*.so"))
++    for name in ("python3","bash","setpriv","ar","readelf","llvm-objdump-18","env","dirname","readlink","realpath"):
++        files.append(Path("/usr/bin")/name)
++    for name in ("libseccomp.so.2","libgcc_s.so.1","libstdc++.so.6","libz.so.1","libtinfo.so.6","libzstd.so.1"):
++        files.append(Path("/usr/lib/x86_64-linux-gnu") / name)
++    for file in files:
++        src = stage(file)
++        # Only independently installed runner objects are passed to ldd.
++        output = command("ldd", str(src), output=True).decode()
++        require("not found" not in output, "host-library")
++        for dependency in re.findall(r"(?:=>\s+|^\s*)(/[^\s]+)\s+\(0x[0-9a-f]+\)",output,re.M):
++            stage(Path(dependency))
++    return root
++
++
++def watchdog(process, seconds, terminate):
++    import time
++    end = time.monotonic() + seconds
++    try:
++        return process.wait(timeout=max(0, end-time.monotonic()))
++    except subprocess.TimeoutExpired:
++        terminate()
++        process.wait(timeout=5)
++        raise ValueError("supervisor-deadline") from None
++
++
++def extra_controls():
++    import io
++    import tempfile
++    from types import SimpleNamespace
++    from unittest.mock import patch
++    def reject(fn, message):
++        try:
++            fn()
++        except ValueError as failure:
++            require(str(failure) == message, "wrong-rejection")
++        else:
++            raise AssertionError("accepted-" + message)
++    network_identity("child","parent","header\n")
++    reject(lambda: network_identity("parent","parent","header\n"),"network-namespace")
++    reject(lambda: network_identity("child","parent","header\nroute\n"),"network-namespace")
++    import errno
++    from unittest.mock import Mock
++    denied = Mock(side_effect=PermissionError(errno.EPERM, "denied"))
++    socket_denial(denied)
++    reject(lambda: socket_denial(Mock()), "network-filter")
++    good = "[GNUPG:] VALIDSIG " + PRIMARY + " 2026-11-12 1 0 4 0 1 10 00 " + PRIMARY
++    gpg_status(good, 0)
++    reject(lambda: gpg_status(good, 1), "signature-status")
++    reject(lambda: gpg_status(good + "\n[GNUPG:] EXPKEYSIG x", 0), "signature-status")
++    reject(lambda: gpg_status(good + "\n" + good, 0), "primary-signer")
++    reject(lambda: gpg_status(good.replace(PRIMARY, "F"*40), 0), "primary-signer")
++    require(portable("safe/file").parts == ("safe","file"),"portable-control")
++    for name in ("../x","/abs","bad//name","bad\\name"):
++        reject(lambda: portable(name), "archive-path")
++    with tempfile.TemporaryDirectory() as tmp:
++        root=Path(tmp)
++        (root/"memory.max").write_text(str(8*GIB))
++        (root/"memory.swap.max").write_text("0")
++        memory_bounds(root)
++        for file,value in (("memory.max","max"),("memory.swap.max","1")):
++            p=root/file
++            saved=p.read_text()
++            p.write_text(value)
++            reject(lambda: memory_bounds(root),"memory-limit")
++            p.write_text(saved)
++        with patch.object(os,"statvfs",create=True,return_value=SimpleNamespace(f_blocks=LIMIT,f_frsize=1)):
++            filesystem_limit(tmp)
++        with patch.object(os,"statvfs",create=True,return_value=SimpleNamespace(f_blocks=LIMIT+1,f_frsize=1)):
++            reject(lambda: filesystem_limit(tmp),"storage-limit")
++        normal=root/"fixture.zip"
++        with zipfile.ZipFile(normal,"w") as arc:
++            arc.writestr("valid/file",b"ok")
++        extract(normal,root/"normal")
++        require((root/"normal/valid/file").read_bytes()==b"ok","archive-control")
++        bad=root/"bad.zip"
++        with zipfile.ZipFile(bad,"w") as arc:
++            arc.writestr("../outside",b"x")
++        reject(lambda: extract(bad,root/"bad"),"archive-path")
++    with subprocess.Popen([sys.executable,"-IB","-c","import time; time.sleep(10)"]) as child:
++        reject(lambda: watchdog(child,0.1,child.kill),"supervisor-deadline")
++    print("PASS signature, archive, memory, storage, namespace, socket and watchdog controls")
++
++
++
++if __name__ == '__main__':
++    if sys.argv[1:] == ['supervise']:
++        supervise()
++    elif len(sys.argv) == 5 and sys.argv[1] == 'worker':
++        worker(sys.argv[2],int(sys.argv[3]),sys.argv[4])
++    elif sys.argv[1:] == ['--self-test']:
++        identity_controls()
++        extra_controls()
++    elif len(sys.argv) == 3 and sys.argv[1] == '--verify-source-trees':
++        print(verify_sources(Path(sys.argv[2])))
++    elif sys.argv[1:] == ['--show-probe']:
++        print(PROBE, end='')
++    elif sys.argv[1:] == ['--show-recipe']:
++        print(RECIPE, end='')
++    else:
++        raise SystemExit('unknown mode')
+diff --git a/.github/scripts/test-memory-diagnostic.py b/.github/scripts/test-memory-diagnostic.py
+index 9e09a0453d45fdc8a03188261c678e1bf5752bd2..647624be62541178f8f6dafbf6c6ed9d16ea2947 100644
+--- a/.github/scripts/test-memory-diagnostic.py
++++ b/.github/scripts/test-memory-diagnostic.py
+@@ -274,0 +275,43 @@ def verify_current_source(snapshot, evidence):
++RUST_PREPARATION = {
++    '.github/scripts/inspect-rust-cross-link.py': '93425e07f429bd10768f68a2ca690e4484757afbd80dba4a956d2364f38ebbd8',
++    '.github/scripts/rust-cross-link.py': '755c409c05c40528d2677478f2180f7bb900ca9850a239fd04db9c3da2797c62',
++    '.github/workflows/rust-cross-link.yml': 'feb81fac154fb67bac73fcd393ebd353216a65756ac4c50f685c2baa0bd8806b',
++    '.github/scripts/validate-foundation.py': '1e2af51dacc07328e9901fb27c58258f3e7faae74195e0c2c7611ac63be34da1',
++}
++FOUNDATION_INSERT = b'    ".github/scripts/inspect-rust-cross-link.py",\n    ".github/scripts/rust-cross-link.py",\n    ".github/workflows/rust-cross-link.yml",\n'
++
++
++def verify_rust_preparation(snapshot, evidence):
++    """Validate the four exact changed protected files before replaying prior admission."""
++    check_source_modes(snapshot)
++    previous = snapshot.copy()
++    for path, digest in RUST_PREPARATION.items():
++        entry = previous.pop(path, None)
++        source_require(entry is not None and hashlib.sha256(entry[1]).hexdigest() == digest,
++                       'exact-rust-preparation')
++    path = '.github/scripts/validate-foundation.py'
++    previous[path] = ('100644', snapshot[path][1].replace(FOUNDATION_INSERT, b'', 1))
++    verify_current_source(previous, evidence)
++    return previous
++
++
++def preparation_controls():
++    snapshot = working_source()
++    evidence = (SOURCE_BASE, PROTECTED.copy())
++    previous = verify_rust_preparation(snapshot, evidence)
++    expect_source_rejection(verify_current_source, snapshot, evidence, 'protected-checks', 'unregistered')
++    expect_source_rejection(verify_rust_preparation, previous, evidence, 'exact-rust-preparation', 'replay')
++    for path in RUST_PREPARATION:
++        _, data = snapshot[path]
++        for entry, reason in ((('100644', data + b'x'), 'exact-rust-preparation'),
++                              (('100755', data), 'regular-source-modes')):
++            expect_source_rejection(verify_rust_preparation, {**snapshot, path: entry}, evidence, reason, path)
++    extra = {**snapshot, '.github/scripts/extra.py': ('100644', b'')}
++    expect_source_rejection(verify_rust_preparation, extra, evidence, 'protected-checks', 'extra-path')
++    print('PASS: exact dormant preparation transition and rejection controls')
++
++
++def previous_for_audit():
++    return verify_rust_preparation(working_source(), (SOURCE_BASE, PROTECTED.copy()))
++
++
+@@ -418 +461 @@ def companion_source_tests():
+-    current = working_source()
++    current = previous_for_audit()
+@@ -554 +597 @@ def companion_source_tests():
+-    source_cli_tests(current)
++    source_cli_tests(working_source())
+@@ -558 +601 @@ def readme_update_tests():
+-    positive = working_source()
++    positive = previous_for_audit()
+@@ -669 +712 @@ def verify_merge_policy_update():
+-    current = working_source()
++    current = previous_for_audit()
+@@ -701 +744 @@ def adr_update_tests():
+-    current = working_source()
++    current = previous_for_audit()
+@@ -1558 +1601 @@ def qualify_signed_pair(paths, receipts=None):
+-    verify_current_source(snapshot, (SOURCE_BASE, PROTECTED.copy()))
++    verify_rust_preparation(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+@@ -2490 +2533 @@ def main():
+-            verify_current_source(snapshot, (SOURCE_BASE, PROTECTED.copy()))
++            verify_rust_preparation(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+@@ -2492,0 +2536 @@ def main():
++    preparation_controls()
+diff --git a/.github/scripts/validate-foundation.py b/.github/scripts/validate-foundation.py
+index 9263f626b59d81167208d3a961a7daf2cb08b7c7..16812f275cad3d8e92ad8fe2e1587607e51f0b0e 100644
+--- a/.github/scripts/validate-foundation.py
++++ b/.github/scripts/validate-foundation.py
+@@ -57,0 +58,3 @@ ALLOWED_CODE = {
++    ".github/scripts/inspect-rust-cross-link.py",
++    ".github/scripts/rust-cross-link.py",
++    ".github/workflows/rust-cross-link.yml",
+diff --git a/.github/workflows/rust-cross-link.yml b/.github/workflows/rust-cross-link.yml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b86b09fbf5e49f58a026d26404b1ae56fbf79a99
+--- /dev/null
++++ b/.github/workflows/rust-cross-link.yml
+@@ -0,0 +1,43 @@
++name: Inspect one Rust Android cross-link
++on: workflow_dispatch
++permissions:
++  contents: read
++concurrency:
++  group: rust-cross-link
++  cancel-in-progress: false
++jobs:
++  research:
++    if: github.repository == 'innercoder78/privacy-decoy-virtual-android' && github.ref == 'refs/heads/main' && github.ref_protected && github.run_attempt == 1
++    environment: rust-cross-link
++    runs-on: ubuntu-24.04
++    timeout-minutes: 30
++    steps:
++      - name: Bind owner authorization to this allocated run and exact source
++        env:
++          ALLOWED_ID: ${{ vars.RUST_LINK_RUN_ID }}
++          ALLOWED_SHA: ${{ vars.RUST_LINK_SHA }}
++          ALLOWED_ACTOR: ${{ vars.RUST_LINK_ACTOR_ID }}
++          ALLOWED_IMAGE: ${{ vars.RUST_LINK_IMAGE_VERSION }}
++          HOSTED: ${{ runner.environment }}
++        run: |
++          set -eu
++          test "$ALLOWED_ID" = "$GITHUB_RUN_ID"
++          test "$ALLOWED_SHA" = "$GITHUB_SHA"
++          test "$ALLOWED_ACTOR" = "$GITHUB_ACTOR_ID"
++          test "$GITHUB_TRIGGERING_ACTOR" = "$GITHUB_ACTOR"
++          test "$HOSTED/$RUNNER_OS/$RUNNER_ARCH" = github-hosted/Linux/X64
++          test "${ImageOS:?}/${ImageVersion:?}" = "ubuntu24/$ALLOWED_IMAGE"
++      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
++        with:
++          ref: ${{ github.sha }}
++          persist-credentials: false
++          clean: false
++      - name: Run supervised experiment on disposable VM
++        run: |
++          set -eu
++          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
++          sudo -n systemd-run --wait --quiet --collect --service-type=exec \
++            -p RuntimeMaxSec=1680 -p TimeoutStopSec=2 -p KillMode=control-group \
++            -p MemoryMax=8589934592 -p MemorySwapMax=0 -p PrivateMounts=yes -p Delegate=memory \
++            -p StandardOutput=null -p StandardError=null \
++            -- /usr/bin/python3 -IB "$GITHUB_WORKSPACE/.github/scripts/rust-cross-link.py" supervise
+````
