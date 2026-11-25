@@ -4121,18 +4121,88 @@ requires no new numbered ADR under PDVA-REQ-008. A material change requires
 a new ADR and explicit approval. ADR-0004 Option A and ADR-0006/0007 stand.
 Gate 0 is **Unresolved** and Gates A–G are **Not reached**.
 
+### Correction and independent source check
+
+The reviewed PR head was `f9f22fe2c9eb127f25f8424da4e90f992194e951`.
+It was the only open PR at preflight. Both existing foundation jobs succeeded
+on that evidence-only head. It had no reviews, comments or review threads.
+GitHub Status reported a minor service outage. The PR head and canonical main
+were retrieved successfully.
+
+Two retrieval and reconstruction paths agreed on the original candidate.
+A fresh canonical Git clone reproduced its SHA-256
+`32c3633286814565fa2999e58b48374ea990e3873a6a3f080e42e214b163379e`
+and all five Git blob identities, modes and lengths. A separate read of the
+public evidence blob and both predecessor source blobs through GitHub,
+followed by an independent implementation of zero-context patch application
+and Git hashing, reproduced the same digest and all five proposed blobs.
+The same independent patch reader also reconstructed all five corrected blobs from the final patch and the public predecessor bytes. The corrected
+candidate's local admission and test results remain subject to independent
+execution on a separately approved host.
+
+The supervisor now emits bounded JSON records from a fixed vocabulary. The
+consumer validates source and hosted image identities, phase order, evidence
+fields, the completed phase list, cleanup and the unit exit status. Its input
+limit is 32 KiB, with at most 36 records of at most 1 KiB each. Authentication
+claims cover the signed manifest, three signed components, NDK size and both
+digests, and reconstructed release source. The supervisor records available
+capacity, memory peaks, confinement and specific negative controls, the build
+and inspection decisions, and observed unmount. It retains the first failure
+when cleanup follows. Missing evidence leaves stages unconfirmed. Only the
+validated supervisor protocol reaches the job log. Worker output, tool text,
+maps, diagnostic exceptions and binaries stay private. A missing or malformed
+terminal record or a nonzero unit exit fails the job.
+
+The original loader guard rejected `DT_FILTER` (`0x7fffffff`).
+The version count is `DT_VERNEEDNUM` (`0x6fffffff`). The correction gives
+both names, requires paired version tags and a version-symbol table, rejects
+audit/loader overrides, validates relocation tag families and compares
+file-backed RELA entries and imported names with the independent tool listing.
+The witness now rejects reads of unspecified registers and binds each message
+call to a matching mapped frame on its own call chain.
+
+The local integrated control sends one synthetic ELF, map and synthetic host-tool
+transcripts through the production `native_artifact` function, including both SCM
+witnesses. Seven individual mutations test loader overrides, orphan version tags,
+the relocation format, a nonzero PLT addend, a mismatched relocation symbol and
+a disassembly byte mismatch. The separate `--self-test-host-tools` fixture
+assembles and links synthetic assembly and calls the same inspector with real
+tools. This test was prepared but unrun. Independent execution needs an approved
+Linux environment with clang, ld.lld, ar, GNU readelf and llvm-objdump-18.
+No Android candidate or synthetic ELF is executed by either test.
+
+The local rerun also verified the signed manifest, all three archive selections,
+the publisher NDK size and SHA-1, downstream SHA-256, Android tag and peeled commit, and all 451 source
+entries against the three pinned tree IDs. The binaries and the hosted runner
+were not measured. Review covered the fixed acquisition URLs, Git invocations,
+the namespace and cgroup setup, privilege drop, child descriptors, writable
+mounts, subprocesses, cleanup and workflow permissions. The proposed HTTP
+fetcher rejects redirects before following them; Git acquisition disables
+redirects, system/global configuration and interactive prompting. No new
+network destination, credential read, active workflow or execution permission
+was identified in the correction. A source review cannot qualify the host or
+the binary supply chain.
+
+Local checks on the corrected bytes reproduced the supervisor and inspector
+synthetic results, historical source and ADR receipts, prospective diagnostic
+checkout and signed-byte refusals, foundation and Markdown links, harness
+manifest and whitespace checks. Repository validation ran 152 tests with four
+platform skips. The host provenance limitation remains open. Independent
+execution and independent private retention are unverified. Registration,
+acquisition, privileged setup and dispatch remain separate decisions.
+
 ### Candidate patch and blob inventory
 
 | Proposed path | Git mode | Git blob | Bytes |
 | --- | --- | --- | ---: |
-| `.github/scripts/inspect-rust-cross-link.py` | 100644 | `a2b61b244f07fe9e5278a82221516bccf8a77f84` | 37021 |
-| `.github/scripts/rust-cross-link.py` | 100644 | `feb673bbff398753745976de8cc28eecd7bdc70f` | 33659 |
-| `.github/scripts/test-memory-diagnostic.py` | 100644 | `121d236c9892a2fe28f8c1bb9f7d68bf3f78cfb0` | 146445 |
+| `.github/scripts/inspect-rust-cross-link.py` | 100644 | `285934d7d38ee2c9c8d4ce2c63f5e661d924725d` | 49249 |
+| `.github/scripts/rust-cross-link.py` | 100644 | `00f7813200be6b933e8d009890f23aebf67d68d8` | 50308 |
+| `.github/scripts/test-memory-diagnostic.py` | 100644 | `dd1cee2fb4abcc0c982272c72118657becdaceaa` | 146445 |
 | `.github/scripts/validate-foundation.py` | 100644 | `16812f275cad3d8e92ad8fe2e1587607e51f0b0e` | 11670 |
-| `.github/workflows/rust-cross-link.yml` | 100644 | `b86b09fbf5e49f58a026d26404b1ae56fbf79a99` | 1915 |
+| `.github/workflows/rust-cross-link.yml` | 100644 | `0da1432f4010d76f7cd4fa57f343f546d84b2634` | 2156 |
 
 The following UTF-8, LF-terminated, zero-context Git patch has SHA-256
-`32c3633286814565fa2999e58b48374ea990e3873a6a3f080e42e214b163379e`. To reproduce it in a disposable checkout at the
+`63320a27b30a0df3c0e6d6f4a2316b58ef20de49ee1bd00d0526105ce73a724f`. To reproduce it in a disposable checkout at the
 base above, extract only the bytes between the diff fences, including the
 last LF. Check with `git apply --check --unidiff-zero`, apply only to that
 disposable copy, and compare each file with `git hash-object --no-filters`
@@ -4142,10 +4212,10 @@ predecessor blob IDs and the exact edits. Source admission remains inactive.
 ````diff
 diff --git a/.github/scripts/inspect-rust-cross-link.py b/.github/scripts/inspect-rust-cross-link.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bccf8a77f84
+index 0000000000000000000000000000000000000000..285934d7d38ee2c9c8d4ce2c63f5e661d924725d
 --- /dev/null
 +++ b/.github/scripts/inspect-rust-cross-link.py
-@@ -0,0 +1,837 @@
+@@ -0,0 +1,1089 @@
 +"""Static inspection only. A layout pass is never a cross-link qualification."""
 +import re
 +import struct
@@ -4423,7 +4493,7 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +
 +
 +
-+def witness(instructions, root, external, read_byte, budget=200000, observe=lambda address: None, received_fd=47):
++def witness(instructions, root, external, read_byte, budget=200000, observe=lambda address: None, received_fd=47, call_origin=lambda name, sites: None):
 +    """Constant propagation for one ABI witness. Unsupported states have no proof.
 +
 +    Track a fresh abstract stack, returned allocation addresses and owned test FDs.
@@ -4431,7 +4501,7 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +    instruction refuses the witness. No machine code is run.
 +    """
 +    import re
-+    registers = {f"x{i}": 0 for i in range(31)}
++    registers = {}
 +    registers.update(x0=31, x1=32, x2=33, x30=0xfffffff0, sp=1 << 48)
 +    memory = {}
 +    frames = []
@@ -4501,6 +4571,7 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +            name = external[pc]
 +            if name in ("sendmsg","recvmsg"):
 +                check(phase == (0 if name == "sendmsg" else 1), "message-order")
++                call_origin(name,[ret-4 for ret in frames])
 +                message(name == "sendmsg")
 +                phase += 1
 +                finish_call(1)
@@ -4565,7 +4636,8 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +            if flags[cond]:
 +                pc=branch()
 +        elif op == "cmp":
-+            a,b=reg(args[0]),atom(args[1])
++            check(len(args)==2, "compare-operands")
++            a,b=reg(args[0]),atom(args[1]) % (1 << (8*width(args[0])))
 +            flags={"eq":a==b,"ne":a!=b,"lo":a<b,"hs":a>=b,"hi":a>b,"ls":a<=b}
 +        elif op == "mov":
 +            put(args[0],atom(args[1]))
@@ -4604,7 +4676,7 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +
 +
 +
-+def witness_controls():
++def witness_program():
 +    ops = []
 +    def emit(op, args):
 +        ops.append((op,args))
@@ -4646,6 +4718,11 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +    emit("ldr","x30, [sp, #176]")
 +    emit("add","sp, sp, #192")
 +    emit("ret","")
++    return ops
++
++
++def witness_controls():
++    ops = witness_program()
 +    def prove(ops,received=47):
 +        return witness(dict(enumerate_words(ops)),0,{65536:"sendmsg",65540:"recvmsg",65544:"close"},
 +                       lambda address: None, received_fd=received)
@@ -4678,6 +4755,73 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +    check(chunks == [raw], "disassembly-load-bytes")
 +
 +
++DT_NEEDED, DT_PLTRELSZ, DT_PLTGOT, DT_HASH, DT_STRTAB, DT_SYMTAB = range(1, 7)
++DT_RELA, DT_RELASZ, DT_RELAENT, DT_STRSZ, DT_SYMENT = range(7, 12)
++DT_PLTREL, DT_JMPREL = 20, 23
++DT_GNU_HASH, DT_VERSYM = 0x6ffffef5, 0x6ffffff0
++DT_VERNEED, DT_VERNEEDNUM = 0x6ffffffe, 0x6fffffff
++DT_AUXILIARY, DT_FILTER = 0x7ffffffd, 0x7fffffff
++DT_CONFIG, DT_DEPAUDIT, DT_AUDIT = 0x6ffffefa, 0x6ffffefb, 0x6ffffefc
++
++
++def tag_contract(entries):
++    tags = dict(entries)
++    check(not ({DT_CONFIG, DT_DEPAUDIT, DT_AUDIT, DT_FILTER, DT_AUXILIARY} & tags.keys()),
++          "dynamic-loader-override")
++    check(len(tags) == len(entries), "duplicate-dynamic-tag")
++    check((DT_VERNEED in tags) == (DT_VERNEEDNUM in tags) and
++          (DT_VERNEED not in tags or DT_VERSYM in tags), "version-tag-pair")
++    for family in ((DT_JMPREL, DT_PLTRELSZ, DT_PLTREL), (DT_RELA, DT_RELASZ, DT_RELAENT)):
++        check(not any(t in tags for t in family) or all(t in tags for t in family), "relocation-tag-family")
++    check(tags.get(DT_PLTREL, DT_RELA) == DT_RELA and tags.get(DT_RELAENT, 24) == 24,
++          "relocation-format")
++    return tags
++
++
++def relocation_bytes(data, entries, segments, rows):
++    """Cross-check the loader's actual RELA records against the independent tool listing."""
++    tags = tag_contract(entries)
++    def file_bytes(address, length):
++        offsets = [off+address-va for va,off,size,_ in segments if va<=address and address+length<=va+size]
++        check(len(offsets)==1,"relocation-mapping")
++        return data[offsets[0]:offsets[0]+length]
++    types = {257:"R_AARCH64_ABS64",1025:"R_AARCH64_GLOB_DAT",1026:"R_AARCH64_JUMP_SLOT",
++             1027:"R_AARCH64_RELATIVE"}
++    observed = {}
++    for addr_tag, size_tag in ((DT_RELA,DT_RELASZ),(DT_JMPREL,DT_PLTRELSZ)):
++        if addr_tag not in tags:
++            continue
++        length=tags[size_tag]
++        check(length%24==0 and length<=len(data),"rela-size")
++        for address,info,addend in struct.iter_unpack("<QQq",file_bytes(tags[addr_tag],length)):
++            kind=info & 0xffffffff
++            check(kind in types and address not in observed and
++                  (kind==1026)==(addr_tag==DT_JMPREL),"relocation-record")
++            sym=info>>32
++            check((kind==1027)==(sym==0),"relocation-symbol")
++            name=""
++            if sym:
++                index,_,_,_,_,_=struct.unpack("<IBBHQQ",file_bytes(tags[DT_SYMTAB]+24*sym,24))
++                check(index<tags[DT_STRSZ],"relocation-string")
++                raw=file_bytes(tags[DT_STRTAB]+index,tags[DT_STRSZ]-index)
++                check(b"\0" in raw,"relocation-string")
++                name=raw.split(b"\0",1)[0].decode("ascii")
++            if kind==1026:
++                check(addend==0,"plt-addend")
++            observed[address]=(info,types[kind],name)
++    parsed={}
++    for line in rows.splitlines():
++        fields=line.split()
++        if len(fields)<3 or not fields[2].startswith("R_AARCH64_"):
++            continue
++        address=int(fields[0],16)
++        check(address not in parsed,"duplicate-relocation")
++        name=fields[4].split("@")[0] if fields[2]!="R_AARCH64_RELATIVE" and len(fields)>=5 else ""
++        parsed[address]=(int(fields[1],16),fields[2],name)
++    check(observed==parsed,"relocation-tool-disagreement")
++
++
++
 +def native_artifact(elf, map_path, inputs):
 +    import re
 +    import subprocess
@@ -4706,7 +4850,7 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +            (imported if section == "UND" else defined).add((base, version))
 +        return defined, imported
 +
-+    check(not any(tag in {0x7ffffffd,0x7fffffff,0x6ffffefa,0x6ffffefb} for tag,_ in dynamic), "dynamic-loader-override")
++    tag_contract(dynamic)
 +    listing = tool("readelf", "-dW", elf)
 +    needed = re.findall(r"\(NEEDED\)\s+Shared library: \[([^\]]+)\]", listing)
 +    check(len(needed) == sum(tag == 1 for tag, _ in dynamic), "needed-table")
@@ -4749,6 +4893,7 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +        typ, flags, off, addr, _, length, _, _ = PHDR.unpack_from(data, header[5] + i * PHDR.size)
 +        if typ == 1:
 +            parts.append((addr,off,length,flags))
++    relocation_bytes(data, dynamic, parts, relocations)
 +    external = plt_endpoints(data, parts, labels, relocations)
 +    origins = account_map(whole_map, inputs, elf.parent, tool)
 +    instructions = {}
@@ -4764,17 +4909,19 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +            if va <= address < va+size and not flags & 2:
 +                return data[off+address-va]
 +        return None
-+    visited = set()
 +    def origin(address):
 +        matched=[(family,section) for lo,hi,family,section in origins if lo <= address < hi]
 +        check(len(matched)==1, "instruction-map")
-+        visited.update(matched)
-+    for received in (47, 83):
-+        witness(instructions, labels["pdva_scm_probe"], external, readonly_byte, observe=origin, received_fd=received)
-+    for operation in ("send","recv"):
++        return matched[0]
++    def call_origin(name, sites):
++        operation = name.removesuffix("msg")
++        chain = [origin(site) for site in sites]
 +        check(any(family in {"probe","libvmm_sys_util.rlib"} and
-+                  ("raw_"+operation+"msg" in section or operation+"_with_fd" in section)
-+                  for family,section in visited), "scm-method-origin")
++                  ("raw_"+name in section or operation+"_with_fd" in section)
++                  for family,section in chain), "scm-method-origin")
++    for received in (47,83):
++        witness(instructions,labels["pdva_scm_probe"],external,readonly_byte,
++                observe=origin,received_fd=received,call_origin=call_origin)
 +    print("PASS static witness and sealed map input inventory")
 +
 +
@@ -4883,9 +5030,9 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +    check(len(needed)==1 and needed[0]=="libc.so","needed-allowlist")
 +    check(one(11)==24,"symbol-stride")
 +    vers={}
-+    if 0x6ffffffe in by_tag:
-+        addr=one(0x6ffffffe)
-+        num=one(0x6fffffff)
++    if DT_VERNEED in by_tag:
++        addr=one(DT_VERNEED)
++        num=one(DT_VERNEEDNUM)
 +        check(0<num<=len(needed),"version-count")
 +        for i in range(num):
 +            version,n,file,aux,nxt=struct.unpack("<HHIII",chunk(addr,16))
@@ -4899,7 +5046,7 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +                auxaddr+=skip
 +            check((nxt>=16 if i+1<num else nxt==0),"version-chain")
 +            addr+=nxt
-+    versions=(struct.unpack("<"+"H"*count,chunk(one(0x6ffffff0),2*count))
++    versions=(struct.unpack("<"+"H"*count,chunk(one(DT_VERSYM),2*count))
 +              if 0x6ffffff0 in by_tag else [1]*count)
 +    table=chunk(one(6),count*24)
 +    exports=[]
@@ -4967,6 +5114,178 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +
 +
 +
++def integrated_control():
++    """One synthetic file through native_artifact, including its external-tool parsers."""
++    import tempfile
++    from unittest.mock import patch
++    ops = witness_program()
++    entry = 0x800
++    call_addresses = {0x10000:0x1000, 0x10004:0x1010, 0x10008:0x1020}
++    fail = entry + 4*len(ops)
++    names = ("sendmsg","recvmsg","close")
++    data = bytearray(0x4100)
++    data[:512] = fixture()
++    struct.pack_into("<H",data,56,4)
++    PHDR.pack_into(data,64,1,5,0,0,0,0x1100,0x1100,16384)
++    PHDR.pack_into(data,232,1,6,0x4000,0x4000,0,0x100,0x100,16384)
++    strings = b"\0libc.so\0pdva_scm_probe\0sendmsg\0recvmsg\0close\0LIBC\0"
++    data[800:800+len(strings)] = strings
++    tags=[(1,1),(4,880),(5,800),(10,len(strings)),(6,960),(11,24),
++          (DT_VERSYM,1100),(DT_VERNEED,1120),(DT_VERNEEDNUM,1),
++          (DT_JMPREL,1280),(DT_PLTRELSZ,72),(DT_PLTREL,DT_RELA),(0,0)]
++    PHDR.pack_into(data,176,2,4,448,448,0,len(tags)*16,len(tags)*16,8)
++    for i,pair in enumerate(tags):
++        DYN.pack_into(data,448+16*i,*pair)
++    struct.pack_into("<8I",data,880,1,5,1,0,2,3,4,0)
++    dynsyms=[]
++    for i,name in enumerate(("pdva_scm_probe",*names),1):
++        defined=i==1
++        struct.pack_into("<IBBHQQ",data,960+24*i,strings.index(name.encode()),0x12,0,int(defined),
++                         entry if defined else 0,4*len(ops) if defined else 0)
++        dynsyms.append(f"{i}: {entry if defined else 0:x} 4 FUNC GLOBAL DEFAULT "
++                       + ("1 "+name if defined else "UND "+name+"@LIBC"))
++    struct.pack_into("<5H",data,1100,0,1,2,2,2)
++    struct.pack_into("<HHIII",data,1120,1,1,1,16,0)
++    struct.pack_into("<IHHII",data,1136,0,0,2,strings.index(b"LIBC"),0)
++    reloc=[]
++    lines=[f"{entry:016x} <pdva_scm_probe>:"]
++    for i,name in enumerate(names):
++        slot=0x4000+8*i
++        info=((2+i)<<32)|1026
++        struct.pack_into("<QQq",data,1280+24*i,slot,info,0)
++        addr=0x1000+16*i
++        struct.pack_into("<4I",data,addr,0xf0000010,0xf9400211|(i<<10),0x91000210|(8*i<<10),0xd61f0220)
++        lines.append(f"{addr:016x} <{name}@plt>:")
++        reloc.append(f"{slot:016x} {info:016x} R_AARCH64_JUMP_SLOT 0 {name}@LIBC + 0")
++    def register(name):
++        return 31 if name=="sp" else int(name[1:])
++    for i,(op,args) in enumerate(ops):
++        pc=entry+i*4
++        a=[token.strip() for token in args.split(",")]
++        if op in ("ldr","str"):
++            offset=int(re.search(r"#(\d+)",args)[1])
++            wide=a[0][0]=="x"
++            word=(0xf9000000 if wide else 0xb9000000) | ((op=="ldr")<<22)
++            word |= (offset//(8 if wide else 4))<<10 | 31<<5 | register(a[0])
++        elif op in ("add","sub"):
++            word=(0x91000000 if op=="add" else 0xd1000000) | int(a[2][1:])<<10 | register(a[1])<<5 | register(a[0])
++        elif op=="mov":
++            word=(0xd2800000 if a[0][0]=="x" else 0x52800000) | int(a[1][1:])<<5 | register(a[0]) if a[1]!="sp" else 0x910003e1
++        elif op=="bl":
++            addr=call_addresses[int(args,16)]
++            word=0x94000000|((addr-pc)//4 & 0x3ffffff)
++            args=hex(addr)
++        elif op=="cmp":
++            word=0xf100041f
++        elif op=="b.ne":
++            word=0x54000001|(((fail-pc)//4)<<5)
++            args=hex(fail)
++        elif op=="ret":
++            word=0xd65f03c0
++        else:
++            raise AssertionError(op)
++        struct.pack_into("<I",data,pc,word)
++        lines.append(f"{pc:x}: {word:08x} {op} {args}")
++    struct.pack_into("<I",data,fail,0xd65f03c0)
++    lines.append(f"{fail:x}: d65f03c0 ret")
++    with tempfile.TemporaryDirectory() as tmp:
++        root=Path(tmp).resolve()
++        elf=root/"fixture.so"
++        elf.write_bytes(data)
++        linkmap=root/"fixture.map"
++        mid=entry+4*next(i for i,x in enumerate(ops) if x==("bl","0x10000"))+4
++        linkmap.write_text(f"{entry:x} {entry:x} {mid-entry:x} 4 /out/libvmm_sys_util.rlib(a.o):(.text.raw_sendmsg)\n"
++                           f"{mid:x} {mid:x} {fail+4-mid:x} 4 /out/libvmm_sys_util.rlib(a.o):(.text.raw_recvmsg)\n"
++                           "0 0 0 1 /out/liblibc.rlib(c.o):(.note)\n"
++                           f"{entry:x} {entry:x} 0 1 pdva_scm_probe\n")
++        for lib in ("libvmm_sys_util.rlib","liblibc.rlib"):
++            (root/lib).write_bytes(b"!<arch>\n")
++        def fixture_tool(argv,**kwargs):
++            if argv[0]=="ar":
++                return "a.o\nc.o\n"
++            if argv[0]=="llvm-objdump-18":
++                return "\n".join(lines)
++            if "--syms" in argv:
++                if argv[-1]==elf:
++                    return "\n".join(dynsyms)
++                return "\n".join(f"{i}: 10 4 FUNC GLOBAL DEFAULT 1 {name}@@LIBC" for i,name in enumerate(names,1))
++            if "-dW" in argv:
++                return "(NEEDED) Shared library: [libc.so]"
++            if "-rW" in argv:
++                return "\n".join(reloc)
++            raise AssertionError("unrecognized-tool-in-fixture")
++        with patch("subprocess.check_output",side_effect=fixture_tool):
++            native_artifact(elf,linkmap,root)
++            for offset,fmt,value,reason in (
++                (448+8*16,"q",DT_FILTER,"dynamic-loader-override"),
++                (448+8*16,"q",DT_AUDIT,"dynamic-loader-override"),
++                (448+8*16,"q",0x1234,"version-tag-pair"),
++                (448+11*16+8,"Q",17,"relocation-format"),
++                (1280+16,"q",1,"plt-addend"),
++                (1280+8,"Q",(3<<32)|1026,"relocation-tool-disagreement"),
++                (entry,"I",0xd65f03c0,"disassembly-load-bytes")):
++                changed=data.copy()
++                struct.pack_into("<"+fmt,changed,offset,value)
++                elf.write_bytes(changed)
++                try:
++                    native_artifact(elf,linkmap,root)
++                except Reject as exc:
++                    check(str(exc)==reason,"integrated-control-"+reason)
++                else:
++                    raise AssertionError("accepted-"+reason)
++    print("PASS integrated native_artifact with synthetic tool transcripts and seven specific refusals")
++
++
++
++def integrated_host_tools():
++    """Optional Linux integration. Only synthetic assembly is assembled and linked."""
++    import subprocess
++    import tempfile
++    with tempfile.TemporaryDirectory() as tmp:
++        root=Path(tmp).resolve()
++        def run(*args):
++            subprocess.run(args,cwd=root,check=True,timeout=60,stdin=subprocess.DEVNULL,
++                           stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
++        stub=root/"inputs/ndk/android-ndk-r28c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/30"
++        stub.mkdir(parents=True)
++        (root/"stub.s").write_text("\n".join(f".globl {n}\n.type {n},%function\n{n}: ret"
++                                             for n in ("sendmsg","recvmsg","close"))+"\n")
++        (root/"version").write_text("LIBC { global: sendmsg; recvmsg; close; local: *; };\n")
++        def assemble(name):
++            run("clang","--target=aarch64-linux-gnu","-c",name+".s","-o",name+".o")
++        assemble("stub")
++        run("ld.lld","-shared","-soname","libc.so","--version-script=version",
++            "--hash-style=sysv","stub.o","-o",stub/"libc.so")
++        asm=['.section .text.raw_sendmsg,"ax",%progbits','.globl pdva_scm_probe',
++             '.type pdva_scm_probe,%function','pdva_scm_probe:']
++        for op,args in witness_program():
++            if op=="bl":
++                name={"0x10000":"sendmsg","0x10004":"recvmsg","0x10008":"close"}[args]
++                args=name
++            if op=="b.ne":
++                args=".Lfailure"
++            asm.append(f"  {op} {args}")
++            if op=="bl" and args=="sendmsg":
++                asm.append('.section .text.raw_recvmsg,"ax",%progbits')
++        asm+=[".Lfailure: ret"]
++
++        (root/"a.s").write_text("\n".join(asm)+"\n")
++        (root/"c.s").write_text('.section .rodata.fixture,"a",%progbits\n.byte 0\n')
++        for obj,lib in (("a","libvmm_sys_util.rlib"),("c","liblibc.rlib")):
++            assemble(obj)
++            run("ar","rcs",lib,obj+".o")
++        run("ld.lld","-shared","--hash-style=sysv","-z","noexecstack","-z","max-page-size=16384",
++            "-Map=fixture.map","--whole-archive","libvmm_sys_util.rlib","liblibc.rlib",
++            "--no-whole-archive",stub/"libc.so","-o","fixture.so")
++        linkmap=root/"fixture.map"
++        content=linkmap.read_text()
++        for lib in ("libvmm_sys_util.rlib","liblibc.rlib"):
++            content=content.replace(lib+"(", "/out/"+lib+"(")
++        linkmap.write_text(content)
++        native_artifact(root/"fixture.so",linkmap,root/"inputs")
++
++
++
 +if __name__ == "__main__":
 +    if sys.argv[1:] == ["--self-test"]:
 +        controls()
@@ -4974,6 +5293,9 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +        witness_controls()
 +        binding_controls()
 +        loader_controls()
++        integrated_control()
++    elif sys.argv[1:] == ["--self-test-host-tools"]:
++        integrated_host_tools()
 +    elif len(sys.argv) == 5 and sys.argv[1] == "--artifact":
 +        native_artifact(*map(Path, sys.argv[2:]))
 +    elif len(sys.argv) == 3 and sys.argv[1] == "--layout":
@@ -4985,10 +5307,10 @@ index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bcc
 +        raise SystemExit("expected --self-test or --layout FILE")
 diff --git a/.github/scripts/rust-cross-link.py b/.github/scripts/rust-cross-link.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eecd7bdc70f
+index 0000000000000000000000000000000000000000..00f7813200be6b933e8d009890f23aebf67d68d8
 --- /dev/null
 +++ b/.github/scripts/rust-cross-link.py
-@@ -0,0 +1,719 @@
+@@ -0,0 +1,1197 @@
 +"""Single disposable cross-link supervisor and exact reviewed probe."""
 +import hashlib
 +import json
@@ -5021,18 +5343,18 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +T=aarch64-linux-android
 +common=(--target "$T" --crate-type rlib -C codegen-units=1 -C panic=abort -C relocation-model=pic)
 +CARGO_PKG_VERSION=1.3.2 "$R" "${common[@]}" --edition 2018 --crate-name bitflags \
-+  --cfg 'feature="default"' "$D/extra_versions/crates/bitflags/src/lib.rs" -o "$O/libbitflags.rlib"
++  --cfg 'feature="default"' "$D/extra_versions/crates/bitflags/src/lib.rs" -o "$O/libbitflags.rlib" || exit 71
 +CARGO_PKG_VERSION=0.2.183 "$R" "${common[@]}" --edition 2021 --crate-name libc \
 +  --cfg freebsd12 --cfg 'feature="default"' --cfg 'feature="std"' --cfg 'feature="extra_traits"' \
-+  "$D/crates/libc/src/lib.rs" -o "$O/liblibc.rlib"
++  "$D/crates/libc/src/lib.rs" -o "$O/liblibc.rlib" || exit 72
 +CARGO_PKG_VERSION=0.15.0 "$R" "${common[@]}" --edition 2021 --crate-name vmm_sys_util \
 +  --extern "libc=$O/liblibc.rlib" --extern "bitflags=$O/libbitflags.rlib" \
-+  "$D/crates/vmm-sys-util/src/lib.rs" -o "$O/libvmm_sys_util.rlib"
++  "$D/crates/vmm-sys-util/src/lib.rs" -o "$O/libvmm_sys_util.rlib" || exit 73
 +"$R" --target "$T" --edition 2021 --crate-type cdylib -C codegen-units=1 -C panic=abort -C relocation-model=pic \
 +  -C "linker=$N/bin/aarch64-linux-android30-clang" -C "link-arg=-Wl,-Map,$O/probe.map" \
 +  -C link-arg=-Wl,--threads=1 -C link-arg=-Wl,-z,defs,-z,max-page-size=16384 -L "dependency=$O" \
-+  --extern "vmm_sys_util=$O/libvmm_sys_util.rlib" probe.rs -o "$O/libprobe.so"
-+"$N/bin/llvm-readelf" -h -lW -d -rW --dyn-syms --version-info "$O/libprobe.so"
++  --extern "vmm_sys_util=$O/libvmm_sys_util.rlib" probe.rs -o "$O/libprobe.so" || exit 74
++"$N/bin/llvm-readelf" -h -lW -d -rW --dyn-syms --version-info "$O/libprobe.so" || exit 75
 +'''
 +
 +
@@ -5177,7 +5499,7 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +
 +
 +def command(*args, output=False):
-+    return subprocess.run(args, check=True, close_fds=True, env=BASE_ENV,
++    return subprocess.run(args, check=True, close_fds=True, env={**BASE_ENV, "GIT_CONFIG_NOSYSTEM":"1", "GIT_CONFIG_GLOBAL":"/dev/null", "GIT_TERMINAL_PROMPT":"0"},
 +                          stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
 +                          stdout=subprocess.PIPE if output else subprocess.DEVNULL).stdout
 +
@@ -5255,7 +5577,11 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +
 +def fetch(url, path, maximum):
 +    import urllib.request
-+    with urllib.request.urlopen(url, timeout=40) as response, path.open("xb") as stream:
++    class RejectRedirect(urllib.request.HTTPRedirectHandler):
++        def redirect_request(self, *args):
++            raise ValueError("redirect")
++    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), RejectRedirect)
++    with opener.open(url, timeout=40) as response, path.open("xb") as stream:
 +        require(response.geturl() == url, "redirect")
 +        copy_stream(response, stream, maximum)
 +
@@ -5281,6 +5607,8 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +    ndk = volume / "android-ndk-r28c-linux.zip"
 +    fetch("https://dl.google.com/android/repository/" + ndk.name, ndk, 722261334)
 +    verify_distribution(volume, ring)
++    REPORT.passed("distribution")
++    REPORT.begin("installed-inputs")
 +    for package, target in PINS:
 +        name = f"{package}-1.100.0-{target}"
 +        archive = volume / (name + ".tar.xz")
@@ -5299,11 +5627,11 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +def release_sources(volume, data):
 +    import shutil
 +    db = volume / "release.git"
-+    command("git", "init", "--bare", str(db))
++    command("git", "init", "--bare", "--template=", str(db))
 +    def git(*args):
 +        return command("git", "--git-dir", str(db), *args, output=True)
 +    ref = "refs/tags/android-17.0.0_r1"
-+    git("-c", "fetch.fsckObjects=true", "fetch", "--no-tags", "--depth=1",
++    git("-c", "http.followRedirects=false", "-c", "fetch.fsckObjects=true", "fetch", "--no-tags", "--depth=1",
 +        "https://android.googlesource.com/platform/external/rust/android-crates-io", ref + ":" + ref)
 +    require(git("rev-parse", ref, ref + "^{}").decode().splitlines() ==
 +            [SOURCE_TAG, SOURCE_COMMIT], "release-tag")
@@ -5446,9 +5774,10 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +    if mode == "preflight":
 +        return
 +    if mode == "inspect":
-+        os.execve("/usr/bin/python3", ["python3", "-IB", "/inspector.py", "--artifact",
-+                                       "/sealed/libprobe.so", "/sealed/probe.map", "/inputs"],
-+                  BASE_ENV)
++        import runpy
++        inspect = runpy.run_path("/inspector.py")["native_artifact"]
++        inspect(Path("/sealed/libprobe.so"), Path("/sealed/probe.map"), Path("/inputs"))
++        return
 +    require(mode == "build", "worker-mode")
 +    require(verify_sources(Path("/inputs/D")) ==
 +            Path("/inputs/source-inventory.sha256").read_text().strip(), "mounted-source")
@@ -5463,8 +5792,13 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +    # RECIPE and PROBE come verbatim from the reviewed evidence apart from the two thread controls.
 +    Path("/out/tmp").mkdir(exist_ok=True)
 +    os.chdir("/inputs")
-+    os.execve("/bin/bash", ["bash", "-eu", "-c", RECIPE], {
++    result = subprocess.run(["/bin/bash", "-eu", "-c", RECIPE], close_fds=True, env={
 +        **BASE_ENV, "D": "/inputs/D", "N": ndk, "R": compiler, "O": "/out", "TMPDIR": "/out/tmp"})
++    if result.returncode:
++        reasons = {71:"compile-bitflags",72:"compile-libc",73:"compile-vmm-sys-util",
++                   74:"link-probe",75:"readelf-summary"}
++        raise ValueError(reasons.get(result.returncode,"command-failed"))
++
 +
 +
 +def run_cage(volume, group, mode, uid, inputs, output):
@@ -5499,8 +5833,13 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +        with open("/dev/null", "r+b", buffering=0) as null:
 +            child = subprocess.Popen(args, env=BASE_ENV, stdin=null, stdout=null, stderr=null,
 +                                     close_fds=True, preexec_fn=enter)
-+            require(watchdog(child, 27*60, lambda: (cg / "cgroup.kill").write_text("1")) == 0,
-+                    "phase-" + mode)
++            status = watchdog(child, 27*60, lambda: (cg / "cgroup.kill").write_text("1"))
++            if status != 0:
++                reason = WORKER_REASONS[status-32] if 32 <= status < 32+len(WORKER_REASONS) else "worker-launch"
++                raise ValueError(reason)
++    except Exception as error:
++        REPORT.failure(error)
++        raise
 +    finally:
 +        (cg / "cgroup.kill").write_text("1")
 +        import time
@@ -5511,13 +5850,441 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +        events = dict(row.split() for row in (cg / "memory.events").read_text().splitlines())
 +        require(int(events["oom"]) == 0 and int(events["max"]) == 0 and
 +                int((cg / "memory.peak").read_text()) <= 8 * GIB, "memory-events")
++        peak = int((cg / "memory.peak").read_text())
 +        cg.rmdir()
++    return peak
++
++
++WORKER_REASONS = (
++    'address-mode',
++    'aggregate-memory-events',
++    'allocation-ownership',
++    'allocation-size',
++    'archive-control',
++    'archive-location',
++    'archive-path',
++    'archive-type',
++    'authorization-identity',
++    'call-return',
++    'cgroup-cleanup',
++    'cgroup-v2',
++    'clone-filter',
++    'command-failed',
++    'compare-operands',
++    'compile-bitflags',
++    'compile-libc',
++    'compile-vmm-sys-util',
++    'component-entry',
++    'component-escape',
++    'component-identity',
++    'deadline',
++    'delegated-limit',
++    'disassembly-load-bytes',
++    'distribution-sha1',
++    'distribution-sha256',
++    'duplicate-dynamic-tag',
++    'duplicate-instruction',
++    'duplicate-jump-slot',
++    'duplicate-member',
++    'duplicate-relocation',
++    'dynamic-binding',
++    'dynamic-extent',
++    'dynamic-loader-override',
++    'dynamic-mapping',
++    'dynamic-pointer',
++    'dynamic-search-path',
++    'dynamic-string',
++    'dynamic-symbol-count',
++    'dynamic-symbol-row',
++    'dynamic-table',
++    'dynamic-tables-disagree',
++    'dynamic-tag',
++    'dynamic-terminator',
++    'elf-class-data',
++    'elf-target',
++    'empty-map',
++    'entry-point',
++    'escaping-link',
++    'executable-load',
++    'expansion-budget',
++    'export-address',
++    'export-allowlist',
++    'failed-git',
++    'failed-gpg',
++    'failed-ldd',
++    'failed-mkfs.ext4',
++    'failed-mount',
++    'failed-umount',
++    'fd-ownership',
++    'filter-init',
++    'filter-load',
++    'filter-rule',
++    'foreign-loader',
++    'gnu-hash-chain',
++    'gnu-hash-index',
++    'gnu-hash-size',
++    'gnu-stack',
++    'group-membership',
++    'header-extent',
++    'host-file',
++    'host-library',
++    'host-origin',
++    'host-python',
++    'host-tools',
++    'import-allowlist',
++    'import-version',
++    'incomplete-report',
++    'indirect-control',
++    'ineffective-isolation-control',
++    'inert-elf-control',
++    'inherited-descriptor',
++    'input-write-denial',
++    'inspection-size',
++    'installed-inode',
++    'instruction-extent',
++    'instruction-map',
++    'interpreter',
++    'link-probe',
++    'link-size',
++    'link-target',
++    'load-alignment',
++    'load-congruence',
++    'loader-control',
++    'loader-positive',
++    'manifest-entry',
++    'map-format',
++    'map-input',
++    'map-positive',
++    'member-length',
++    'memory-events',
++    'memory-limit',
++    'memory-operation',
++    'message-name',
++    'message-order',
++    'missing-call-endpoint',
++    'missing-map-origins',
++    'missing-reachable-endpoint',
++    'mounted-source',
++    'msghdr-contract',
++    'native-runtime',
++    'ndk-linker',
++    'ndk-revision',
++    'ndk-size',
++    'needed-allowlist',
++    'needed-table',
++    'network-filter',
++    'network-namespace',
++    'operating-system',
++    'os-EACCES',
++    'os-EBUSY',
++    'os-EIO',
++    'os-ENOENT',
++    'os-ENOMEM',
++    'os-ENOSPC',
++    'os-EPERM',
++    'os-EROFS',
++    'os-ETIMEDOUT',
++    'output-type',
++    'packed-relocations',
++    'page-alias',
++    'pair-width',
++    'payload-escape',
++    'plt-addend',
++    'plt-binding',
++    'plt-control',
++    'plt-extent',
++    'plt-offset',
++    'plt-sequence',
++    'portable-control',
++    'positive-control',
++    'primary-signer',
++    'privilege',
++    'probe-binding',
++    'probe-object',
++    'program-table',
++    'project-archive',
++    'readelf-summary',
++    'readonly-input',
++    'redirect',
++    'rela-size',
++    'release-blob',
++    'release-link',
++    'release-mode',
++    'release-tag',
++    'release-tree',
++    'relocation-count',
++    'relocation-format',
++    'relocation-kind',
++    'relocation-mapping',
++    'relocation-record',
++    'relocation-string',
++    'relocation-symbol',
++    'relocation-tag-family',
++    'relocation-target',
++    'relocation-tool-disagreement',
++    'report-overflow',
++    'required-imports',
++    'return-address',
++    'runner',
++    'runner-capacity',
++    'runtime-member',
++    'rust-runtime',
++    'rustc-version',
++    'scm-method-origin',
++    'scm-receive-contract',
++    'scm-send-contract',
++    'segment-extent',
++    'shifted-operand',
++    'signature-status',
++    'source-link',
++    'source-mode',
++    'source-tree',
++    'stage-status',
++    'storage-limit',
++    'stream-extent',
++    'string-table-size',
++    'successful-scm-witness',
++    'supervisor-deadline',
++    'symbol-binding',
++    'symbol-stride',
++    'text-relocation',
++    'unexpected',
++    'unknown-condition',
++    'unknown-memory',
++    'unknown-register',
++    'unmodeled-external',
++    'unsupported-register',
++    'unsupported-witness-instruction',
++    'version-chain',
++    'version-count',
++    'version-index',
++    'version-library',
++    'version-tag-pair',
++    'volume-cleanup',
++    'witness-budget',
++    'worker-identity',
++    'worker-launch',
++    'worker-mode',
++    'writable-executable',
++    'writable-mount',
++    'write-region',
++    'wrong-rejection',
++    'wrong-specific-rejection',
++)
++
++# Only the privileged supervisor emits public records. All descendant stdio stays private.
++STAGES = ("runner", "limits", "host-runtime", "preflight", "control-net", "control-filter",
++          "distribution", "installed-inputs", "release-sources", "build", "seal", "inspect",
++          "resource-events", "cleanup")
++PUBLIC_REASONS = frozenset(("unexpected", "command-failed", "deadline", "operating-system",
++                            "authorization-identity", "incomplete-report", "report-overflow",
++                            "worker-launch", "invalid-proof", "stage-status")) | frozenset(WORKER_REASONS)
++REPORT = None
++
++
++def safe_reason(error):
++    if isinstance(error, ValueError) and error.args and isinstance(error.args[0],str) and error.args[0] in PUBLIC_REASONS:
++        return error.args[0]
++    if isinstance(error, subprocess.TimeoutExpired):
++        return "deadline"
++    if isinstance(error, subprocess.CalledProcessError):
++        name = Path(str(error.cmd[0])).name if isinstance(error.cmd,(list,tuple)) and error.cmd else ""
++        label = "failed-" + name
++        return label if label in PUBLIC_REASONS else "command-failed"
++    if isinstance(error, OSError):
++        import errno
++        label = "os-" + errno.errorcode.get(error.errno,"")
++        return label if label in PUBLIC_REASONS else "operating-system"
++    return "unexpected"
++
++
++class Evidence:
++    def __init__(self, commit, image, emit):
++        import re
++        require(re.fullmatch(r"[0-9a-f]{40}", commit) and
++                re.fullmatch(r"[0-9]{6,8}\.[0-9]+\.[0-9]+", image), "authorization-identity")
++        self.count = 0
++        self.emit = emit
++        self.done = []
++        self.active = "runner"
++        self.failed = None
++        self.cleanup = "unobserved"
++        self.record("identity", source=commit, runner="ubuntu-24.04-x64", image=image,
++                    release=SOURCE_COMMIT, rust_manifest=MANIFEST, ndk="28.2.13676358")
++
++    def record(self, event, **fields):
++        row = json.dumps({"event":event, **fields}, sort_keys=True, separators=(",",":"))
++        require(len(row) <= 1024, "report-overflow")
++        self.count += 1
++        require(self.count <= 36, "report-overflow")
++        self.emit(row)
++
++    def begin(self, stage):
++        require(stage in STAGES and stage not in self.done, "stage-status")
++        self.active = stage
++        self.record("begin", stage=stage)
++
++    def passed(self, stage, **measurements):
++        require(stage == self.active and stage not in self.done, "stage-status")
++        require(all(k in {"available_ram","free_disk","peak_memory"} and
++                    type(v) is int and 0 <= v < 2**64 for k,v in measurements.items()), "stage-status")
++        self.done.append(stage)
++        claims = {
++            "distribution":"manifest-signature-three-archive-signatures-and-pins-ndk-size-sha1-sha256",
++            "release-sources":"tag-commit-tree-blob-mode-inventory",
++            "control-net":"missing-namespace-rejected",
++            "control-filter":"missing-socket-filter-rejected",
++            "preflight":"uid-gid-caps-network-mounts-descriptors-cgroup-storage",
++            "build":"four-serial-compiler-steps-and-readelf-summary",
++            "inspect":"elf-loader-versions-relocations-map-and-two-scm-witnesses",
++            "cleanup":"private-volume-unmounted"
++        }
++        self.record("pass", stage=stage, checks=claims.get(stage,stage), **measurements)
++
++    def failure(self, error):
++        failure = (self.active, safe_reason(error))
++        if self.failed is None:
++            self.failed = failure
++        self.record("failure", stage=failure[0], reason=failure[1])
++
++    def finish(self):
++        complete = self.failed is None and self.done == list(STAGES) and self.cleanup == "unmounted"
++        self.record("final", outcome="pass" if complete else "incomplete", cleanup=self.cleanup,
++                    unconfirmed=[s for s in STAGES if s not in self.done],
++                    unrun=["android-execution","independent-rebuild","production-qualification"])
++        require(complete, "incomplete-report")
++
++
++def reported_run(commit, image, action, emit):
++    global REPORT
++    REPORT = Evidence(commit,image,emit)
++    try:
++        action()
++    except Exception as failure:
++        if REPORT.failed is None or REPORT.active == "cleanup" and REPORT.cleanup != "unmounted":
++            REPORT.failure(failure)
++    REPORT.finish()
++
++
++def read_report(source, commit, image, publish):
++    """Validate the entire bounded protocol before emitting any line into the Actions log."""
++    rows = []
++    data = source.read(32769)
++    require(len(data)<=32768, "report-overflow")
++    lines=data.splitlines()
++    import re
++    exit_line = lines.pop() if lines else b""
++    match = re.fullmatch(rb"unit=([0-9]{1,3})",exit_line)
++    require(match is not None and int(match[1])<=255, "incomplete-report")
++    unit_status = int(match[1])
++    require(0<len(lines)<=36 and data.endswith(b"\n"), "incomplete-report")
++    expected=[]
++    replay=Evidence(commit,image,expected.append)
++    for i,line in enumerate(lines):
++        require(len(line)<=1024, "report-overflow")
++        row=json.loads(line)
++        require(type(row) is dict,"stage-status")
++        event=row.pop("event",None)
++        if i==0:
++            require(event=="identity","stage-status")
++        elif event=="begin":
++            stage=row["stage"]
++            require(stage=="cleanup" or (len(replay.done)<len(STAGES) and stage==STAGES[len(replay.done)]),
++                    "stage-status")
++            replay.begin(stage)
++        elif event=="pass":
++            stage=row.pop("stage")
++            row.pop("checks")
++            replay.passed(stage,**row)
++            if stage=="cleanup":
++                replay.cleanup="unmounted"
++        elif event=="failure":
++            require(row["reason"] in PUBLIC_REASONS,"stage-status")
++            replay.failure(ValueError(row["reason"]))
++        elif event=="final" and i==len(lines)-1:
++            try:
++                replay.finish()
++            except ValueError as exc:
++                require(str(exc)=="incomplete-report","stage-status")
++        else:
++            raise ValueError("stage-status")
++        require(len(expected)==i+1 and expected[-1].encode()==line, "stage-status")
++        rows.append(expected[-1])
++    if unit_status and event=="final" and json.loads(rows[-1])["outcome"]=="pass":
++        rows.pop()
++        for line in rows:
++            publish(line)
++        publish("FAIL supervisor unit returned nonzero after its report")
++        raise ValueError("incomplete-report")
++    for line in rows:
++        publish(line)
++    require(unit_status==0 and event=="final" and json.loads(rows[-1])["outcome"]=="pass","incomplete-report")
++
++
++def reader_controls():
++    import io
++    commit,image="a"*40,"20261120.1.0"
++    rows=[]
++    def emit_all():
++        for stage in STAGES:
++            REPORT.begin(stage)
++            REPORT.passed(stage)
++        REPORT.cleanup="unmounted"
++    reported_run(commit,image,emit_all,rows.append)
++    encoded=lambda seq, status=0: io.BytesIO(("\n".join(seq)+f"\nunit={status}\n").encode())
++    published=[]
++    read_report(encoded(rows),commit,image,published.append)
++    require(published==rows,"report-round-trip")
++    published.clear()
++    try:
++        read_report(encoded(rows,1),commit,image,published.append)
++    except ValueError as exc:
++        require(str(exc)=="incomplete-report" and rows[-1] not in published,"unit-exit-control")
++    else:
++        raise AssertionError("failed unit reported success")
++    for seq in (rows[:-1],rows[:1]+rows[-1:],rows+["::error::secret"],rows[:1]+['{"event":"private"}']):
++        try:
++            read_report(encoded(seq),commit,image,lambda s: None)
++        except (ValueError,KeyError):
++            pass
++        else:
++            raise AssertionError("malformed report accepted")
++    print("PASS complete report round-trip; truncated, forged, extra and invalid records rejected")
++
++
++
++def report_controls():
++    records = []
++    def success():
++        for stage in STAGES:
++            REPORT.begin(stage)
++            REPORT.passed(stage)
++        REPORT.cleanup = "unmounted"
++    reported_run("a"*40,"20261120.1.0",success,records.append)
++    require(json.loads(records[-1])["outcome"] == "pass", "report-positive")
++    for code in ("unexpected","incomplete-report"):
++        records.clear()
++        def fail():
++            REPORT.begin("build")
++            if code == "unexpected":
++                raise ValueError("private detail\n::warning::forged")
++        try:
++            reported_run("a"*40,"20261120.1.0",fail,records.append)
++        except ValueError as exc:
++            require(str(exc)=="incomplete-report", "report-negative")
++        else:
++            raise AssertionError("invalid-success")
++        require(json.loads(records[-1])["outcome"]=="incomplete" and
++                not any("private detail" in r or "::" in r for r in records), "report-leak")
++    print("PASS bounded report, incomplete work, failure exit and untrusted-text suppression")
++
 +
 +
 +def supervise():
 +    import platform
 +    import shutil
 +    import tempfile
++    REPORT.begin("runner")
 +    require(os.geteuid() == 0 and platform.machine() == "x86_64" and
 +            'VERSION_ID="24.04"' in Path("/etc/os-release").read_text().splitlines(), "runner")
 +    require(not any(p.name not in {"status", "register"} for p in
@@ -5527,6 +6294,8 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +    mem = next(l for l in Path("/proc/meminfo").read_text().splitlines() if l.startswith("MemAvailable:"))
 +    require(int(mem.split()[1]) * 1024 >= 8 * GIB and
 +            shutil.disk_usage("/var/tmp").free >= LIMIT + GIB, "runner-capacity")
++    REPORT.passed("runner", available_ram=int(mem.split()[1])*1024, free_disk=shutil.disk_usage("/var/tmp").free)
++    REPORT.begin("limits")
 +    cg = memory_group()
 +    leaf = cg / "supervisor"
 +    leaf.mkdir()
@@ -5543,6 +6312,8 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +            Path(file).unlink()
 +            try:
 +                filesystem_limit(volume)
++                REPORT.passed("limits")
++                REPORT.begin("host-runtime")
 +                empty = volume / "empty"
 +                empty.mkdir()
 +                command("mount", "--make-rprivate", "/")
@@ -5550,7 +6321,9 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +                transient.mkdir(mode=0o700)
 +                command("mount", "--bind", str(transient), "/tmp")
 +                host_runtime(volume)
++                REPORT.passed("host-runtime")
 +                for name, uid in (("preflight", 61001), ("control-net",61001), ("control-filter",61001), ("build", 61001), ("inspect", 61002)):
++                    REPORT.begin("distribution" if name == "build" else name)
 +                    out = volume / name
 +                    out.mkdir(mode=0o700)
 +                    os.chown(out, uid, uid)
@@ -5558,10 +6331,16 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +                    command("mount", "-o", "remount,bind,noexec,nosuid,nodev", str(out))
 +                    if name == "build":
 +                        inputs = acquire(volume)
++                        REPORT.passed("installed-inputs")
++                        REPORT.begin("release-sources")
 +                        release_sources(volume, inputs)
 +                        (inputs / "probe.rs").write_text(PROBE)
-+                    run_cage(volume, cg, name, uid, inputs if name in ("build","inspect") else empty, out)
++                        REPORT.passed("release-sources")
++                        REPORT.begin("build")
++                    peak = run_cage(volume, cg, name, uid, inputs if name in ("build","inspect") else empty, out)
++                    REPORT.passed(name,peak_memory=peak)
 +                    if name == "build":
++                        REPORT.begin("seal")
 +                        for file_name in ("libprobe.so", "probe.map"):
 +                            artifact = out / file_name
 +                            st = artifact.lstat()
@@ -5571,14 +6350,24 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +                            artifact.chmod(0o444)
 +                        os.chown(out, 0, 0)
 +                        out.chmod(0o555)
++                        REPORT.passed("seal")
++                REPORT.begin("resource-events")
 +                events = dict(line.split() for line in (cg / "memory.events").read_text().splitlines())
 +                require(int(events["oom"]) == 0 and int(events["max"]) == 0 and
 +                        int((cg / "memory.peak").read_text()) <= 8 * GIB, "aggregate-memory-events")
++                REPORT.passed("resource-events", peak_memory=int((cg / "memory.peak").read_text()))
++            except Exception as error:
++                if REPORT.failed != (REPORT.active,safe_reason(error)):
++                    REPORT.failure(error)
++                raise
 +            finally:
++                REPORT.begin("cleanup")
 +                if os.path.ismount("/tmp") and os.stat("/tmp").st_dev == volume.stat().st_dev:
 +                    command("umount", "/tmp")
 +                command("umount", "--recursive", str(volume))
 +                require(not os.path.ismount(volume), "volume-cleanup")
++                REPORT.cleanup = "unmounted"
++                REPORT.passed("cleanup")
 +
 +
 +
@@ -5693,13 +6482,24 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +
 +
 +if __name__ == '__main__':
-+    if sys.argv[1:] == ['supervise']:
-+        supervise()
++    if len(sys.argv) == 4 and sys.argv[1] == 'supervise':
++        reported_run(sys.argv[2],sys.argv[3],supervise,lambda row: print(row,flush=True))
++    elif len(sys.argv) == 4 and sys.argv[1] == 'read-report':
++        try:
++            read_report(sys.stdin.buffer,sys.argv[2],sys.argv[3],print)
++        except Exception:
++            print("FAIL incomplete or invalid evidence; successful cleanup and experiment cannot be inferred")
++            raise SystemExit(1) from None
 +    elif len(sys.argv) == 5 and sys.argv[1] == 'worker':
-+        worker(sys.argv[2],int(sys.argv[3]),sys.argv[4])
++        try:
++            worker(sys.argv[2],int(sys.argv[3]),sys.argv[4])
++        except Exception as error:
++            raise SystemExit(32 + WORKER_REASONS.index(safe_reason(error))) from None
 +    elif sys.argv[1:] == ['--self-test']:
 +        identity_controls()
 +        extra_controls()
++        report_controls()
++        reader_controls()
 +    elif len(sys.argv) == 3 and sys.argv[1] == '--verify-source-trees':
 +        print(verify_sources(Path(sys.argv[2])))
 +    elif sys.argv[1:] == ['--show-probe']:
@@ -5709,14 +6509,14 @@ index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eec
 +    else:
 +        raise SystemExit('unknown mode')
 diff --git a/.github/scripts/test-memory-diagnostic.py b/.github/scripts/test-memory-diagnostic.py
-index 9e09a0453d45fdc8a03188261c678e1bf5752bd2..121d236c9892a2fe28f8c1bb9f7d68bf3f78cfb0 100644
+index 9e09a0453d45fdc8a03188261c678e1bf5752bd2..dd1cee2fb4abcc0c982272c72118657becdaceaa 100644
 --- a/.github/scripts/test-memory-diagnostic.py
 +++ b/.github/scripts/test-memory-diagnostic.py
 @@ -274,0 +275,43 @@ def verify_current_source(snapshot, evidence):
 +RUST_PREPARATION = {
-+    '.github/scripts/inspect-rust-cross-link.py': 'a6293a944ae6e7cbb6247da9b702baee8995537f6d5c047bfeeab6058dae3e3a',
-+    '.github/scripts/rust-cross-link.py': 'e5f8fbdb2f9c663ffff1ed6aff81b313835482f41e47870981b42d1aa7351bb3',
-+    '.github/workflows/rust-cross-link.yml': 'feb81fac154fb67bac73fcd393ebd353216a65756ac4c50f685c2baa0bd8806b',
++    '.github/scripts/inspect-rust-cross-link.py': '0c0f09c0bb7cacaca448e9c136421df5a58c5b94068ac663c1c5162c5b321d1c',
++    '.github/scripts/rust-cross-link.py': 'e893fd14c185a1b8d2a4a671b1d8f5c3211ef451c79875a2eab3453b4a422188',
++    '.github/workflows/rust-cross-link.yml': '1d719e75e7d57a9da09cacd4647524f269f06307859818d8135a39ef0f6dd370',
 +    '.github/scripts/validate-foundation.py': '1e2af51dacc07328e9901fb27c58258f3e7faae74195e0c2c7611ac63be34da1',
 +}
 +FOUNDATION_INSERT = b'    ".github/scripts/inspect-rust-cross-link.py",\n    ".github/scripts/rust-cross-link.py",\n    ".github/workflows/rust-cross-link.yml",\n'
@@ -5789,10 +6589,10 @@ index 9263f626b59d81167208d3a961a7daf2cb08b7c7..16812f275cad3d8e92ad8fe2e1587607
 +    ".github/workflows/rust-cross-link.yml",
 diff --git a/.github/workflows/rust-cross-link.yml b/.github/workflows/rust-cross-link.yml
 new file mode 100644
-index 0000000000000000000000000000000000000000..b86b09fbf5e49f58a026d26404b1ae56fbf79a99
+index 0000000000000000000000000000000000000000..0da1432f4010d76f7cd4fa57f343f546d84b2634
 --- /dev/null
 +++ b/.github/workflows/rust-cross-link.yml
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,47 @@
 +name: Inspect one Rust Android cross-link
 +on: workflow_dispatch
 +permissions:
@@ -5829,11 +6629,15 @@ index 0000000000000000000000000000000000000000..b86b09fbf5e49f58a026d26404b1ae56
 +          clean: false
 +      - name: Run supervised experiment on disposable VM
 +        run: |
-+          set -eu
++          set -euo pipefail
 +          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-+          sudo -n systemd-run --wait --quiet --collect --service-type=exec \
++          {
++            unit_status=0
++            sudo -n systemd-run --pipe --wait --quiet --collect --service-type=exec \
 +            -p RuntimeMaxSec=1680 -p TimeoutStopSec=2 -p KillMode=control-group \
 +            -p MemoryMax=8589934592 -p MemorySwapMax=0 -p PrivateMounts=yes -p Delegate=memory \
-+            -p StandardOutput=null -p StandardError=null \
-+            -- /usr/bin/python3 -IB "$GITHUB_WORKSPACE/.github/scripts/rust-cross-link.py" supervise
++            -- /usr/bin/python3 -IB "$GITHUB_WORKSPACE/.github/scripts/rust-cross-link.py" supervise "$GITHUB_SHA" "$ImageVersion" </dev/null 2>/dev/null || unit_status=$?
++            printf 'unit=%d\n' "$unit_status"
++          } | \
++            /usr/bin/python3 -IB .github/scripts/rust-cross-link.py read-report "$GITHUB_SHA" "$ImageVersion"
 ````
