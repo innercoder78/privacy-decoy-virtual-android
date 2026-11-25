@@ -4077,7 +4077,7 @@ remain trusted for this research.
 
 The independent inspector reads ELF headers and loader tables, compares the
 dynamic symbols with host readelf and authenticated arm64 API 30 stubs, and
-binds direct AArch64 PLT stubs to actual JUMP_SLOT relocations. It checks lld
+checks the disassembled instructions against executable LOAD bytes, and binds direct AArch64 PLT stubs to actual JUMP_SLOT relocations. It checks lld
 map origins and selected archive member names. The static witness follows
 the sole export with fixed caller FDs, tracks stack and allocation contents,
 and checks SCM_RIGHTS fields, the successful send continuation, receipt and
@@ -4125,14 +4125,14 @@ Gate 0 is **Unresolved** and Gates A–G are **Not reached**.
 
 | Proposed path | Git mode | Git blob | Bytes |
 | --- | --- | --- | ---: |
-| `.github/scripts/inspect-rust-cross-link.py` | 100644 | `de096abb3b165bd188298361c5443a0e39dcd6bc` | 36185 |
-| `.github/scripts/rust-cross-link.py` | 100644 | `ebad3d32e6a2d4224b9a54497d95b76d9a643beb` | 33651 |
-| `.github/scripts/test-memory-diagnostic.py` | 100644 | `647624be62541178f8f6dafbf6c6ed9d16ea2947` | 146445 |
+| `.github/scripts/inspect-rust-cross-link.py` | 100644 | `a2b61b244f07fe9e5278a82221516bccf8a77f84` | 37021 |
+| `.github/scripts/rust-cross-link.py` | 100644 | `feb673bbff398753745976de8cc28eecd7bdc70f` | 33659 |
+| `.github/scripts/test-memory-diagnostic.py` | 100644 | `121d236c9892a2fe28f8c1bb9f7d68bf3f78cfb0` | 146445 |
 | `.github/scripts/validate-foundation.py` | 100644 | `16812f275cad3d8e92ad8fe2e1587607e51f0b0e` | 11670 |
 | `.github/workflows/rust-cross-link.yml` | 100644 | `b86b09fbf5e49f58a026d26404b1ae56fbf79a99` | 1915 |
 
 The following UTF-8, LF-terminated, zero-context Git patch has SHA-256
-`bc90bbb70f4a280eac4e218b9630b13e34ede1b05ab9e850d6c5b0c92d061a1a`. To reproduce it in a disposable checkout at the
+`32c3633286814565fa2999e58b48374ea990e3873a6a3f080e42e214b163379e`. To reproduce it in a disposable checkout at the
 base above, extract only the bytes between the diff fences, including the
 last LF. Check with `git apply --check --unidiff-zero`, apply only to that
 disposable copy, and compare each file with `git hash-object --no-filters`
@@ -4142,10 +4142,10 @@ predecessor blob IDs and the exact edits. Source admission remains inactive.
 ````diff
 diff --git a/.github/scripts/inspect-rust-cross-link.py b/.github/scripts/inspect-rust-cross-link.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..de096abb3b165bd188298361c5443a0e39dcd6bc
+index 0000000000000000000000000000000000000000..a2b61b244f07fe9e5278a82221516bccf8a77f84
 --- /dev/null
 +++ b/.github/scripts/inspect-rust-cross-link.py
-@@ -0,0 +1,822 @@
+@@ -0,0 +1,837 @@
 +"""Static inspection only. A layout pass is never a cross-link qualification."""
 +import re
 +import struct
@@ -4670,6 +4670,14 @@ index 0000000000000000000000000000000000000000..de096abb3b165bd188298361c5443a0e
 +
 +
 +
++def loaded_instruction(data, parts, address, encoded):
++    chunks = [data[off+address-va:off+address-va+4] for va,off,length,flags in parts
++              if flags & 1 and va <= address and address+4 <= va+length]
++    words = encoded.split()
++    raw = (int(words[0],16).to_bytes(4,"little") if len(words)==1 else bytes.fromhex(encoded))
++    check(chunks == [raw], "disassembly-load-bytes")
++
++
 +def native_artifact(elf, map_path, inputs):
 +    import re
 +    import subprocess
@@ -4727,7 +4735,7 @@ index 0000000000000000000000000000000000000000..de096abb3b165bd188298361c5443a0e
 +          "packed-relocations")
 +    relocations = tool("readelf", "--use-dynamic", "-rW", elf)
 +    relocation_targets(relocations, segments, dynamic)
-+    text = tool("llvm-objdump-18", "-d", "--no-show-raw-insn", elf)
++    text = tool("llvm-objdump-18", "-d", elf)
 +    whole_map = map_path.read_text()
 +    check(all(s in whole_map for s in ("libvmm_sys_util.rlib", "liblibc.rlib", "pdva_scm_probe")),
 +          "missing-map-origins")
@@ -4745,9 +4753,12 @@ index 0000000000000000000000000000000000000000..de096abb3b165bd188298361c5443a0e
 +    origins = account_map(whole_map, inputs, elf.parent, tool)
 +    instructions = {}
 +    for line in text.splitlines():
-+        row = re.match(r"^\s*([0-9a-fA-F]+):\s+([a-z.0-9]+)\s*(.*?)\s*$",line)
++        row = re.match(r"^\s*([0-9a-fA-F]+):\s+([0-9a-fA-F]{8}|(?:[0-9a-fA-F]{2}\s+){3}[0-9a-fA-F]{2})\s+([a-z.0-9]+)\s*(.*?)\s*$",line)
 +        if row:
-+            instructions[int(row[1],16)] = (row[2],row[3].split("//")[0].strip())
++            address=int(row[1],16)
++            check(address not in instructions, "duplicate-instruction")
++            loaded_instruction(data,parts,address,row[2])
++            instructions[address]=(row[3],row[4].split("//")[0].strip())
 +    def readonly_byte(address):
 +        for va,off,size,flags in parts:
 +            if va <= address < va+size and not flags & 2:
@@ -4793,6 +4804,10 @@ index 0000000000000000000000000000000000000000..de096abb3b165bd188298361c5443a0e
 +            check(str(failure)==reason,"binding-control-"+reason)
 +        else:
 +            raise AssertionError("accepted-"+reason)
++    machine=bytes.fromhex("c0035fd6")
++    loaded_instruction(machine,[(0,0,4,5)],0,"d65f03c0")
++    loaded_instruction(machine,[(0,0,4,5)],0,"c0 03 5f d6")
++    refused(lambda:loaded_instruction(machine,[(0,0,4,5)],0,"14000000"),"disassembly-load-bytes")
 +    r="00001000 0000 R_AARCH64_JUMP_SLOT 00000000 sendmsg@LIBC + 0"
 +    relocation_targets(r,[(4096,8192,6)],[(2,24)])
 +    refused(lambda:relocation_targets(r,[(4096,8192,5)],[(2,24)]),"relocation-target")
@@ -4970,10 +4985,10 @@ index 0000000000000000000000000000000000000000..de096abb3b165bd188298361c5443a0e
 +        raise SystemExit("expected --self-test or --layout FILE")
 diff --git a/.github/scripts/rust-cross-link.py b/.github/scripts/rust-cross-link.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..ebad3d32e6a2d4224b9a54497d95b76d9a643beb
+index 0000000000000000000000000000000000000000..feb673bbff398753745976de8cc28eecd7bdc70f
 --- /dev/null
 +++ b/.github/scripts/rust-cross-link.py
-@@ -0,0 +1,718 @@
+@@ -0,0 +1,719 @@
 +"""Single disposable cross-link supervisor and exact reviewed probe."""
 +import hashlib
 +import json
@@ -5520,11 +5535,12 @@ index 0000000000000000000000000000000000000000..ebad3d32e6a2d4224b9a54497d95b76d
 +    with tempfile.TemporaryDirectory(dir="/var/tmp") as tmp:
 +        volume = Path(tmp) / "volume"
 +        volume.mkdir()
-+        with tempfile.TemporaryFile(dir=tmp) as backing:
++        with (Path(tmp) / "bounded.ext4").open("xb") as backing:
 +            os.posix_fallocate(backing.fileno(), 0, LIMIT)
-+            file = f"/proc/{os.getpid()}/fd/{backing.fileno()}"
++            file = backing.name
 +            command("mkfs.ext4", "-q", "-F", "-m", "0", file)
 +            command("mount", "-o", "loop,nosuid,nodev", file, str(volume))
++            Path(file).unlink()
 +            try:
 +                filesystem_limit(volume)
 +                empty = volume / "empty"
@@ -5693,13 +5709,13 @@ index 0000000000000000000000000000000000000000..ebad3d32e6a2d4224b9a54497d95b76d
 +    else:
 +        raise SystemExit('unknown mode')
 diff --git a/.github/scripts/test-memory-diagnostic.py b/.github/scripts/test-memory-diagnostic.py
-index 9e09a0453d45fdc8a03188261c678e1bf5752bd2..647624be62541178f8f6dafbf6c6ed9d16ea2947 100644
+index 9e09a0453d45fdc8a03188261c678e1bf5752bd2..121d236c9892a2fe28f8c1bb9f7d68bf3f78cfb0 100644
 --- a/.github/scripts/test-memory-diagnostic.py
 +++ b/.github/scripts/test-memory-diagnostic.py
 @@ -274,0 +275,43 @@ def verify_current_source(snapshot, evidence):
 +RUST_PREPARATION = {
-+    '.github/scripts/inspect-rust-cross-link.py': '93425e07f429bd10768f68a2ca690e4484757afbd80dba4a956d2364f38ebbd8',
-+    '.github/scripts/rust-cross-link.py': '755c409c05c40528d2677478f2180f7bb900ca9850a239fd04db9c3da2797c62',
++    '.github/scripts/inspect-rust-cross-link.py': 'a6293a944ae6e7cbb6247da9b702baee8995537f6d5c047bfeeab6058dae3e3a',
++    '.github/scripts/rust-cross-link.py': 'e5f8fbdb2f9c663ffff1ed6aff81b313835482f41e47870981b42d1aa7351bb3',
 +    '.github/workflows/rust-cross-link.yml': 'feb81fac154fb67bac73fcd393ebd353216a65756ac4c50f685c2baa0bd8806b',
 +    '.github/scripts/validate-foundation.py': '1e2af51dacc07328e9901fb27c58258f3e7faae74195e0c2c7611ac63be34da1',
 +}
