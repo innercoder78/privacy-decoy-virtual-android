@@ -3805,3 +3805,190 @@ continue to govern. Both workers and their dependencies remain potentially
 compromised. Independent resource limits, revocation, lifecycle enforcement
 and management-secret separation remain prerequisites. Gate 0 is **Unresolved**.
 Gates A–G are **Not reached**.
+
+## Rust cross-link approval proposal
+
+**Decision requested, 2026-11-24. Stop before acquisition.** Approve or decline preparation
+of a narrowly scoped source-admission amendment and manual workflow for review. Reserve
+approval of the exact file bytes, public input acquisition, disposable runner setup and one
+compilation/inspection for separate explicit decisions. Merging this text grants none of them.
+Live canonical main, fetched main and the remote-tracking ref agreed on PR #111's merge
+`1e66d8063d1c418bebf1f696d9c2c59e58b87d2d`. The open PR inventory was empty at preflight,
+so there were no open diffs, modes, jobs, logs, reviews, comments or threads to inspect.
+GitHub Status reported operational. [Merged proposal](https://github.com/innercoder78/privacy-decoy-virtual-android/pull/111).
+
+### Source admission and execution authority
+
+The foundation validator enumerates allowed script and workflow paths. The active
+`verify_current_source` also verifies regular 100644 modes, exact ADR blobs, the companion
+build delta and protected groups by path count and a digest of path and contents. Only the
+checker itself, this evidence document and its index receive independent full-diff review
+under `REVIEWED_FILES`. New workflow/script bytes change the protected checks group. An
+embedded script in an existing workflow changes it too. The QEMU workflow triggers on
+matching PR paths and allows 45 minutes. Neither that workflow, foundation nor the Android
+harness authorizes this experiment. [Foundation inventory](../../.github/scripts/validate-foundation.py),
+[source checker](../../.github/scripts/test-memory-diagnostic.py).
+
+**Required amendment.** Present the new paths, modes and exact blobs as one separately
+reviewed transition, with negative tests for changed bytes, executable mode, added path,
+old baseline and diagnostic-checkout substitution. Preserve historical checkers and
+receipts. Register the new transition only after the owner approves the policy and its
+ordinary CI effects. ADR-0004 retains Option A. ADR-0006/0007 authorize only their named
+diagnostic exceptions and one prospective checkout. REQ-008 requires an ADR for a material
+product or architecture change. This static research question proposes neither. Separate
+source-admission approval **is mandatory** even if recorded without a new numbered ADR.
+If accepting incomplete correspondence requires a material change to an evidence gate,
+the governance policy requires a new PDVA ADR and explicit owner approval first. The
+research result cannot waive REQ-036 for production. [Governance](../governance.md).
+[Requirements](../requirements.md), [provenance policy](../source-provenance-policy.md),
+[exact source binding](../decisions/ADR-0007-diagnostic-source-binding.md).
+
+**Proposed implementation inventory for that review.** One manual-only
+`.github/workflows/rust-cross-link.yml`, one trusted supervisor
+`.github/scripts/rust-cross-link.py` containing the fixed probe and acquisition/build recipe,
+and one separately reviewed `.github/scripts/inspect-rust-cross-link.py` containing the static
+oracle and rejection fixtures. Include only the exact foundation/checker/test changes needed
+to admit that inventory. Review all bytes before publication of runnable files. One
+`workflow_dispatch` job, zero matrix entries, no reusable workflows, services, cache,
+artifact actions or automatic triggers. Pin checkout to the already admitted action SHA
+with credentials persistence disabled. Require dispatch from the reviewed protected ref,
+exact SHA recorded in external owner approval, authorized actor, first run attempt and
+one specific authorized dispatch. A second dispatch or rerun needs new authority.
+
+### Inputs and command reconciliation
+
+**Observed independent metadata checks.** Decoding the OpenPGP v4 primary public-key packet
+from an independently maintained distribution package and computing its full fingerprint
+gave `108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE`, matching the earlier Rust Forge
+manifest verification. This corroborates the fingerprint across distributors. Owner
+acceptance of this trust anchor and fresh signature verification at acquisition remain due.
+[Downstream key at reviewed revision](https://github.com/dariogriffo/rust-stable-debian/blob/ca0035d95a1c6469f88653c061c2cb5f7465566f/debian/upstream/signing-key.asc).
+
+The original PDVA recipe measured the Linux NDK ZIP's SHA-256 locally after checking
+Google's published SHA-1. Independently, dotnet/android's immutable `XAAndroidNdkHashLinux`
+matches the full `dfb20d39…aa552f` SHA-256 printed above. This resolves the pin's origin
+and supplies independent corroboration. Google's unsupported r28c archive listing supplies
+the size and SHA-1. A Google signature or publisher SHA-256 for this ZIP remains unestablished.
+Require explicit acceptance of that authentication basis or stop. Keep r28c / 28.2.13676358.
+[Original measurement](gate-0-qemu-android-linux-crossbuild.md),
+[downstream SHA-256](https://github.com/dotnet/android/blob/71640f149ff2131fada4be5d98606711112fa806/Configuration.props),
+[publisher archive](https://github.com/android/ndk/wiki/Unsupported-Downloads).
+
+After acquisition approval, use a fresh keyring restricted to that fingerprint. Fetch the
+versioned Rust manifest and detached signature, check its exact SHA-256 above, and require
+successful `gpgv --status-fd 1 --keyring KEYRING FILE.asc FILE` verification with VALIDSIG bound to the approved primary key.
+Reject revoked, expired, ambiguous or missing signatures. From that verified TOML select
+only the dated xz URLs for x86_64 Linux rustc and host std and aarch64-linux-android std.
+Check each detached .asc, exact signed xz_hash and the three independent-of-download pins
+above before extraction. Omit Cargo and rust-src. Verify the NDK ZIP's size and **both**
+digests before extraction. Reject traversal, duplicate paths and escaping links, and bound
+actual decompression. Stage compiler and std into one private prefix from the authenticated
+component manifests. Verify installed payloads against the authenticated inventory, rustc
+`-vV` against the pinned release commit, and the NDK revision and linker identity.
+
+For D, verify the Android 17 r1 tag object and peeled commit recorded above with canonical
+Git objects and strict object verification. Export only the three named subtrees, including
+their Android.bp, Cargo metadata, patch records and licenses. Compare each path, mode and
+Git blob to the pinned tree and seal a SHA-256 inventory before the read-only mount.
+An archive checksum supplied by its own download cannot authenticate this tree.
+For all inputs retain source/notice inventories locally on the disposable volume. Distributed
+byte identity, corresponding source revision, demonstrated source-to-binary correspondence,
+independent reproduction and production adoption are five separate claims. The last three
+remain unestablished. Historical Google-customized compiler reconstruction remains STOP.
+
+Re-reading the three pinned `rust_library` declarations confirms the direct rustc commands
+in [the preceding proposal](#release-dependencies-and-the-first-cross-link). Each root is
+`src/lib.rs` with cargo_env_compat and its declared package version. Versioned bitflags
+1.3.2 uses edition 2018 and default. Regular libc 0.2.183 uses edition 2021, default,
+extra_traits, std and freebsd12. The musl and no_std variants do not apply. vmm-sys-util
+0.15.0 uses edition 2021 and only those two rustlibs, with no declared features. Preserve
+the checked-in patched trees. No test dependencies, build-script execution, OUT_DIR,
+generated bindings or unstable feature flag is declared for these library invocations.
+Before compiling, inspect active include/env macros, crate metadata, doc includes and
+target cfg against the sealed tree and explicit environment. Block on any additional
+required value or generated file. No fallback to Cargo or RUSTC_BOOTSTRAP.
+
+**Exact proposed probe.rs, never invoked.** The caller transfers ownership of two distinct
+live connected UnixStream peer FDs to the export, which closes both on every return.
+The third FD is borrowed for transfer. The returned status is 0 for one matching
+byte and a received descriptor, -1 for send failure and -2 for receive/contract failure.
+The received File closes on drop. No pointer, allocation or FD crosses back to the caller.
+
+```rust
+use std::os::fd::FromRawFd;
+use std::os::unix::net::UnixStream;
+use vmm_sys_util::sock_ctrl_msg::ScmSocket;
+
+#[no_mangle]
+pub unsafe extern "C" fn pdva_scm_probe(tx: i32, rx: i32, payload: i32) -> i32 {
+    let sender = unsafe { UnixStream::from_raw_fd(tx) };
+    let receiver = unsafe { UnixStream::from_raw_fd(rx) };
+    if !matches!(sender.send_with_fd(&[0x51_u8][..], payload), Ok(1)) {
+        return -1;
+    }
+    let mut byte = [0_u8];
+    match receiver.recv_with_fd(&mut byte) {
+        Ok((1, Some(_received))) if byte == [0x51] => 0,
+        _ => -2,
+    }
+}
+```
+
+### Disposable runner and independent decision
+
+**Conditional feasibility only.** This public repository can request a standard free
+GitHub-hosted Ubuntu 24.04 x86-64 VM. Available capacity and the actual image cannot be
+verified before allocation. Require owner confirmation of free standard-runner eligibility
+and no paid fallback. At job entry require GitHub-hosted runner context, Linux/X64,
+Ubuntu 24.04, machine architecture, and GitHub's setup-job image name/version matching an
+owner-reviewed image release. Fail before downloading on mismatch, missing tools or
+insufficient available RAM/disk. Record sanitized image identity, available bytes and
+limits. Nominal disk size cannot establish extraction fit. [Runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+
+| Boundary | Enforcer and refusal condition for the proposed single job |
+| --- | --- |
+| Time and parallelism | One job, no fan-out or retries, one concurrency group. Actions timeout 30 minutes for the entire job. An outer monotonic supervisor deadline of 28 minutes covers acquisition through inspection and kills the process cgroup on expiry. Run rustc invocations serially with one codegen unit and constrain linker threads to one. |
+| 8 GiB memory | Put all build descendants in a supervisor-owned cgroup v2 with memory.max=8589934592 and memory.swap.max=0. Verify membership, controller values and absence of delegated writes from the compile UID. Inspect peak and OOM events. Stop on exhaustion or missing controller. |
+| 10 GiB aggregate temporary storage | Before acquisition require sufficient free blocks plus host reserve, then preallocate one fixed 10 GiB filesystem image and mount it privately. Charge archives, extracted inputs, Git objects, writable root, temp, outputs, maps, fixtures and bounded logs to this volume. Reject projected peak above available blocks before extraction. Allow no other writable build mounts, including tmpfs or host /tmp. Refuse on quota/ENOSPC or unaccounted writable storage. |
+| Offline and read-only | Trusted supervisor sets a private mount, PID and new network namespace before dropping UID/GID, supplementary groups and all capabilities. Supply minimal read-only host tools and authenticated input mounts, isolated proc, empty environment except approved paths/versions, no host sockets, inherited network FDs, service credentials, metadata routes or host namespaces. Disable privilege gains, set core size to zero and deny socket creation/connect and namespace changes by inherited syscall filter. Independently verify mount flags, write denial, effective identity, routes and denied socket attempts under the actual build identity before rustc. Environment variables alone cannot enforce offline operation. |
+| Credentials and outputs | Job permission contents:read only, no secrets, OIDC, cache, shared home or persisted checkout credential. Keep runner command files and agent sockets outside the sandbox. Supervisor captures bounded output to the volume and emits only fixed, sanitized results. No emulator, binfmt handler, target loader, test runner, binary upload or map publication. Destroy disposable volume and VM after inspection or failure. |
+
+Run the inspector under a different unprivileged identity after terminating the build
+cgroup. Mount the sealed outputs read-only and use reviewed host ELF tools separate from
+the candidate linker. Treat ELF and map as untrusted data. Compare independent readelf
+and disassembly with the map's input objects and actual branch/PLT relocations. Starting
+at the sole defined public symbol `pdva_scm_probe`, follow feasible paths for send and
+successful-send continuation to receive, checking the pinned SCM_RIGHTS control-message
+construction and parse. Both calls must resolve to public Bionic sendmsg/recvmsg.
+Imports merely present elsewhere in the object cannot satisfy reachability.
+
+Require ELF64 little-endian AArch64 ET_DYN, a non-executable GNU_STACK, no W+X LOAD,
+TEXTREL, relocation into executable memory, interpreter, RPATH or RUNPATH. Require
+each LOAD's power-of-two p_align >= 16384 and offset/vaddr congruence modulo p_align,
+4096 and 16384. Freeze a per-symbol/version and DT_NEEDED allowlist **before dispatch**,
+derived from the NDK arm64 API 30 stubs, with an explanation for every selected library.
+Resolve even weak imports or reject. Inventory archive members from CRT, compiler-rt,
+builtins, allocator, emulated TLS, panic-abort and any unwind machinery in precompiled
+std. Unexplained members or dependencies fail. Map and disassembly must agree with the
+sealed crate identities and the final artifact.
+
+Require independent negative fixtures and a positive control for each detector. Flip one
+verified archive byte before admission (no extraction), build a constant-return variant
+(reachability rejection), mutate a copy's LOAD alignment to 4096, inject a non-admitted
+DT_NEEDED and separately an unapproved import into valid fixture copies. Disable the
+network filter/namespace and memory/disk ceiling in isolated **preflight fixtures** one
+at a time. Assert the intended refusal before compiling any candidate with a missing
+control. Test the watchdog on a harmless sleeping process. An unrelated parse/build error
+or a timeout cannot stand in for the expected negative result. Publish only sanitized
+check outcomes, never fixtures, raw logs, objects or credentials.
+
+**Remaining prerequisites.** Owner approval for the admission transition, exact workflow,
+input trust bases and one dispatch is pending. Image identity, actual free capacity,
+safe expansion within quota, symbol allowlist, available sandbox mechanisms and their
+negative controls need review or measurement as specified above. No runner was requested,
+no build inputs acquired, no compilation, rejection fixture or target execution performed.
+A pass would establish one statically inspected cross-link for these bytes. Loading on
+Android, working FD transfer, TLS/panic behavior at runtime, backend or guest feasibility,
+independent reproducibility and production suitability remain Unknown. ADR-0004 Option A
+stands, ADR-0006/0007 retain their dispositions, Gate 0 is **Unresolved** and Gates A–G
+are **Not reached**.
