@@ -105,3 +105,103 @@ jobs:
           ulimit -c 0
           git rev-parse HEAD
           timeout --signal=TERM --kill-after=15s 140s python3 .github/scripts/revocation-research.py
+      - name: Validate registered Rust cross-link self-tests on Linux
+        timeout-minutes: 2
+        shell: setpriv --no-new-privs bash --noprofile --norc -eu -o pipefail {0}
+        env:
+          EXPECTED_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          export PATH="/usr/bin:$PATH" LC_ALL=C
+          umask 077
+          source_sha=$(git rev-parse HEAD)
+          uid=$(id -u)
+          caps=$(awk '/^CapEff:/{print $2}' /proc/self/status)
+          nnp=$(awk '/^NoNewPrivs:/{print $2}' /proc/self/status)
+          . /etc/os-release
+          echo "source=$source_sha os=$ID-$VERSION_ID runner=${RUNNER_ENVIRONMENT:?} image=${ImageOS:?}/${ImageVersion:?} uid=$uid caps=$caps no_new_privs=$nnp"
+          [[ $source_sha == "$EXPECTED_SOURCE" && $RUNNER_ENVIRONMENT == github-hosted ]]
+          [[ $ID == ubuntu && $VERSION_ID == 24.04 && $uid != 0 && $caps =~ ^0+$ && $nnp == 1 ]]
+          TMPDIR=$(mktemp -d "${RUNNER_TEMP:?}/cross-link.XXXXXXXX")
+          export TMPDIR
+          trap 'rm -rf -- "$TMPDIR"' EXIT
+          ulimit -c 0
+          ulimit -f 32768
+          ulimit -t 30
+          ulimit -v 4194304
+          ulimit -n 256
+          # native_artifact runs ar, readelf and llvm-objdump-18 with PATH=/usr/bin.
+          # Only clang and ld.lld in fixture construction need private aliases.
+          mkdir "$TMPDIR/bin"
+          export PATH="$TMPDIR/bin:/usr/bin"
+          missing=0
+          resolve() {
+            local tool=$1 pattern=$2 path version
+            shift 2
+            for path in "$@"; do
+              [[ -f $path && -x $path ]] || { echo "$tool unavailable: $path"; continue; }
+              if ! version=$(timeout 10s "$path" --version 2>/dev/null); then
+                echo "$tool version query failed: $path"
+                continue
+              fi
+              version=${version%%$'\n'*}
+              if [[ ! $version =~ $pattern ]]; then
+                echo "$tool unexpected version: $path"
+                continue
+              fi
+              if [[ $tool == clang ]] && ! "$path" --print-targets | grep -E '^[[:space:]]*aarch64[[:space:]]+-' >/dev/null; then
+                echo "$tool lacks AArch64 target: $path"
+                continue
+              fi
+              if [[ $tool == clang || $tool == ld.lld ]]; then
+                ln -s -- "$path" "$TMPDIR/bin/$tool"
+              fi
+              [[ $(type -P "$tool") -ef $path ]]
+              echo "$tool path=$path version=${version:0:160}"
+              return
+            done
+            echo "Missing required tool: $tool"
+            missing=1
+          }
+          resolve python3 '^Python 3\.' /usr/bin/python3
+          resolve clang '^(Ubuntu |Debian )?clang version 18\.' /usr/bin/clang-18 /usr/lib/llvm-18/bin/clang /usr/bin/clang
+          resolve ld.lld '^((Ubuntu|Debian) )?LLD 18\.' /usr/bin/ld.lld-18 /usr/lib/llvm-18/bin/ld.lld /usr/bin/ld.lld
+          resolve ar '^GNU ar ' /usr/bin/ar
+          resolve readelf '^GNU readelf ' /usr/bin/readelf
+          resolve llvm-objdump-18 'LLVM version 18\.' /usr/bin/llvm-objdump-18
+          if [[ ! -x /usr/bin/llvm-objdump-18 && -x /usr/lib/llvm-18/bin/llvm-objdump ]]; then
+            echo "LLVM directory contains llvm-objdump, but registered inspection requires /usr/bin/llvm-objdump-18"
+          fi
+          (( missing == 0 ))
+          echo "Synthetic validation only. Rust compilation, Android runtime, isolation and Gate 0 feasibility remain unverified."
+          failed=0
+          run_test() {
+            local result=0
+            timeout --kill-after=2s 30s python3 -IB ".github/scripts/$1" "$2" > "$TMPDIR/test.log" 2>&1 || result=$?
+            if (( result == 0 )); then
+              echo "PASS $1 $2 exit=0"
+            else
+              local phase=self-test reason
+              if (( result == 124 || result == 137 )); then
+                phase=timeout-or-kill
+              elif [[ $2 == --self-test-host-tools ]]; then
+                if grep -q ', in native_artifact$' "$TMPDIR/test.log"; then
+                  phase=artifact-inspection
+                elif grep -q ', in assemble$' "$TMPDIR/test.log"; then
+                  phase=fixture-assembly
+                elif grep -qF "Command '('ld.lld'," "$TMPDIR/test.log"; then
+                  phase=fixture-link
+                elif grep -qF "Command '('ar'," "$TMPDIR/test.log"; then
+                  phase=fixture-archive
+                else
+                  phase=fixture-setup
+                fi
+              fi
+              reason=$(sed -nE 's/^(__main__\.)?Reject: ([a-z0-9-]{1,64})$/\2/p' "$TMPDIR/test.log" | tail -n 1)
+              echo "FAIL $1 $2 exit=$result phase=$phase reason=${reason:-unclassified}"
+              failed=1
+            fi
+          }
+          run_test rust-cross-link.py --self-test
+          run_test inspect-rust-cross-link.py --self-test
+          run_test inspect-rust-cross-link.py --self-test-host-tools
+          exit "$failed"

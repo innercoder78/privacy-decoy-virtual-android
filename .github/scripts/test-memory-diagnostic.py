@@ -295,9 +295,44 @@ def verify_rust_preparation(snapshot, evidence):
     return previous
 
 
+FOUNDATION_WORKFLOW = '.github/workflows/foundation.yml'
+LINUX_STEP = b'      - name: Validate registered Rust cross-link self-tests on Linux\n'
+LINUX_FOUNDATION_SHA256 = '6fbb2e48f348a1666dc46ee762ab981a76ac8618c61f5459e5cab6edef840d16'
+
+
+def registered_snapshot(snapshot):
+    """Admit one exact workflow, then replay registration on its original prefix."""
+    entry = snapshot.get(FOUNDATION_WORKFLOW)
+    source_require(entry is not None and entry[0] == '100644'
+                   and hashlib.sha256(entry[1]).hexdigest() == LINUX_FOUNDATION_SHA256,
+                   'exact-linux-validation')
+    original, marker, _ = entry[1].partition(LINUX_STEP)
+    source_require(marker == LINUX_STEP, 'exact-linux-validation')
+    return {**snapshot, FOUNDATION_WORKFLOW: ('100644', original)}
+
+
+def verify_linux_validation(snapshot, evidence):
+    return verify_rust_preparation(registered_snapshot(snapshot), evidence)
+
+
 def preparation_controls():
-    snapshot = working_source()
+    current = working_source()
     evidence = (SOURCE_BASE, PROTECTED.copy())
+    snapshot = registered_snapshot(current)
+    verify_linux_validation(current, evidence)
+    workflow = current[FOUNDATION_WORKFLOW][1]
+    host_test = b'          run_test inspect-rust-cross-link.py --self-test-host-tools\n'
+    for label, row in (
+        ('step-removed', snapshot[FOUNDATION_WORKFLOW]),
+        ('real-fixture-skipped', ('100644', workflow.replace(host_test, b''))),
+        ('failure-suppressed', ('100644', workflow.replace(b'exit "$failed"', b'exit 0'))),
+        ('unrelated-linker', ('100644', workflow.replace(b'/usr/bin/ld.lld-18', b'/usr/bin/ld'))),
+        ('missing-prerequisite-ignored', ('100644', workflow.replace(b'(( missing == 0 ))', b'true'))),
+        ('workflow-mode', ('100755', workflow)),
+    ):
+        expect_source_rejection(verify_linux_validation, {**current, FOUNDATION_WORKFLOW: row},
+                                evidence, 'exact-linux-validation', label)
+    print('PASS: exact Linux workflow and six validation rejection controls')
     previous = verify_rust_preparation(snapshot, evidence)
     expect_source_rejection(verify_current_source, snapshot, evidence, 'protected-checks', 'unregistered')
     expect_source_rejection(verify_rust_preparation, previous, evidence, 'exact-rust-preparation', 'replay')
@@ -312,7 +347,7 @@ def preparation_controls():
 
 
 def previous_for_audit():
-    return verify_rust_preparation(working_source(), (SOURCE_BASE, PROTECTED.copy()))
+    return verify_linux_validation(working_source(), (SOURCE_BASE, PROTECTED.copy()))
 
 
 def check_adr_worktree(file):
@@ -1598,7 +1633,7 @@ def qualification_source_identity(snapshot):
 def qualify_signed_pair(paths, receipts=None):
     """Read-only staged verifier. There is currently NO successful admission path."""
     snapshot = working_source()
-    verify_rust_preparation(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+    verify_linux_validation(snapshot, (SOURCE_BASE, PROTECTED.copy()))
     originals = original_pair(paths)
     certificates = []
     for _, raw in originals:
@@ -2530,7 +2565,7 @@ def main():
             require(protected_evidence(snapshot) == PROTECTED, 'baseline protected evidence')
             print('PASS: public baseline Git blobs/modes recomputed (not independent authentication)')
         else:
-            verify_rust_preparation(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+            verify_linux_validation(snapshot, (SOURCE_BASE, PROTECTED.copy()))
             print('PASS: exact proposed source delta only; independent review and qualification still required')
         return
     preparation_controls()
