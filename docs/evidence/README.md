@@ -1,8 +1,8 @@
 # Evidence index
 
-The [independent Linux validation amendment](gate-0-companion-source-controls.md#independent-linux-validation-amendment) adds three synthetic self-tests to ordinary hosted foundation CI. The [first hosted run and LLVM 18 correction](gate-0-companion-source-controls.md#hosted-prerequisite-failure-and-llvm-18-resolution) record the unversioned linker lookup failure. All three hosted test results remain outstanding.
+The [Linux validation and cross-link readiness record](gate-0-companion-source-controls.md#cross-link-readiness-after-independent-linux-validation) verifies all three self-tests on both hosted images. The experiment is stopped pending confinement controls and protected one-run authorization. The record includes the exact dormant stop and inspection handoff patch.
 
-The [Rust cross-link source registration](gate-0-companion-source-controls.md#rust-cross-link-source-registration) records the exact five Git blobs, local controls and outstanding independent Linux fixture. Experimental execution requires separate approval.
+The [Rust cross-link source registration](gate-0-companion-source-controls.md#rust-cross-link-source-registration) and [LLVM 18 linker correction](gate-0-companion-source-controls.md#hosted-prerequisite-failure-and-llvm-18-resolution) preserve the reviewed source identities and earlier decisions.
 
 The [prepared Rust cross-link transition](gate-0-companion-source-controls.md#prepared-rust-cross-link-source-transition) includes the exact dormant workflow, supervisor, inspector, admission patch, bounded evidence protocol, integrated ELF controls and independent source-check disposition. This is the preserved preparation record.
 

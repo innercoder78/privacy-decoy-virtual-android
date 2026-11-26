@@ -6808,3 +6808,146 @@ and whitespace. Repository validation ran 152 tests with four platform skips.
 Tool availability on the corrected hosted checkout and successful execution
 of each of the three registered commands remain unverified. Gate 0 remains
 **Unresolved** and Gates A-G remain **Not reached**.
+
+### Cross-link readiness after independent Linux validation
+
+**STOP before dispatch.** At main `8751c0cf7de492e4be99764107b0115acf2b75ab`, the supervisor reaches `acquire(volume)` after three worker launches. None tests a missing kernel memory or storage ceiling or an independent service timeout with surviving descendants. After build, the inspector opens compiler-produced archives from the build mount. Only the ELF and map undergo the registered type, link-count, size and ownership checks. Owner approval alone cannot close these gaps.
+
+#### Independent foundation jobs
+
+| Event and attempt | Checked-out Git commit | Ubuntu 24.04 image | Supervisor self-test | Inspector self-test | Inspector host tools |
+| --- | --- | --- | --- | --- | --- |
+| [PR, attempt 1](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/45867571742/job/140074236793) | `322ec487563abf5cb595ea1e14608c1d8dfd345c` | `20261122.23.1` | exit 0 | exit 0 | exit 0 |
+| [Main push, attempt 1](https://github.com/innercoder78/privacy-decoy-virtual-android/actions/runs/45868886022/job/140078802633) | `8751c0cf7de492e4be99764107b0115acf2b75ab` | `20261116.133.1` | exit 0 | exit 0 | exit 0 |
+
+Both jobs recorded github-hosted Ubuntu 24.04, UID 1001, zero effective capabilities and no-new-privileges set. Each used Python 3.12.3, Ubuntu clang 18.1.3 (1ubuntu1), Ubuntu LLD 18.1.3, GNU ar and readelf 2.42, and Ubuntu llvm-objdump 18.1.3. Both resolved `/usr/bin/clang-18` and `/usr/bin/ld.lld-18`. The post-merge result confirms the versioned linker on the image where the unversioned lookup failed. The columns correspond to `rust-cross-link.py --self-test`, `inspect-rust-cross-link.py --self-test` and `inspect-rust-cross-link.py --self-test-host-tools`. The third assembled, linked and statically inspected a synthetic AArch64 fixture. Neither job ran the experimental supervisor, Rust compilation or Android target. The original Windows environment remains unqualified.
+
+#### One-run authorization
+
+Remote advertisement, fetched main and tracking ref agreed at the main SHA above. Preflight found zero open PRs, protected main and public visibility. GitHub Status reported all systems operational. The environment inventory was empty. The personal repository had no repository-level definitions of the four reserved authorization names. A workflow's environment name alone supplies no review protection. Public repositories on current plans support required reviewers and free standard Ubuntu 24.04 x64 VMs. Actual free capacity and image assignment remain allocation-time checks. [Deployment eligibility](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/review-deployments) and [standard runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+
+Before any future dispatch, verify that the existing environment requires the intended owner reviewer, selects only the main branch with no tag rule, and disables administrator bypass. Any one listed reviewer can release a job. With self-review prevention, dispatcher and reviewer must be distinct. Verify the four reserved authorization names have no repository or organization definitions available to this workflow. Environment values become available to step-level expressions after the runner declares the environment. GitHub documents no guarantee that edits made while a deployment waits will refresh a previously evaluated value. Missing or stale run ID fails before checkout. Stop if environment-only origin, timing or visibility cannot be established. [Protection rules](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments), [vars context](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#vars-context) and [variable precedence](https://docs.github.com/en/actions/reference/workflows-and-actions/variables#configuration-variable-precedence).
+
+Authorize one acceptable published image version in advance. The assigned image becomes observable when the protected job starts. A separate job cannot identify that VM. For a future approved attempt, independently verify the pending canonical manual run ID, full reviewed main SHA, initiating actor ID, standard free runner and attempt 1. Bind the four registered environment variables and release only that deployment. The first step checks exact equality, triggering actor, hosted class, OS and architecture before checkout. Reject mismatched images, reruns and replacement IDs. If actual image identification before approval is required, the registered one-job design cannot meet it. Clear all four values after success, failure, rejection or cancellation and verify absence. Run-ID equality and attempt 1 exclude reuse while removal is pending. A replacement requires a separate owner decision.
+
+#### Confinement evidence and outstanding controls
+
+| Boundary | Registered control and evidence | Required hosted observation |
+| --- | --- | --- |
+| Memory and swap | Outer unit and phase groups request 8 GiB and zero swap. Workers check membership and limits. The supervisor checks peak and events. The self-test substitutes ordinary files. | In a disposable child under the bounded outer unit, omit the child memory cap and separately permit swap. Require memory-limit in each case. Demonstrate aggregate enforcement across two harmless processes sharing a smaller group and verify its events. |
+| Storage | The supervisor preallocates 10 GiB and checks ext4 capacity. The negative test mocks statvfs. | Exercise writes through two directories on one small fixed filesystem until ENOSPC. Substitute a measured over-limit filesystem and require storage-limit. Verify full preallocation, host reserve and extraction fit on the actual VM. |
+| Watchdog and descendants | A real child sleeps and the Python watchdog kills it. The workflow requests an independent 28-minute service deadline, control-group kill and a 30-minute job limit. | Give a disposable unit a short deadline, a sleeping parent and a grandchild. Require a systemd timeout, nonzero status and an empty descendant group. Repeat with interruption and worker failure. Verify resource disposal externally when the supervisor cannot report. |
+| Namespaces, sockets, FDs and mounts | The cage requests PID/network/IPC/UTS isolation, dropped credentials, filtered syscalls and closed FDs. Workers audit routes, socket calls, descriptors and writable mounts. Missing network namespace and missing filter are registered live controls but have never run here. | Exercise both worker UIDs before acquisition. Verify distinct namespaces and denied sockets. Deliberately retain a harmless FD, allow an input write and remove noexec in separate fixtures. Require the intended refusal in each case. Test actual noexec with a harmless host fixture. |
+| Inspector inputs | Build UID 61001 and inspector UID 61002 differ. The producer cgroup must drain. The registered seal covers two of five named files. The inspector receives the build directory. | Export only the five bounded regular files into a root-owned read-only/noexec mount after producer termination. Reject missing, linked, oversized and nonregular inputs and deny inspector writes. Retain authenticated toolchain and release inputs on their separate read-only mounts. |
+| Cleanup and evidence | The reader bounds and replays canonical rows, source/image binding, stage order and outer-unit status. Workers have null streams. Ordinary exceptions enter cleanup. | Inject failure during setup, after mount and during inspection. Truncate the stream and inject nonzero unit exit after a complete report. Require failure propagation. Check actual mount and cgroup disposal on timeout, interruption and failure. A missing final row cannot certify cleanup. |
+
+All hosted enforcement cases above remain unrun. Each required negative must produce its specific refusal before experimental acquisition or compilation. The patch below places an unconditional refusal before checkout and privileged setup and refuses direct supervisor entry. It exports a separate allowlisted set of inspection files after the producer group drains. It is a dormant containment correction pending the missing hosted controls. Its admission and any subsequent removal of the stops require separately reviewed exact source. Material security or architecture changes require a new ADR and explicit owner approval.
+
+The experiment retains the registered Rust 1.100.0, NDK r28c, Android 17 release inputs, ARM64 API 30 single-export SCM_RIGHTS probe, authentication and static inspection only. ADR-0004 Option A remains accepted. ADR-0006/0007 retain their dispositions. Gate 0 is **Unresolved** and Gates A-G are **Not reached**.
+
+#### Dormant STOP and inspection handoff patch
+
+Behind the stop, the candidate also creates an empty child cgroup under the original bounded ancestor. It removes the child's memory cap and separately changes its swap limit, requires a specific rejection in each case, then removes the child. It passes the host backing directory to the storage check as the over-limit control and runs the positive cage preflight under the inspection identity as well as the build identity. These are proposed live checks. Aggregate exhaustion, service timeout, interrupted cleanup and mount enforcement still require the independent hosted observations above.
+
+Local replay reconstructed both proposed blobs byte-for-byte. Synthetic tests verified the unconditional supervisor refusal, the workflow stop before checkout, and the exact five-file copy with an extra file excluded. Removing or emptying each of the five files, hard-linking an archive, substituting a directory or exceeding the per-file limit each caused rejection. The expected-refusal helper rejected an unexpected success and propagated a wrong failure reason. Permission changes were mocked for these Windows copy tests. Root ownership, mode enforcement and the proposed kernel controls remain unverified.
+
+Foundation and Markdown links passed for 189 files and 115 Markdown documents. Harness manifest, registered source admission and rejection controls, historical baseline, README, merge policy, ADR and prospective diagnostic checkout checks passed. Repository validation ran 152 tests with four platform skips. Both portable cross-link self-tests passed, as did desktop readiness (28), offline image (45), frame copy (4), Gradle distribution (38) and installed tools (16). The Linux host-tools result comes from the two historical jobs above. The two evidence files retain regular mode and pass whitespace checks. Only the foundation PR workflow applies to this documentation diff. No experimental acquisition, privileged setup or target execution was run.
+
+Both before and after modes are 100644. Against the two registered blobs, apply the LF-terminated fenced bytes with `git apply --unidiff-zero` in a disposable copy. Patch SHA-256 is `08e6d65b46557f86dde53aaef1d6867126a77eb1a43c6c7334dfa61b7894ab00`.
+
+| Protected path | Registered Git blob | Proposed Git blob | Proposed SHA-256 |
+| --- | --- | --- | --- |
+| `.github/scripts/rust-cross-link.py` | `00f7813200be6b933e8d009890f23aebf67d68d8` | `436e64cbb1e2bd542d94dd65662ccbee5ae63ec6` | `a4cde6521bd9953944cceaa436e4e3da0ee37653bb3ebde3971671ed60c0b1e4` |
+| `.github/workflows/rust-cross-link.yml` | `0da1432f4010d76f7cd4fa57f343f546d84b2634` | `8f745313b1e6a0e22e780d4cf57eb997a69f6ea9` | `998358102a4bee4030b1fe7841d1c28df68b193d18582d38aebf5d989eb6bb8f` |
+
+```diff
+--- a/.github/scripts/rust-cross-link.py
++++ b/.github/scripts/rust-cross-link.py
+@@ -509 +509 @@
+-        args += ["--ro-bind", str(volume / "build"), "/sealed"]
++        args += ["--ro-bind", str(volume / "sealed"), "/sealed"]
+@@ -969,0 +970,21 @@
++SEALED_OUTPUTS = ("libprobe.so", "probe.map", "libbitflags.rlib", "liblibc.rlib",
++                  "libvmm_sys_util.rlib")
++
++
++def seal_outputs(build, sealed):
++    # The caller has killed and drained the producer cgroup. Export only named files.
++    sealed.mkdir(mode=0o700)
++    for name in SEALED_OUTPUTS:
++        source = build / name
++        info = source.lstat()
++        require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and
++                0 < info.st_size <= 128 << 20, "output-type")
++        destination = sealed / name
++        # Distinct bind mounts may share a device but reject rename with EXDEV.
++        with source.open("rb") as reader, destination.open("xb") as writer:
++            copy_stream(reader, writer, info.st_size)
++        require(destination.stat().st_size == info.st_size, "output-type")
++        destination.chmod(0o444)
++    sealed.chmod(0o555)
++
++
+@@ -970,0 +992,35 @@
++    raise ValueError("confinement-unverified")
++
++
++def require_refusal(check, reason):
++    try:
++        check()
++    except ValueError as exc:
++        if exc.args == (reason,):
++            return
++        raise
++    raise ValueError("ineffective-isolation-control")
++
++
++def limit_controls(group, host_storage):
++    # No worker enters this empty child. The ancestor ceiling stays in force.
++    fixture = group / "limit-control"
++    fixture.mkdir()
++    try:
++        memory = fixture / "memory.max"
++        swap = fixture / "memory.swap.max"
++        memory.write_text(str(8 * GIB))
++        swap.write_text("0")
++        memory_bounds(fixture)
++        memory.write_text("max")
++        require_refusal(lambda: memory_bounds(fixture), "memory-limit")
++        memory.write_text(str(8 * GIB))
++        swap.write_text("4096")
++        require_refusal(lambda: memory_bounds(fixture), "memory-limit")
++    finally:
++        fixture.rmdir()
++    # The host backing directory is outside the private 10 GiB filesystem.
++    require_refusal(lambda: filesystem_limit(host_storage), "storage-limit")
++
++
++def supervised_experiment():
+@@ -1001,0 +1058 @@
++                limit_controls(cg, Path(tmp))
+@@ -1018,0 +1076,4 @@
++                    if name == "preflight":
++                        os.chown(out, 61002, 61002)
++                        run_cage(volume, cg, name, 61002, empty, out)
++                        os.chown(out, uid, uid)
+@@ -1031,9 +1092,4 @@
+-                        for file_name in ("libprobe.so", "probe.map"):
+-                            artifact = out / file_name
+-                            st = artifact.lstat()
+-                            require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
+-                                    0 < st.st_size <= 128 << 20, "output-type")
+-                            os.chown(artifact, 0, 0)
+-                            artifact.chmod(0o444)
+-                        os.chown(out, 0, 0)
+-                        out.chmod(0o555)
++                        sealed = volume / "sealed"
++                        seal_outputs(out, sealed)
++                        command("mount", "--bind", str(sealed), str(sealed))
++                        command("mount", "-o", "remount,bind,ro,noexec,nosuid,nodev", str(sealed))
+--- a/.github/workflows/rust-cross-link.yml
++++ b/.github/workflows/rust-cross-link.yml
+@@ -29,0 +30,2 @@
++      - name: Refuse pending independent confinement qualification
++        run: exit 1
+```
