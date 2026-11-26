@@ -1,5 +1,7 @@
 # Evidence index
 
+The [independent Linux validation amendment](gate-0-companion-source-controls.md#independent-linux-validation-amendment) adds three synthetic self-tests to ordinary hosted foundation CI. Independent results are outstanding.
+
 The [Rust cross-link source registration](gate-0-companion-source-controls.md#rust-cross-link-source-registration) records the exact five Git blobs, local controls and outstanding independent Linux fixture. Experimental execution requires separate approval.
 
 The [prepared Rust cross-link transition](gate-0-companion-source-controls.md#prepared-rust-cross-link-source-transition) includes the exact dormant workflow, supervisor, inspector, admission patch, bounded evidence protocol, integrated ELF controls and independent source-check disposition. This is the preserved preparation record.

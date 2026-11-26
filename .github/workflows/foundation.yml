@@ -105,3 +105,50 @@ jobs:
           ulimit -c 0
           git rev-parse HEAD
           timeout --signal=TERM --kill-after=15s 140s python3 .github/scripts/revocation-research.py
+      - name: Validate registered Rust cross-link self-tests on Linux
+        timeout-minutes: 2
+        shell: setpriv --no-new-privs bash --noprofile --norc -eu -o pipefail {0}
+        env:
+          EXPECTED_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          export PATH="/usr/bin:$PATH" LC_ALL=C
+          umask 077
+          source_sha=$(git rev-parse HEAD)
+          uid=$(id -u)
+          caps=$(awk '/^CapEff:/{print $2}' /proc/self/status)
+          nnp=$(awk '/^NoNewPrivs:/{print $2}' /proc/self/status)
+          . /etc/os-release
+          echo "source=$source_sha os=$ID-$VERSION_ID runner=${RUNNER_ENVIRONMENT:?} image=${ImageOS:?}/${ImageVersion:?} uid=$uid caps=$caps no_new_privs=$nnp"
+          [[ $source_sha == "$EXPECTED_SOURCE" && $RUNNER_ENVIRONMENT == github-hosted ]]
+          [[ $ID == ubuntu && $VERSION_ID == 24.04 && $uid != 0 && $caps =~ ^0+$ && $nnp == 1 ]]
+          for tool in python3 clang ld.lld ar readelf llvm-objdump-18; do
+            path=$(type -P "$tool") || { echo "Missing prerequisite: $tool"; exit 1; }
+            version=$("$path" --version)
+            echo "$tool path=$path version=${version%%$'\n'*}"
+            if [[ $tool == readelf ]]; then [[ $version == 'GNU readelf'* ]]; fi
+          done
+          clang --print-targets | grep -E '^[[:space:]]*aarch64[[:space:]]+-'
+          TMPDIR=$(mktemp -d "${RUNNER_TEMP:?}/cross-link.XXXXXXXX")
+          export TMPDIR
+          trap 'rm -rf -- "$TMPDIR"' EXIT
+          ulimit -c 0
+          ulimit -f 32768
+          ulimit -t 30
+          ulimit -v 4194304
+          ulimit -n 256
+          echo "Synthetic validation only. Rust compilation, Android runtime, isolation and Gate 0 feasibility remain unverified."
+          failed=0
+          run_test() {
+            local result=0
+            timeout --kill-after=2s 30s python3 -IB ".github/scripts/$1" "$2" > /dev/null 2>&1 || result=$?
+            if (( result == 0 )); then
+              echo "PASS $1 $2 exit=0"
+            else
+              echo "FAIL $1 $2 exit=$result"
+              failed=1
+            fi
+          }
+          run_test rust-cross-link.py --self-test
+          run_test inspect-rust-cross-link.py --self-test
+          run_test inspect-rust-cross-link.py --self-test-host-tools
+          exit "$failed"

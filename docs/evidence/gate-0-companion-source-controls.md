@@ -6696,3 +6696,64 @@ execution and signed-APK qualification remain unrun. The Java and native
 execution locks remain in force. ADR-0004 Option A remains accepted,
 ADR-0006 and ADR-0007 retain their bindings, Gate 0 remains **Unresolved**,
 and Gates A-G remain **Not reached**.
+
+## Independent Linux validation amendment
+
+The remote main ref and fetched commit agreed at
+`7f5ace76e7f827ecd995f2586122797a6b7615eb`. All five entries in the
+[candidate inventory](#candidate-patch-and-blob-inventory) matched at mode
+100644. The owner authorized synthetic validation through ordinary CI.
+
+| Amended path | Registered Git blob | Validation Git blob (100644) |
+| --- | --- | --- |
+| `.github/workflows/foundation.yml` | `bd4c8ee07c8d4efe0e4b557bcee885a78f628853` | `b27babd4307356732a647a45ae02366e59330e50` |
+| `.github/scripts/test-memory-diagnostic.py` | `dd1cee2fb4abcc0c982272c72118657becdaceaa` | `a3345399335d196f22bb0c0a87c418b0917f20e7` |
+
+Admission requires the full amended foundation workflow's SHA-256 and regular
+mode before replaying the registered verifier over the original workflow
+prefix. The previous protected group receipts still check that prefix.
+Negative fixtures remove the whole step, delete the real-tool invocation,
+suppress its failure status, and change the workflow mode. The signed-pair
+verifier continues to bind receipts to the full current snapshot.
+
+The existing Ubuntu 24.04 job uses its reviewed checkout pin and compares
+HEAD with the selected PR head or push SHA. The step records the hosted
+runner identity, Ubuntu release and image version, requires a nonzero UID,
+zero effective capabilities and Linux no-new-privileges, then reports the
+resolved paths and versions of Python 3, clang, ld.lld, ar, GNU readelf and
+llvm-objdump-18. It checks clang's AArch64 target. The published inventory
+reviewed on November 26 listed image `20261116.376.1`, Python 3.12.3 and
+Clang 18.1.3. Actual availability is checked on each run.
+[Ubuntu 24.04 runner inventory](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md)
+
+The step invokes the following commands with a 30-second deadline each.
+It records a fixed pass/fail label and the exit status for every attempted
+command. A missing prerequisite or any nonzero test status fails the step.
+
+```sh
+python3 -IB .github/scripts/rust-cross-link.py --self-test
+python3 -IB .github/scripts/inspect-rust-cross-link.py --self-test
+python3 -IB .github/scripts/inspect-rust-cross-link.py --self-test-host-tools
+```
+
+The third command assembles and links synthetic AArch64 inputs, then calls
+the production `native_artifact` inspector. The generated ELF is read only.
+Fixtures use a private temporary directory with cleanup on exit. Bounds
+include two minutes for the step, 30 CPU seconds, 4 GiB of virtual memory,
+32 MiB per output file, 256 open descriptors and disabled core dumps.
+
+Local source-admission and rejection controls, historical baseline, README,
+ADR and merge-policy audits, and the sole prospective diagnostic checkout
+check passed. Foundation and local Markdown link checks covered 189 files
+and 115 Markdown documents. Repository validation ran 152 tests with four
+platform skips. Harness manifest, desktop readiness (28), offline image (45),
+frame copy (4), Gradle distribution (38), installed tools (16) and whitespace
+checks passed.
+
+The foundation and Android harness PR workflows apply. The QEMU path filter
+does not match and the experimental workflow requires manual dispatch.
+Independent hosted execution of all three commands remains unobserved.
+Synthetic reproduction cannot establish Rust compilation, Android runtime
+behavior, host isolation, prior host qualification or Gate 0 feasibility.
+ADR-0004 Option A and the ADR-0006/0007 bindings continue. Gate 0 remains
+**Unresolved** and Gates A-G remain **Not reached**.
