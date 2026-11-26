@@ -1,6 +1,6 @@
 # Evidence index
 
-The [independent Linux validation amendment](gate-0-companion-source-controls.md#independent-linux-validation-amendment) adds three synthetic self-tests to ordinary hosted foundation CI. Independent results are outstanding.
+The [independent Linux validation amendment](gate-0-companion-source-controls.md#independent-linux-validation-amendment) adds three synthetic self-tests to ordinary hosted foundation CI. The [first hosted run and LLVM 18 correction](gate-0-companion-source-controls.md#hosted-prerequisite-failure-and-llvm-18-resolution) record the unversioned linker lookup failure. All three hosted test results remain outstanding.
 
 The [Rust cross-link source registration](gate-0-companion-source-controls.md#rust-cross-link-source-registration) records the exact five Git blobs, local controls and outstanding independent Linux fixture. Experimental execution requires separate approval.
 

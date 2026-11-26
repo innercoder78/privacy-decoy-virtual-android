@@ -297,7 +297,7 @@ def verify_rust_preparation(snapshot, evidence):
 
 FOUNDATION_WORKFLOW = '.github/workflows/foundation.yml'
 LINUX_STEP = b'      - name: Validate registered Rust cross-link self-tests on Linux\n'
-LINUX_FOUNDATION_SHA256 = 'd38a2dc0a4193cf47f8608a95731db4337d48a8478ab7f683ee03c7088609ec1'
+LINUX_FOUNDATION_SHA256 = '6fbb2e48f348a1666dc46ee762ab981a76ac8618c61f5459e5cab6edef840d16'
 
 
 def registered_snapshot(snapshot):
@@ -326,11 +326,13 @@ def preparation_controls():
         ('step-removed', snapshot[FOUNDATION_WORKFLOW]),
         ('real-fixture-skipped', ('100644', workflow.replace(host_test, b''))),
         ('failure-suppressed', ('100644', workflow.replace(b'exit "$failed"', b'exit 0'))),
+        ('unrelated-linker', ('100644', workflow.replace(b'/usr/bin/ld.lld-18', b'/usr/bin/ld'))),
+        ('missing-prerequisite-ignored', ('100644', workflow.replace(b'(( missing == 0 ))', b'true'))),
         ('workflow-mode', ('100755', workflow)),
     ):
         expect_source_rejection(verify_linux_validation, {**current, FOUNDATION_WORKFLOW: row},
                                 evidence, 'exact-linux-validation', label)
-    print('PASS: exact Linux workflow and four validation rejection controls')
+    print('PASS: exact Linux workflow and six validation rejection controls')
     previous = verify_rust_preparation(snapshot, evidence)
     expect_source_rejection(verify_current_source, snapshot, evidence, 'protected-checks', 'unregistered')
     expect_source_rejection(verify_rust_preparation, previous, evidence, 'exact-rust-preparation', 'replay')
