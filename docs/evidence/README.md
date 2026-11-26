@@ -1,8 +1,10 @@
 # Evidence index
 
-The [prepared Rust cross-link transition](gate-0-companion-source-controls.md#prepared-rust-cross-link-source-transition) includes the exact dormant workflow, supervisor, inspector, admission patch, bounded evidence protocol, integrated ELF controls and independent source-check disposition. Registration and execution await separate approvals.
+The [Rust cross-link source registration](gate-0-companion-source-controls.md#rust-cross-link-source-registration) records the exact five Git blobs, local controls and outstanding independent Linux fixture. Experimental execution requires separate approval.
 
-The [Rust cross-link approval proposal](gate-0-companion-source-controls.md#rust-cross-link-approval-proposal) records independent checksum provenance, the single-export probe and the controls a hosted runner must demonstrate. Source admission and one-run owner authorization are pending.
+The [prepared Rust cross-link transition](gate-0-companion-source-controls.md#prepared-rust-cross-link-source-transition) includes the exact dormant workflow, supervisor, inspector, admission patch, bounded evidence protocol, integrated ELF controls and independent source-check disposition. This is the preserved preparation record.
+
+The [Rust cross-link approval proposal](gate-0-companion-source-controls.md#rust-cross-link-approval-proposal) records independent checksum provenance, the single-export probe and the controls a hosted runner must demonstrate. The proposal describes the separate one-run authorization.
 
 The [upstream Rust qualification](gate-0-companion-source-controls.md#independent-upstream-rust-qualification-for-delegated-streams) identifies a signed Rust 1.100.0 distribution and proposes one cross-link of the release FD-passing code. Owner authorization is pending.
 

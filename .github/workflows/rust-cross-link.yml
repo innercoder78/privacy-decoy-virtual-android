@@ -1,0 +1,47 @@
+name: Inspect one Rust Android cross-link
+on: workflow_dispatch
+permissions:
+  contents: read
+concurrency:
+  group: rust-cross-link
+  cancel-in-progress: false
+jobs:
+  research:
+    if: github.repository == 'innercoder78/privacy-decoy-virtual-android' && github.ref == 'refs/heads/main' && github.ref_protected && github.run_attempt == 1
+    environment: rust-cross-link
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Bind owner authorization to this allocated run and exact source
+        env:
+          ALLOWED_ID: ${{ vars.RUST_LINK_RUN_ID }}
+          ALLOWED_SHA: ${{ vars.RUST_LINK_SHA }}
+          ALLOWED_ACTOR: ${{ vars.RUST_LINK_ACTOR_ID }}
+          ALLOWED_IMAGE: ${{ vars.RUST_LINK_IMAGE_VERSION }}
+          HOSTED: ${{ runner.environment }}
+        run: |
+          set -eu
+          test "$ALLOWED_ID" = "$GITHUB_RUN_ID"
+          test "$ALLOWED_SHA" = "$GITHUB_SHA"
+          test "$ALLOWED_ACTOR" = "$GITHUB_ACTOR_ID"
+          test "$GITHUB_TRIGGERING_ACTOR" = "$GITHUB_ACTOR"
+          test "$HOSTED/$RUNNER_OS/$RUNNER_ARCH" = github-hosted/Linux/X64
+          test "${ImageOS:?}/${ImageVersion:?}" = "ubuntu24/$ALLOWED_IMAGE"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          clean: false
+      - name: Run supervised experiment on disposable VM
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          {
+            unit_status=0
+            sudo -n systemd-run --pipe --wait --quiet --collect --service-type=exec \
+            -p RuntimeMaxSec=1680 -p TimeoutStopSec=2 -p KillMode=control-group \
+            -p MemoryMax=8589934592 -p MemorySwapMax=0 -p PrivateMounts=yes -p Delegate=memory \
+            -- /usr/bin/python3 -IB "$GITHUB_WORKSPACE/.github/scripts/rust-cross-link.py" supervise "$GITHUB_SHA" "$ImageVersion" </dev/null 2>/dev/null || unit_status=$?
+            printf 'unit=%d\n' "$unit_status"
+          } | \
+            /usr/bin/python3 -IB .github/scripts/rust-cross-link.py read-report "$GITHUB_SHA" "$ImageVersion"
