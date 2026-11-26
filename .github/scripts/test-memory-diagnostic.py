@@ -272,6 +272,49 @@ def verify_current_source(snapshot, evidence):
     check_protected_source({p: row for p, row in snapshot.items() if p not in (ADR_PATH, DIAGNOSTIC_ADR, BINDING_ADR)})
 
 
+RUST_PREPARATION = {
+    '.github/scripts/inspect-rust-cross-link.py': '0c0f09c0bb7cacaca448e9c136421df5a58c5b94068ac663c1c5162c5b321d1c',
+    '.github/scripts/rust-cross-link.py': 'e893fd14c185a1b8d2a4a671b1d8f5c3211ef451c79875a2eab3453b4a422188',
+    '.github/workflows/rust-cross-link.yml': '1d719e75e7d57a9da09cacd4647524f269f06307859818d8135a39ef0f6dd370',
+    '.github/scripts/validate-foundation.py': '1e2af51dacc07328e9901fb27c58258f3e7faae74195e0c2c7611ac63be34da1',
+}
+FOUNDATION_INSERT = b'    ".github/scripts/inspect-rust-cross-link.py",\n    ".github/scripts/rust-cross-link.py",\n    ".github/workflows/rust-cross-link.yml",\n'
+
+
+def verify_rust_preparation(snapshot, evidence):
+    """Validate the four exact changed protected files before replaying prior admission."""
+    check_source_modes(snapshot)
+    previous = snapshot.copy()
+    for path, digest in RUST_PREPARATION.items():
+        entry = previous.pop(path, None)
+        source_require(entry is not None and hashlib.sha256(entry[1]).hexdigest() == digest,
+                       'exact-rust-preparation')
+    path = '.github/scripts/validate-foundation.py'
+    previous[path] = ('100644', snapshot[path][1].replace(FOUNDATION_INSERT, b'', 1))
+    verify_current_source(previous, evidence)
+    return previous
+
+
+def preparation_controls():
+    snapshot = working_source()
+    evidence = (SOURCE_BASE, PROTECTED.copy())
+    previous = verify_rust_preparation(snapshot, evidence)
+    expect_source_rejection(verify_current_source, snapshot, evidence, 'protected-checks', 'unregistered')
+    expect_source_rejection(verify_rust_preparation, previous, evidence, 'exact-rust-preparation', 'replay')
+    for path in RUST_PREPARATION:
+        _, data = snapshot[path]
+        for entry, reason in ((('100644', data + b'x'), 'exact-rust-preparation'),
+                              (('100755', data), 'regular-source-modes')):
+            expect_source_rejection(verify_rust_preparation, {**snapshot, path: entry}, evidence, reason, path)
+    extra = {**snapshot, '.github/scripts/extra.py': ('100644', b'')}
+    expect_source_rejection(verify_rust_preparation, extra, evidence, 'protected-checks', 'extra-path')
+    print('PASS: exact dormant preparation transition and rejection controls')
+
+
+def previous_for_audit():
+    return verify_rust_preparation(working_source(), (SOURCE_BASE, PROTECTED.copy()))
+
+
 def check_adr_worktree(file):
     """Git modes cannot represent hardlinks or Windows directory reparse points."""
     for path in (file, *file.parents):
@@ -415,7 +458,7 @@ def source_cli_tests(snapshot):
 
 
 def companion_source_tests():
-    current = working_source()
+    current = previous_for_audit()
     evidence = (SOURCE_BASE, PROTECTED.copy())
     verify_current_source(current, evidence)
     positive = current.copy()
@@ -551,11 +594,11 @@ def companion_source_tests():
             raise AssertionError('ineffective detector-removal assertion: ' + name)
     print(f'PASS: exact active companion delta; {len(cases)} specific negatives; '
           f'{len(cases)} detector-removal assertion failures ({len(mutants)} detector bodies)')
-    source_cli_tests(current)
+    source_cli_tests(working_source())
 
 
 def readme_update_tests():
-    positive = working_source()
+    positive = previous_for_audit()
     evidence = (SOURCE_BASE, PROTECTED.copy())
     verify_current_source(positive, evidence)
     del positive[ADR_PATH]  # Historical README contract, not current admission.
@@ -666,7 +709,7 @@ def verify_adr_update():
 def verify_merge_policy_update():
     verify_adr_update()
     prior = committed_source(MERGE_POLICY_PRIOR)
-    current = working_source()
+    current = previous_for_audit()
     evidence = (SOURCE_BASE, PROTECTED.copy())
     checker = prior['.github/scripts/test-memory-diagnostic.py']
     source_require(checker[0] == '100644' and hashlib.sha256(checker[1]).hexdigest()
@@ -698,7 +741,7 @@ def verify_merge_policy_update():
 
 def adr_update_tests():
     from unittest.mock import patch
-    current = working_source()
+    current = previous_for_audit()
     evidence = (SOURCE_BASE, PROTECTED.copy())
     verify_current_source(current, evidence)
     historical = current.copy(); del historical[ADR_PATH]
@@ -1555,7 +1598,7 @@ def qualification_source_identity(snapshot):
 def qualify_signed_pair(paths, receipts=None):
     """Read-only staged verifier. There is currently NO successful admission path."""
     snapshot = working_source()
-    verify_current_source(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+    verify_rust_preparation(snapshot, (SOURCE_BASE, PROTECTED.copy()))
     originals = original_pair(paths)
     certificates = []
     for _, raw in originals:
@@ -2487,9 +2530,10 @@ def main():
             require(protected_evidence(snapshot) == PROTECTED, 'baseline protected evidence')
             print('PASS: public baseline Git blobs/modes recomputed (not independent authentication)')
         else:
-            verify_current_source(snapshot, (SOURCE_BASE, PROTECTED.copy()))
+            verify_rust_preparation(snapshot, (SOURCE_BASE, PROTECTED.copy()))
             print('PASS: exact proposed source delta only; independent review and qualification still required')
         return
+    preparation_controls()
     adr_update_tests()
     companion_source_tests()
     readme_update_tests()

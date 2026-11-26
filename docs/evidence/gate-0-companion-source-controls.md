@@ -6641,3 +6641,58 @@ index 0000000000000000000000000000000000000000..0da1432f4010d76f7cd4fa57f343f546
 +          } | \
 +            /usr/bin/python3 -IB .github/scripts/rust-cross-link.py read-report "$GITHUB_SHA" "$ImageVersion"
 ````
+
+## Rust cross-link source registration
+
+**Registration PR, 2026-11-26.** Canonical main, fetched main and the tracking
+ref agreed at `e392937ade723ca7e1fd6000f167099256d2a475`. Preflight found
+zero open PRs and GitHub Status reported all systems operational. Merged PRs
+#111, #112 and #113 record qualification, the approval proposal and the final
+reviewed patch respectively. The owner authorized registration and ordinary CI.
+
+The five paths, Git blob IDs, lengths and modes in the
+[candidate inventory](#candidate-patch-and-blob-inventory) are the registered
+identities. The fenced patch above is preserved verbatim. Extraction from the
+base Git blob reproduced SHA-256
+`63320a27b30a0df3c0e6d6f4a2316b58ef20de49ee1bd00d0526105ce73a724f`.
+The two existing blobs were `9e09a0453d45fdc8a03188261c678e1bf5752bd2`
+(diagnostic checker) and `9263f626b59d81167208d3a961a7daf2cb08b7c7`
+(foundation validator), both mode 100644. The other three paths were absent.
+An independent hunk reader checked removed lines against those Git blobs and
+hashed each reconstructed file with its Git blob header. In a separate
+worktree, Git checked and applied the zero-context patch. Full file bytes,
+unfiltered Git hashes and all five index entries agreed, each mode 100644.
+The admission checker itself is bound by its published blob and patch review.
+
+| Local check | Observed result |
+| --- | --- |
+| Supervisor and inspector, each with `--self-test` | Both passed. Bounded reporting, watchdog and synthetic confinement controls passed. The inspector passed 22 layout negatives and the integrated artifact test with seven specific refusals. |
+| Diagnostic checker, default suite | Exact protected bytes admitted. Changed bytes, executable modes, an extra protected path and predecessor replay rejected. Current ADR suite passed 127 negatives/effective removals, companion controls 60, README controls 11. Signed-structure controls passed 60 negatives/removal checks and eight file/CLI/admission negatives. |
+| Historical CLI audits | Source baseline, README update, ADR update and merge-policy update passed. The prospective-checkout command accepted the sole ADR-0007 commit, `381ab85afacde557346a80b887841e7f49eef05c`. |
+| Repository validation | 152 tests, 148 passed and four platform skips (host C, destination/ancestor symlinks, executable modes and POSIX symlink types). |
+| Foundation, local Markdown targets, harness manifest and Git whitespace | Passed. Foundation covered 189 files, 115 Markdown files, 54 requirements and seven ADRs. |
+| Other foundation Python suites | Desktop readiness 28, offline image inspection 45, frame copy 4 and Gradle distribution 38 passed. Installed-tools initially reported one error in 16 tests when temporary Windows junction creation timed out. All 16 passed on an isolated rerun of the unchanged suite outside the command sandbox. |
+
+The Rust workflow accepts only manual dispatch. Its pre-checkout step binds
+the run, source, actor and hosted image. Read-only inspection found zero
+repository Actions variables and zero deployment environments. The registration
+selects existing foundation and Android harness PR CI. QEMU path filters do
+not match. Experimental acquisition, privileged setup and dispatch require
+separate authorization.
+
+**Next proof.** On a separately approved disposable Linux host, an independent
+operator must obtain the exact registration revision from the canonical
+repository, verify the five inventory entries and use an unprivileged account
+with Python 3, AArch64-capable clang, ld.lld, ar, GNU readelf and
+llvm-objdump-18 already available. Run
+`python3 -IB .github/scripts/inspect-rust-cross-link.py --self-test-host-tools`
+and record the commit, tool versions, exit status and sanitized fixture result.
+The fixture assembles and links synthetic inputs in temporary storage and
+inspects the resulting ELF without executing it. This independent run remains
+outstanding. Local synthetic results remain subject to independent reproduction.
+
+Actual Rust cross-linking, experimental binary authentication, Android target
+execution and signed-APK qualification remain unrun. The Java and native
+execution locks remain in force. ADR-0004 Option A remains accepted,
+ADR-0006 and ADR-0007 retain their bindings, Gate 0 remains **Unresolved**,
+and Gates A-G remain **Not reached**.
